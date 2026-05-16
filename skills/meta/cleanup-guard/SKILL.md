@@ -1,6 +1,6 @@
 ---
 name: cleanup-guard
-description: 收尾清理：删除测试残留、处理未跟踪文件、压缩脏区，经确认后删除。
+description: Cleanup: remove test artifacts, handle untracked files, compact dirty state. Confirmation required.
 metadata:
   author: anfeng
   version: "0.1.0"

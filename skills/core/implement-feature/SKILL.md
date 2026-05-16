@@ -1,6 +1,6 @@
 ---
 name: implement-feature
-description: 实现新功能、补充业务逻辑、增加接口、扩展配置或改造现有流程。
+description: Implement features: add business logic, APIs, configs, or transform existing flows.
 metadata:
   author: anfeng
   version: "1.0.0"

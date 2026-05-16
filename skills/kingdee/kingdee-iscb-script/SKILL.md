@@ -1,6 +1,6 @@
 ---
 name: kingdee-iscb-script
-description: 集成云 ISCB DSL：数据集成方案、值转换、服务流程脚本、WebAPI 脚本。
+description: ISCB DSL: integration flows, value transforms, service process scripts, WebAPI scripts.
 metadata:
   author: anfeng
   version: "1.0.0"

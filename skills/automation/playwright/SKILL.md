@@ -1,6 +1,6 @@
 ---
 name: playwright
-description: Playwright 浏览器自动化：截图、点击、填表单、网页操作。
+description: Playwright browser automation: screenshots, clicks, form filling, web actions.
 metadata:
   author: anfeng
   version: "1.0.0"

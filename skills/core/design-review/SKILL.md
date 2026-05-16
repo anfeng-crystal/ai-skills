@@ -1,6 +1,6 @@
 ---
 name: design-review
-description: "Web 页面视觉设计审查：布局、排版、间距、配色、层级、一致性、响应式。"
+description: "Visual design review: layout, typography, spacing, color, hierarchy, consistency, responsive. Use frontend-design to build new UI."
 compatibility: claude-code-only
 ---
 

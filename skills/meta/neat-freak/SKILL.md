@@ -1,6 +1,6 @@
 ---
 name: neat-freak
-description: 会话结束审查：同步 CLAUDE.md、README、docs 和记忆与代码一致。
+description: Session-end review: sync CLAUDE.md, README, docs, and memory with code changes.
 metadata:
   author: anfeng
   version: "1.0.0"

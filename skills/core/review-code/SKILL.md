@@ -1,6 +1,6 @@
 ---
 name: review-code
-description: 只读代码审查：bug、性能、兼容性、可维护性、测试缺口，分级建议不改代码。
+description: Code review read-only: bugs, perf, compatibility, maintainability, test gaps. No code changes. Use fix-bug to fix, explain-code to explain.
 metadata:
   author: anfeng
   version: "1.0.0"

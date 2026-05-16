@@ -1,6 +1,6 @@
 ---
 name: skill-vetter
-description: 第三方 skill 安全审查：来源、脚本行为、写入风险、密钥暴露。
+description: Third-party skill security: source verification, script behavior, write risk, secret exposure. For optimizing your own skills, use darwin-skill.
 metadata:
   author: anfeng
   version: "0.2.0"

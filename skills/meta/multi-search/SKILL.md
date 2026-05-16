@@ -1,6 +1,6 @@
 ---
-name: union-search-skill
-description: 跨平台搜索：覆盖 20+ 平台，结果过滤排序，批量图片下载。
+name: multi-search
+description: Multi-platform search: 20+ platforms, result filtering/sorting, batch image download. Use web-access for single-URL fetches or CDP login-state reuse.
 metadata:
   author: anfeng
   version: "0.2.0"

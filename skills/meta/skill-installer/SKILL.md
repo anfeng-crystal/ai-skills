@@ -1,6 +1,6 @@
 ---
 name: skill-installer
-description: Skills 目录分发：软链接同步到多 AI 工具，支持审计和冲突检测。
+description: Skill distribution: symlink sync to multiple AI tools, audit and conflict detection.
 metadata:
   author: anfeng
   version: "0.2.1"

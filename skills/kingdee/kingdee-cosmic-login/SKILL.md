@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic-login
-description: "苍穹登录鉴权：测试环境登录、列出数据中心、校验 Cookie/CSRF。"
+description: "Kingdee auth: test env login, list data centers, verify Cookie/CSRF."
 metadata:
   author: anfeng
   version: "1.0.0"

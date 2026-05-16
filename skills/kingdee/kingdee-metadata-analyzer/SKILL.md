@@ -1,6 +1,6 @@
 ---
 name: kingdee-metadata-analyzer
-description: 苍穹元数据取证：实体、表单、插件挂载点、字段读写、上下游关系。
+description: Kingdee metadata forensics: entities, forms, plugin mount points, field R/W, dependencies.
 metadata:
   author: anfeng
   version: "1.0.0"

@@ -1,6 +1,6 @@
 ---
 name: darwin-skill
-description: "自主迭代优化 SKILL.md 质量。8 维 rubric 评分，git 追踪版本，测试 prompt 验证实际效果，保留改进自动回滚退步。触发词：优化skill、skill评分、自动优化、达尔文、darwin、skill质量检查、skill review、skill打分"
+description: "Self-improving SKILL.md quality. 8-dim rubric scoring, git-tracked versions, test prompts, auto-rollback on regression. Not for reviewing third-party skills (use skill-vetter)."
 metadata:
   author: anfeng
   version: "1.0.0"

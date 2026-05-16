@@ -1,6 +1,6 @@
 ---
 name: explain-code
-description: 只读解释代码：逻辑、调用链、数据流、模块职责、设计意图和关键边界。
+description: Explain code read-only: logic, call chain, data flow, module responsibilities, design intent. Use fix-bug to fix, review-code to review.
 metadata:
   author: anfeng
   version: "1.0.0"

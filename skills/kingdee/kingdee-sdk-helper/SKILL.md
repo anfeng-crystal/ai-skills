@@ -1,6 +1,6 @@
 ---
 name: kingdee-sdk-helper
-description: "苍穹 SDK/API 查询：类定义、方法签名、Javadoc、API 归属。"
+description: "Kingdee SDK/API lookup: class defs, method signatures, Javadoc, API ownership."
 metadata:
   author: anfeng
   version: "1.0.0"

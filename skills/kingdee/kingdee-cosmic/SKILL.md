@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic
-description: 苍穹 Java 二开主控：插件、报表、工作流、BOTP、OpenAPI、故障诊断。
+description: Kingdee Cosmic Java dev: plugins, reports, workflows, BOTP, OpenAPI, troubleshooting.
 metadata:
   author: anfeng
   version: "1.2.0"

@@ -1,6 +1,6 @@
 ---
 name: multi-agent-collab
-description: 多 agent 协同调度：复杂任务拆分、角色路由、并行执行。
+description: Multi-agent orchestration: task decomposition, role routing, parallel execution.
 metadata:
   author: anfeng
   version: "1.0.0"
