@@ -15,3 +15,13 @@ doctor-report*.json
 .metadata_cache/
 responses/
 downloads/
+
+# darwin-skill eval/test artifacts
+skills/meta/darwin-skill/test-prompts.json
+skills/meta/darwin-skill/results.tsv
+skills/meta/darwin-skill/results.tsv.backup
+skills/meta/darwin-skill/*-evaluation.md
+skills/meta/darwin-skill/optimization-report-*.md
+skills/meta/darwin-skill/result-cards-*.md
+skills/meta/darwin-skill/showcase.html
+skills/meta/darwin-skill/SKILL-optimized.md
