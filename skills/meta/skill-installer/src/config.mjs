@@ -5,7 +5,22 @@ import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
-export const CATEGORY_NAMES = new Set(["core", "automation", "kingdee", "meta", "incoming"]);
+export const CATEGORY_NAMES = new Set(["incoming"]);
+
+export async function loadCategoryNames(sourceRoot) {
+  const fixed = new Set(["incoming"]);
+  try {
+    const entries = await fs.promises.readdir(path.join(sourceRoot, "skills"), { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isDirectory() && !e.name.startsWith(".")) {
+        fixed.add(e.name);
+      }
+    }
+  } catch {
+    // skills/ 目录不存在时只返回 incoming
+  }
+  return fixed;
+}
 
 export function loadConfig() {
   const fileConfig = readConfigFile();
