@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #18202b;
+      --muted: #687386;
+      --line: #d9dee8;
+      --accent: #0f766e;
+      --warn: #a16207;
+      --danger: #b42318;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.55; }
+    header, main { max-width: 1120px; margin: 0 auto; padding: 28px; }
+    header { padding-top: 36px; }
+    h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.15; letter-spacing: 0; }
+    h2 { margin: 0 0 14px; font-size: 18px; letter-spacing: 0; }
+    .meta, .toolbar { display: flex; flex-wrap: wrap; gap: 10px; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .pill, .control, .input { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+    .pill { border-radius: 999px; padding: 4px 10px; }
+    .toolbar { position: sticky; top: 0; z-index: 2; margin-top: 18px; padding: 12px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 8px; }
+    .control, .input { min-height: 36px; padding: 0 11px; font: inherit; color: var(--text); }
+    .input { flex: 1 1 280px; min-width: 0; }
+    .control { cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease; }
+    .control:hover { border-color: var(--accent); }
+    .control:focus-visible, .input:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+    .control:active { transform: translateY(1px); }
+    .status { color: var(--muted); font-size: 13px; align-self: center; }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .metric { border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+    .metric strong { display: block; font-size: 26px; line-height: 1.1; }
+    .metric span { color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    [hidden] { display: none !important; }
+    details { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    details + details { margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .matched { outline: 2px solid color-mix(in srgb, var(--accent) 24%, transparent); outline-offset: 2px; }
+    code { overflow-wrap: anywhere; }
+    .high { color: var(--danger); }
+    .medium { color: var(--warn); }
+    .ok { color: var(--accent); }
+    @media (max-width: 640px) {
+      header, main { padding: 20px 14px; }
+      h1 { font-size: 24px; }
+      .toolbar { position: static; }
+      .control { flex: 1 1 auto; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{title}}</h1>
+    <div class="meta">
+      <span class="pill">生成时间：{{generatedAt}}</span>
+      <span class="pill">来源：{{sourceLabel}}</span>
+      <span class="pill">记录数：{{recordCount}}</span>
+    </div>
+    <div class="toolbar" role="toolbar" aria-label="报告操作">
+      <input class="input" id="reportSearch" type="search" placeholder="搜索报告内容">
+      <button class="control" type="button" data-jump="#summary">摘要</button>
+      <button class="control" type="button" data-jump="#details">详细</button>
+      <button class="control" type="button" id="toggleDetails">展开明细</button>
+      <button class="control" type="button" id="copySummary">复制摘要</button>
+      <span class="status" id="reportStatus" aria-live="polite">已加载</span>
+    </div>
+  </header>
+  <main data-generated-at="{{generatedAt}}" data-source="{{sourceLabel}}" data-source-count="{{recordCount}}">
+    <section id="summary" data-search-scope>
+      <h2>结论摘要</h2>
+      <div class="summary">{{summaryHtml}}</div>
+    </section>
+    <section id="details" data-search-scope>
+      <h2>详细内容</h2>
+      {{contentHtml}}
+    </section>
+  </main>
+  <script>
+    const reportSearch = document.getElementById('reportSearch');
+    const reportStatus = document.getElementById('reportStatus');
+    const searchable = Array.from(document.querySelectorAll('[data-search-scope] tbody tr, [data-search-scope] li, [data-search-scope] article, [data-search-scope] details'));
+    const fallbackScopes = Array.from(document.querySelectorAll('[data-search-scope]'));
+    const targets = searchable.length > 0 ? searchable : fallbackScopes;
+    function setStatus(message) {
+      reportStatus.textContent = message;
+    }
+    function applyReportSearch() {
+      const needle = reportSearch.value.trim().toLowerCase();
+      let visible = 0;
+      for (const item of targets) {
+        const matched = !needle || item.textContent.toLowerCase().includes(needle);
+        item.hidden = !matched;
+        item.classList.toggle('matched', Boolean(needle && matched));
+        if (matched) visible += 1;
+      }
+      setStatus(needle ? `匹配 ${visible} 项` : `显示 ${targets.length} 项`);
+    }
+    reportSearch.addEventListener('input', applyReportSearch);
+    document.querySelectorAll('[data-jump]').forEach((button) => {
+      button.addEventListener('click', () => document.querySelector(button.dataset.jump)?.scrollIntoView({ block: 'start' }));
+    });
+    document.getElementById('toggleDetails').addEventListener('click', (event) => {
+      const details = Array.from(document.querySelectorAll('details'));
+      const open = details.some((item) => !item.open);
+      details.forEach((item) => { item.open = open; });
+      event.currentTarget.textContent = open ? '收起明细' : '展开明细';
+      setStatus(open ? '明细已展开' : '明细已收起');
+    });
+    document.getElementById('copySummary').addEventListener('click', async () => {
+      const text = document.getElementById('summary').innerText.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('摘要已复制');
+      } catch {
+        setStatus('当前环境不允许复制');
+      }
+    });
+    applyReportSearch();
+  </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+[
+  {"query": "这个任务太复杂了，帮我拆分成多个 agent 并行处理", "should_trigger": true},
+  {"query": "用 subagents 并行排查这几个模块", "should_trigger": true},
+  {"query": "帮我做角色分工，让不同 agent 各司其职", "should_trigger": true},
+  {"query": "这个任务可以并行，帮我委派给多个 agent", "should_trigger": true},
+  {"query": "帮我调度多个 agent 协同完成这个研究任务", "should_trigger": true},
+  {"query": "需要多 agent 配合，一个做实现一个做 review", "should_trigger": true},
+  {"query": "帮我写一个 agent 调度的代码", "should_trigger": false},
+  {"query": "解释一下这段 agent 调度逻辑", "should_trigger": false},
+  {"query": "review 一下这个 agent 的代码质量", "should_trigger": false},
+  {"query": "这个 agent 报错了帮我修复", "should_trigger": false},
+  {"query": "帮我查一下这个 API 的用法", "should_trigger": false},
+  {"query": "帮我实现一个新的 agent 功能", "should_trigger": false}
+]

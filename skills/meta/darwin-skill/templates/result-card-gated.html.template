@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$skill_name 优化成果</title>
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #172033;
+      --text: #f8fafc;
+      --muted: #a7b3c5;
+      --line: #2a3851;
+      --accent: #14b8a6;
+      --delta: #f59e0b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); display: grid; place-items: center; padding: 24px; }
+    main { width: min(960px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: clamp(24px, 5vw, 48px); }
+    .eyebrow { color: var(--accent); font-weight: 700; }
+    h1 { margin: 10px 0 24px; font-size: clamp(28px, 5vw, 52px); line-height: 1.06; letter-spacing: 0; }
+    .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 26px; }
+    .score { border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    .score strong { display: block; font-size: clamp(28px, 5vw, 44px); line-height: 1; }
+    .score span, p, li { color: var(--muted); }
+    .delta strong { color: var(--delta); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; }
+    button { min-height: 36px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--text); padding: 0 12px; font: inherit; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease; }
+    button:hover, button[aria-pressed="true"] { border-color: var(--accent); background: rgba(20, 184, 166, 0.1); }
+    button:focus-visible { outline: 2px solid rgba(20, 184, 166, 0.45); outline-offset: 2px; }
+    button:active { transform: translateY(1px); }
+    .status { color: var(--muted); font-size: 13px; align-self: center; }
+    section + section { margin-top: 22px; }
+    section[data-panel] { display: none; }
+    section[data-panel].active { display: block; }
+    h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 9px; text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+    ul { margin: 0; padding-left: 20px; }
+    li + li { margin-top: 8px; }
+    .delta-cell { color: var(--delta); font-weight: 700; }
+    @media (max-width: 640px) {
+      body { padding: 12px; place-items: start center; }
+      .scores { grid-template-columns: 1fr; }
+      button { flex: 1 1 auto; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <main data-generated-at="$date" data-source="card-data.json" data-source-count="1">
+    <div class="eyebrow">$date · Darwin Skill</div>
+    <h1>$skill_name 优化成果</h1>
+    <section class="scores">
+      <div class="score"><strong>$score_before</strong><span>Before</span></div>
+      <div class="score"><strong>$score_after</strong><span>After</span></div>
+      <div class="score delta"><strong>+$score_delta</strong><span>Delta</span></div>
+    </section>
+    <nav class="actions" aria-label="成果卡片视图">
+      <button type="button" data-tab="dimensions" aria-pressed="true">维度变化</button>
+      <button type="button" data-tab="improvements" aria-pressed="false">主要改进</button>
+      <button type="button" data-tab="tests" aria-pressed="false">测试结果</button>
+      <button type="button" id="copyCard">复制摘要</button>
+      <span class="status" id="cardStatus" aria-live="polite">维度变化</span>
+    </nav>
+    <section data-panel="dimensions" class="active">
+      <h2>维度变化</h2>
+      <table>
+        <thead><tr><th>维度</th><th>Before</th><th>After</th><th>Delta</th></tr></thead>
+        <tbody>
+$dimensions_rows
+        </tbody>
+      </table>
+    </section>
+    <section data-panel="improvements">
+      <h2>主要改进</h2>
+      <ul>
+$improvements_items
+      </ul>
+    </section>
+    <section data-panel="tests">
+      <h2>测试结果</h2>
+      <ul>
+$test_results_items
+      </ul>
+    </section>
+  </main>
+  <script>
+    const cardStatus = document.getElementById('cardStatus');
+    document.querySelectorAll('[data-tab]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-tab]').forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        document.querySelectorAll('[data-panel]').forEach((panel) => panel.classList.remove('active'));
+        button.setAttribute('aria-pressed', 'true');
+        document.querySelector('[data-panel="' + button.dataset.tab + '"]')?.classList.add('active');
+        cardStatus.textContent = button.textContent.trim();
+      });
+    });
+    document.getElementById('copyCard').addEventListener('click', async () => {
+      const text = `$skill_name 优化成果：$score_before -> $score_after，Delta +$score_delta`;
+      try {
+        await navigator.clipboard.writeText(text);
+        cardStatus.textContent = '摘要已复制';
+      } catch {
+        cardStatus.textContent = '当前环境不允许复制';
+      }
+    });
+  </script>
+</body>
+</html>

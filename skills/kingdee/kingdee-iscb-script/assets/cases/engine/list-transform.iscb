@@ -1,0 +1,14 @@
+var inputList = [
+    {ProductCode: 'MAT-001', Name: '物料A', UnitPrice: '99.90'},
+    {ProductCode: 'MAT-002', Name: '物料B', UnitPrice: '128.00'}
+];
+
+var materialList = inputList
+    .filter(ProductCode != null && Name != null)
+    .each(
+        number: ProductCode,
+        name: Name,
+        price: N(UnitPrice)
+    );
+
+return materialList;

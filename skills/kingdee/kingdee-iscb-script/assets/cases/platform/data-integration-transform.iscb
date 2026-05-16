@@ -1,0 +1,7 @@
+var result = {
+    number: src.number,
+    name: src.name
+};
+
+tar = result;
+return tar;

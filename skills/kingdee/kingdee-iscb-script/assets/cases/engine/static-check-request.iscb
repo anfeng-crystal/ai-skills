@@ -1,0 +1,2 @@
+var total = N('100.10') + N('200.20');
+return total;

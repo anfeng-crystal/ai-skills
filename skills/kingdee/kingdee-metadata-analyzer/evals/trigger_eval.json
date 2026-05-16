@@ -1,0 +1,14 @@
+[
+  {"query": "查一下这个苍穹实体的字段信息", "should_trigger": true},
+  {"query": "分析一下这个表单的插件挂载点", "should_trigger": true},
+  {"query": "这个实体绑定的插件有哪些", "should_trigger": true},
+  {"query": "查一下这个字段的读写关系", "should_trigger": true},
+  {"query": "分析一下这个实体的上下游关系", "should_trigger": true},
+  {"query": "查一下页面操作的挂载点", "should_trigger": true},
+  {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "苍穹插件报错了帮我排查", "should_trigger": false},
+  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
+  {"query": "帮我写一个 KingScript 脚本", "should_trigger": false}
+]

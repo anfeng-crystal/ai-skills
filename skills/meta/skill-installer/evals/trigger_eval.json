@@ -1,0 +1,14 @@
+[
+  {"query": "同步 skills 到 Codex 和 Junie", "should_trigger": true},
+  {"query": "帮我安装这个 skill 到各个 AI 工具", "should_trigger": true},
+  {"query": "审计一下 skills 目录的软链接", "should_trigger": true},
+  {"query": "修复 skills 的软链接冲突", "should_trigger": true},
+  {"query": "验证 skills 分发是否正确", "should_trigger": true},
+  {"query": "link skill 到 Hermes 的 external_dirs", "should_trigger": true},
+  {"query": "帮我审查一下这个第三方 skill", "should_trigger": false},
+  {"query": "帮我写一个新的 skill", "should_trigger": false},
+  {"query": "优化一下这个 skill 的描述", "should_trigger": false},
+  {"query": "review 一下 skill 的代码质量", "should_trigger": false},
+  {"query": "帮我实现一个 skill 管理功能", "should_trigger": false},
+  {"query": "帮我查一下这个 API 的用法", "should_trigger": false}
+]

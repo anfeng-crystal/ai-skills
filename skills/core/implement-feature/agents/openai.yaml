@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Feature"
+  short_description: "先出方案再实现新功能"
+  default_prompt: "使用 $implement-feature 实现新功能、扩展接口或改造流程；先确认目标、方案、影响范围和验收方式，再编码并验证。编码前先查仓库已有 helper、wrapper、模板、SDK 封装、标准服务和成熟三方能力，只有现成能力不满足时才新写方法。生成或修改任何语言代码时必须补稳定注释或 docstring，说明职责、输入输出、边界、副作用和设计原因；署名不用 AI，需署名统一用 anfeng。只解释用 $explain-code，只审查用 $review-code，修复现有错误用 $fix-bug。"

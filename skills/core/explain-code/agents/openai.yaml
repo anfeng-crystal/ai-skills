@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain Code"
+  short_description: "解释代码职责、流程和设计意图"
+  default_prompt: "使用 $explain-code 只读解释代码职责、入口、调用流程、设计原因和关键边界，不修改代码。解释时如果仓库已有 shared helper、wrapper、SDK 封装或模板参与当前实现，应点明复用关系。需要修复用 $fix-bug，需要审查风险用 $review-code，需要实现新能力用 $implement-feature。"

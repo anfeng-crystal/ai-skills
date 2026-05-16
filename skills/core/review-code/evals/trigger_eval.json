@@ -1,0 +1,14 @@
+[
+  {"query": "review 一下这个 PR 的代码质量", "should_trigger": true},
+  {"query": "帮我检查一下这段代码有没有性能问题", "should_trigger": true},
+  {"query": "分析一下这个变更的兼容性风险", "should_trigger": true},
+  {"query": "看看这个模块的可维护性怎么样", "should_trigger": true},
+  {"query": "检查一下有没有重复造轮子的问题", "should_trigger": true},
+  {"query": "review 一下这个代码的测试覆盖", "should_trigger": true},
+  {"query": "帮我修复 review 中发现的问题", "should_trigger": false},
+  {"query": "帮我解释一下这段代码的逻辑", "should_trigger": false},
+  {"query": "帮我实现 review 中建议的新功能", "should_trigger": false},
+  {"query": "这个代码报错了帮我排查", "should_trigger": false},
+  {"query": "帮我写测试覆盖这些代码", "should_trigger": false},
+  {"query": "帮我重构这段代码", "should_trigger": false}
+]

@@ -1,0 +1,14 @@
+[
+  {"query": "这个接口返回 500 了，帮我排查一下", "should_trigger": true},
+  {"query": "单元测试跑不过了，是个回归问题", "should_trigger": true},
+  {"query": "线上用户反馈这个功能行为不符合预期", "should_trigger": true},
+  {"query": "这段代码报错了，帮我定位根因修复", "should_trigger": true},
+  {"query": "这个异常现象很奇怪，帮我看看", "should_trigger": true},
+  {"query": "最近一次部署后功能坏了", "should_trigger": true},
+  {"query": "帮我解释一下这段代码为什么这样写", "should_trigger": false},
+  {"query": "review 一下这段代码有没有潜在问题", "should_trigger": false},
+  {"query": "帮我新增一个错误处理的功能", "should_trigger": false},
+  {"query": "这个 SDK 的 API 怎么用", "should_trigger": false},
+  {"query": "帮我重构一下这段代码", "should_trigger": false},
+  {"query": "分析一下这个错误日志的含义", "should_trigger": false}
+]

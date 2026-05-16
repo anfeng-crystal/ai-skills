@@ -1,0 +1,13 @@
+[
+  {"query": "review 一下这个页面的视觉设计", "should_trigger": true},
+  {"query": "这个页面排版和间距不太对，帮我看看", "should_trigger": true},
+  {"query": "检查一下这个 UI 的配色和层级关系", "should_trigger": true},
+  {"query": "看看这个页面的响应式布局有没有问题", "should_trigger": true},
+  {"query": "评估一下这个页面的 look and feel", "should_trigger": true},
+  {"query": "帮我做一个高设计质量的 landing page", "should_trigger": false},
+  {"query": "review 一下这个组件的代码质量", "should_trigger": false},
+  {"query": "这个页面的 CSS 报错了", "should_trigger": false},
+  {"query": "解释一下这个布局组件的实现逻辑", "should_trigger": false},
+  {"query": "帮我加一个暗色模式功能", "should_trigger": false},
+  {"query": "分析一下这个页面的性能瓶颈", "should_trigger": false}
+]

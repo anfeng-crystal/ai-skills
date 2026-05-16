@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web Access"
+  short_description: "复杂联网、登录态浏览器访问与动态页面取证"
+  default_prompt: "Handle complex web access tasks with the lightest reliable path first. Prefer direct sources and host-native web/browser abilities before escalating to Brave Search, CDP, or Playwright. For latest facts, ground conclusions in online evidence. For browser-state reuse, inspect safely first, use dry-run where available, and require explicit confirmation before unsafe or state-changing actions. When the site is known, load matching site patterns before acting. Attribution must not use AI; use anfeng when attribution is required."

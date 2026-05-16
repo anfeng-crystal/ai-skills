@@ -1,0 +1,14 @@
+[
+  {"query": "查一下 SaveServiceHelper 的方法签名", "should_trigger": true},
+  {"query": "QueryServiceHelper 有哪些 API", "should_trigger": true},
+  {"query": "这个苍穹类的 Javadoc 怎么查", "should_trigger": true},
+  {"query": "帮我查一下这个 API 属于哪个 SDK", "should_trigger": true},
+  {"query": "苍穹的类定义在哪里", "should_trigger": true},
+  {"query": "有没有现成的候选 SDK 可以用", "should_trigger": true},
+  {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下这个苍穹实体的字段信息", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "苍穹插件报错了帮我排查", "should_trigger": false},
+  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
+  {"query": "帮我写一个 KingScript 脚本", "should_trigger": false}
+]

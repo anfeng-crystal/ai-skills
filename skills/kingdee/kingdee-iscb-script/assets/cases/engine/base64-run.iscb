@@ -1,0 +1,2 @@
+var encoded = Base64Encode(String.getBytes('abc', 'UTF-8'));
+return encoded;

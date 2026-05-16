@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "sourceRoot": "skills",
+  "distribution": {
+    "defaultRepo": "skills/active",
+    "defaultInstallScope": "all root-level directories with SKILL.md",
+    "excludedTrees": ["legacy", "incoming"],
+    "hosts": ["codex", "claude", "junie", "agents", "hermes"]
+  },
+  "skills": [
+    {
+      "name": "darwin-skill",
+      "runtime": ["node", "playwright"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "data-analyst",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "explain-code",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "fix-bug",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "implement-feature",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "kingdee-cosmic",
+      "runtime": ["python3", "local-knowledge"],
+      "requiresKnowledge": true,
+      "optional": true
+    },
+    {
+      "name": "kingdee-cosmic-devtools",
+      "runtime": ["python3"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "kingdee-iscb-script",
+      "runtime": ["python3"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "kingdee-kingscript",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "kingdee-metadata-analyzer",
+      "runtime": ["python3", "local-knowledge"],
+      "requiresKnowledge": true,
+      "optional": true
+    },
+    {
+      "name": "multi-agent-collab",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "playwright",
+      "runtime": ["npx", "@playwright/cli"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "review-code",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "skill-installer",
+      "runtime": ["node"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "skill-vetter",
+      "runtime": ["node"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "multi-search",
+      "runtime": ["python3", "node", "yt-dlp", "env-file"],
+      "requiresKnowledge": false,
+      "optional": true,
+      "repositoryMode": "submodule"
+    },
+    {
+      "name": "web-access",
+      "runtime": ["node", "browser", "cdp"],
+      "requiresKnowledge": false,
+      "optional": false
+    }
+  ]
+}

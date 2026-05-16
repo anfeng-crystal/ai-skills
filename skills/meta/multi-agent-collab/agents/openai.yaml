@@ -1,0 +1,4 @@
+interface:
+  display_name: "Multi-Agent Collab"
+  short_description: "Plan host-neutral multi-agent work with ownership, handoffs, and model profiles."
+  default_prompt: "Use this skill to decide whether work should be split, then coordinate host-neutral Explorer, Worker, Reviewer/Tester, and Integrator roles with explicit ownership locks, context relay, verification, and model_profile routing. Do not assume subagents, model selection, or parallel execution unless the current host supports them. Coding workers must inventory existing helpers, wrappers, templates, SDKs, fixtures, scripts, and standard services before adding new methods. Attribution must not use AI; use anfeng when attribution is required."

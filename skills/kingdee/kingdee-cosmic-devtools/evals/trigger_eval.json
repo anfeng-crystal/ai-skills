@@ -1,0 +1,14 @@
+[
+  {"query": "用 KDDT 模板创建一个苍穹工程", "should_trigger": true},
+  {"query": "增量新增一个苍穹模块", "should_trigger": true},
+  {"query": "生成苍穹插件类和服务类", "should_trigger": true},
+  {"query": "资源包 staging 和 apply 操作", "should_trigger": true},
+  {"query": "苍穹资源包 rollback", "should_trigger": true},
+  {"query": "COSMIC_HOME 环境配置", "should_trigger": true},
+  {"query": "写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "苍穹插件报错了", "should_trigger": false},
+  {"query": "帮我写一个 ISCB 脚本", "should_trigger": false}
+]

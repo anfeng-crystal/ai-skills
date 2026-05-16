@@ -1,0 +1,9 @@
+var item = {code: 'C001', name: '分类A', enabled: 'true'};
+
+var result = {
+    number: item.code,
+    name: item.name,
+    isEnable: X(item.enabled)
+};
+
+return result;

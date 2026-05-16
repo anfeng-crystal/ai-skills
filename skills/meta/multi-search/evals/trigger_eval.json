@@ -1,0 +1,14 @@
+[
+  {"query": "帮我搜索多个平台关于这个话题的讨论", "should_trigger": true},
+  {"query": "在开发者社区搜索这个问题的解决方案", "should_trigger": true},
+  {"query": "帮我批量搜索并下载相关图片", "should_trigger": true},
+  {"query": "搜索社交媒体上对这个产品的评价", "should_trigger": true},
+  {"query": "用 AI 搜索引擎查一下最新资讯", "should_trigger": true},
+  {"query": "帮我过滤排序搜索结果", "should_trigger": true},
+  {"query": "帮我查一下这个库的最新版本号", "should_trigger": false},
+  {"query": "帮我登录后访问这个网页", "should_trigger": false},
+  {"query": "用 Playwright 截一个网页截图", "should_trigger": false},
+  {"query": "帮我分析一下这个搜索结果的数据", "should_trigger": false},
+  {"query": "帮我写一个搜索功能的代码", "should_trigger": false},
+  {"query": "帮我 review 一下这段搜索逻辑", "should_trigger": false}
+]
