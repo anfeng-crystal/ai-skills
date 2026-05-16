@@ -1,6 +1,6 @@
 ---
 name: fix-bug
-description: 排查修复行为错误：报错、异常、失败测试、回归、不符合预期，最小修复。
+description: Diagnose and fix bugs: errors, exceptions, failing tests, regressions, unexpected behavior. Minimal fix. Use review-code for review-only, explain-code for understanding.
 metadata:
   author: anfeng
   version: "1.0.0"

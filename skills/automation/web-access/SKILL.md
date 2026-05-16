@@ -1,6 +1,6 @@
 ---
 name: web-access
-description: "联网查事实：curl 优先，Jina 摘要，CDP 复用登录态，动态页面读取。"
+description: "Fetch facts online: curl-first, Jina summaries, CDP login-state reuse, dynamic page reading. Use multi-search for multi-platform aggregation."
 metadata:
   author: anfeng
   version: "1.0.0"

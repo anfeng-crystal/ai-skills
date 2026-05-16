@@ -1,8 +1,13 @@
 ---
 name: frontend-design
-description: 生产级前端界面实现：高设计质量的 UI、页面构建和视觉打磨。
+description: Production frontend: build distinctive UI with bold aesthetics. No generic AI slop. Use design-review to review existing pages.
 license: Complete terms in LICENSE.txt
 ---
+
+## Trigger Boundary
+- Use this skill when building new frontend UI (components, pages, apps).
+- Use design-review when reviewing an existing page for visual quality.
+- Use frontend-design-principles (not a slash command) for deep design process guidance.
 
 # Frontend Design
 
@@ -42,3 +47,13 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 **IMPORTANT**: Match implementation complexity to the aesthetic vision. Maximalist designs need elaborate code with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
 
 Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.
+
+## Advanced Design Mode
+
+For complex UI (dashboards, marketing sites, apps with multiple views), load the full design process from `skills/core/frontend-design-principles/SKILL.md`. This adds:
+- Intent questions and domain exploration
+- Four required outputs before coding
+- Pre-show self-review checklist
+- Principles on defaults, sameness, and systemic intent
+
+Simple requests (single component, quick page, proof of concept) use the fast path above. Complex requests (multi-page apps, client-facing products, anything requiring craft differentiation) load the principles.

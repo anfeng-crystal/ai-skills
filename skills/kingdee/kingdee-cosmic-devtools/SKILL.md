@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic-devtools
-description: 苍穹工程工具：KDDT 创建工程、生成插件类、资源包 staging/apply/rollback。
+description: Kingdee devtools: KDDT project creation, plugin class gen, resource pack staging/apply/rollback.
 metadata:
   author: anfeng
   version: "1.0.0"

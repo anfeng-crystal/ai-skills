@@ -110,6 +110,54 @@
       "runtime": ["node", "browser", "cdp"],
       "requiresKnowledge": false,
       "optional": false
+    },
+    {
+      "name": "design-review",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "frontend-design",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "frontend-design-principles",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "kingdee-cosmic-login",
+      "runtime": ["python3", "browser"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "kingdee-sdk-helper",
+      "runtime": ["python3", "local-knowledge"],
+      "requiresKnowledge": true,
+      "optional": true
+    },
+    {
+      "name": "cleanup-guard",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "html-output-quality",
+      "runtime": ["node", "markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "neat-freak",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
     }
   ]
 }

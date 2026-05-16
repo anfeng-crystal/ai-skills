@@ -1,6 +1,6 @@
 ---
 name: kingdee-kingscript
-description: KingScript 脚本插件：脚本 SDK 声明、运行错误、风险审查。
+description: KingScript plugin: SDK declarations, runtime errors, risk review.
 metadata:
   author: anfeng
   version: "1.0.0"

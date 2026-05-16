@@ -1,6 +1,6 @@
 ---
 name: html-output-quality
-description: 用于生成、检查和交付本地 HTML 增强产物的质量门禁；适合截图评审、扫描 dashboard、关系图、评分卡片、多维对比和需转交审核的报告。不用于短结论、命令速查、SDK 签名、普通代码解释或低风险一次性回答。
+description: Quality gate for local HTML artifacts: review cards, dashboards, comparison charts. Not for quick answers.
 metadata:
   author: anfeng
   version: "1.0.0"

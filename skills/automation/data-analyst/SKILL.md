@@ -1,6 +1,6 @@
 ---
 name: data-analyst
-description: 数据分析师：SQL/CSV/Excel 清洗、指标计算、趋势对比、报表结论。
+description: Data analyst: SQL/CSV/Excel cleaning, metric computation, trend comparison, report conclusions.
 metadata:
   author: anfeng
   version: "1.0.0"
