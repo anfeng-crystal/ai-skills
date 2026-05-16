@@ -44,18 +44,34 @@ metadata:
    - 不要直接写 `~/.codex/skills`
    - 不要直接写 `~/.claude/skills`
    - 不要直接写 `%USERPROFILE%\.codex\skills`
-2. 默认先 dry-run：
+2. 默认先 dry-run（`--category` 可省略，默认 `auto`）：
    ```bash
-   node bin/skill-installer.mjs install ./my-skill --category auto --json
+   node bin/skill-installer.mjs install ./my-skill --json
    ```
 3. 确认 `category / targetPath / status` 后再 apply：
    ```bash
-   node bin/skill-installer.mjs install ./my-skill --category meta --apply
+   node bin/skill-installer.mjs install ./my-skill --apply
    ```
 4. 分类规则：
-   - 明确分类时使用 `--category core|automation|kingdee|meta`
-   - 不确定时使用 `--category auto`
-   - 自动分类失败会放入 `skills/incoming/<skill>`，不会自动分发
+   - `--category` 省略时默认 `auto`，按 frontmatter 的 name/description/tags 自动匹配
+   - 匹配优先级：kingdee → automation → meta → core → tags 派生 → incoming
+   - 正则不匹配时，从第一个 tag 派生新分类名（如 tag `cleanup` → `skills/cleanup/`）
+   - 无 tag 时才 fallback 到 `skills/incoming/`（不分发）
+   - 明确分类时可使用 `--category core|automation|kingdee|meta`
+
+### 迁移根级 skill
+
+根级目录（如 `neat-freak/`）不在 `skills/{category}/` 下，需要迁移：
+
+```bash
+# dry-run 查看迁移计划
+node bin/skill-installer.mjs migrate --json
+
+# 确认后执行迁移（自动分类 + move + sync）
+node bin/skill-installer.mjs migrate --apply
+```
+
+迁移流程：扫描 sourceRoot 一级子目录中有 SKILL.md 的目录 → 自动分类 → `fs.rename` 移入 `skills/{category}/` → 自动 sync 到各工具目录。
 
 ### 同步 skill
 
@@ -110,6 +126,8 @@ metadata:
 | 用户要求覆盖冲突 | "冲突覆盖不可逆，确认手动处理以下路径：{paths}" |
 | 全量同步（不指定 --skill） | "将同步所有 {N} 个 skill 到 {tools}，确认执行？" |
 | install 目标为 `incoming` | "自动分类不确定，已计划放入 incoming，不会分发，确认是否 apply？" |
+| migrate 发现根级 skill | "发现 {N} 个根级 skill 待迁移到 skills/{category}/，确认执行？" |
+| migrate 目标已存在 | "目标目录已存在，跳过 {skill}，需人工处理。" |
 
 ## 边界与回退
 
@@ -125,6 +143,8 @@ metadata:
 | Hermes 本地 shadow 冲突 | `hermes_local_shadow_conflict`，报告会遮住 external_dirs |
 | `sync-links.mjs` 执行失败 | 报告脚本错误，检查 Node.js 环境和文件权限 |
 | apply 后验证失败 | 用 `ls -l` 或再次 dry-run 确认，报告差异 |
+| migrate 目标目录已存在 | `target_exists`，不覆盖，跳过 |
+| migrate 无根级 skill | 无操作，正常退出 |
 
 ## Guardrails
 - 未经用户确认，不执行 `--apply`。
@@ -151,6 +171,8 @@ metadata:
 | `needs_external_dir_config` | 显式指定 Hermes 时未配置 external_dirs | 是（配 config.yaml 或跳过 Hermes） |
 | `target_exists` | install 目标目录已存在 | 是（改名或人工处理） |
 | `needs_review` | install 进入 incoming | 是（人工审核后移动分类） |
+| `migrated` | migrate 已完成迁移 | 否 |
+| `ready_to_migrate` | migrate 计划迁移 | 是（确认后 apply） |
 
 ## Output
 使用简体中文，先给结论：源目录 → 目标目录 → dry-run 结果 → 待确认动作 → 执行后验证与风险。

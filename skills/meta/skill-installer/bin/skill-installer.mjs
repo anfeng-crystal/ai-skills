@@ -9,7 +9,7 @@ import { parseArgs } from '../src/cli.mjs';
 import { buildPlan, applyPlan, buildRemovePlan, applyRemovePlan } from '../src/sync-links.mjs';
 import { checkAllUpdates } from '../src/update-checker.mjs';
 import { diffSkill, updateSkill, updateAll } from '../src/updater.mjs';
-import { buildInstallPlan, applyInstallPlan } from '../src/install.mjs';
+import { buildInstallPlan, applyInstallPlan, resolveCategory } from '../src/install.mjs';
 import { queryHistory, appendHistory } from '../src/history.mjs';
 import { deleteMeta } from '../src/meta.mjs';
 import fs from "node:fs/promises";
@@ -58,6 +58,11 @@ try {
 
   if (options.command === 'install') {
     await handleInstall(options);
+    process.exit(0);
+  }
+
+  if (options.command === 'migrate') {
+    await handleMigrate(options);
     process.exit(0);
   }
 
@@ -234,6 +239,117 @@ async function handleRemove(options) {
   }
 }
 
+async function handleMigrate(options) {
+  const sourceRoot = options.sourceRoot;
+  const migrations = [];
+
+  // 扫描 sourceRoot 一级子目录，找出含 SKILL.md 但不在 skills/ 下的目录
+  const entries = await fs.readdir(sourceRoot, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name === "skills" || entry.name.startsWith(".")) continue;
+    const skillMdPath = path.join(sourceRoot, entry.name, "SKILL.md");
+    try {
+      await fs.access(skillMdPath);
+    } catch {
+      continue;
+    }
+
+    // 读取 frontmatter
+    const content = await fs.readFile(skillMdPath, "utf8");
+    const frontmatter = parseFrontmatter(content);
+    const category = await resolveCategory("auto", frontmatter, sourceRoot);
+    const skillName = entry.name;
+    const targetRelativePath = path.posix.join("skills", category, skillName);
+    const targetPath = path.join(sourceRoot, ...targetRelativePath.split("/"));
+
+    let targetExists = false;
+    try {
+      await fs.access(targetPath);
+      targetExists = true;
+    } catch {}
+
+    migrations.push({
+      skillName,
+      category,
+      sourcePath: path.join(sourceRoot, entry.name),
+      targetRelativePath,
+      targetPath,
+      targetExists,
+      status: targetExists ? "target_exists" : "planned",
+      reason: targetExists ? "target_directory_exists" : "ready_to_migrate",
+    });
+  }
+
+  const result = {
+    sourceRoot,
+    home: options.home,
+    command: "migrate",
+    applied: false,
+    ok: migrations.every((m) => !m.targetExists),
+    count: migrations.length,
+    planned: migrations.filter((m) => m.status === "planned").length,
+    blocked: migrations.filter((m) => m.status === "target_exists").length,
+    migrations,
+  };
+
+  if (options.apply) {
+    if (!result.ok) {
+      printOutput(result, options);
+      process.exit(2);
+    }
+    for (const migration of migrations) {
+      if (migration.status !== "planned") continue;
+      await fs.mkdir(path.dirname(migration.targetPath), { recursive: true });
+      await fs.rename(migration.sourcePath, migration.targetPath);
+      migration.status = "migrated";
+      migration.reason = "moved_to_category";
+    }
+    result.applied = true;
+
+    // 迁移后自动 sync
+    const syncPlan = await buildPlan({
+      ...options,
+      skills: migrations.filter((m) => m.status === "migrated").map((m) => m.targetRelativePath),
+    });
+    await applyPlan(syncPlan.records);
+    result.syncPlan = syncPlan;
+  }
+
+  printOutput(result, options);
+
+  if (!result.ok && !options.apply) {
+    process.exitCode = 2;
+  }
+}
+
+function parseFrontmatter(content) {
+  if (!content.startsWith("---")) return {};
+  const end = content.indexOf("\n---", 3);
+  if (end === -1) return {};
+  const values = {};
+  for (const rawLine of content.slice(3, end).split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    values[key] = parseScalar(rawValue);
+  }
+  return values;
+}
+
+function parseScalar(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    return trimmed.slice(1, -1).split(",").map((item) => normalizeScalar(item)).filter(Boolean);
+  }
+  return normalizeScalar(trimmed);
+}
+
+function normalizeScalar(value) {
+  return String(value).trim().replace(/^['"]|['"]$/g, "");
+}
+
 async function handleInstall(options) {
   const plan = await buildInstallPlan(options);
 
@@ -341,6 +457,15 @@ function printOutput(payload, options) {
     );
   }
 
+  if (outputPayload.command === "migrate" && outputPayload.migrations) {
+    console.log(`Migrate: ${outputPayload.count} found, ${outputPayload.planned} planned, ${outputPayload.blocked} blocked`);
+    for (const m of outputPayload.migrations) {
+      console.log(
+        [m.skillName, m.category, m.status, m.reason, m.targetRelativePath || "-"].join("\t"),
+      );
+    }
+  }
+
   if (outputPayload.history) {
     console.log("History:");
     for (const record of outputPayload.history) {
@@ -397,7 +522,8 @@ function printHelp() {
 Usage:
   skill-installer [options]
   skill-installer remove <skill> [options]
-  skill-installer install <local-path-or-git-url> --category <category> [options]
+  skill-installer install <local-path-or-git-url> [--category <category>] [options]
+  skill-installer migrate [--apply] [--json]
   skill-installer diff <skill> [options]
   skill-installer update <skill|--all> [options]
   skill-installer history [options]
@@ -407,7 +533,7 @@ Options:
   --home <path>          Host home. Defaults to AI_HOST_HOME or $HOME.
   --skill <name>         Skill name or relative path. Can be repeated or comma-separated.
   --tool <name>          codex, claude, junie, agents, or hermes.
-  --category <name>      core, automation, kingdee, meta, incoming, or auto.
+  --category <name>      core, automation, kingdee, meta, incoming, or auto (default).
   --name <name>          Override installed skill directory name.
   --path <subdir>        Use a subdirectory inside a Git source.
   --apply                Apply planned link changes.

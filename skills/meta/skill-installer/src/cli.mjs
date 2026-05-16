@@ -32,7 +32,7 @@ export function parseArgs(argv) {
     const token = argv[i];
 
     // 子命令
-    if (token === 'history' || token === 'diff' || token === 'update' || token === 'remove' || token === 'install') {
+    if (token === 'history' || token === 'diff' || token === 'update' || token === 'remove' || token === 'install' || token === 'migrate') {
       parsed.command = token;
       i++;
       continue;

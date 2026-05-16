@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { CATEGORY_NAMES } from "./config.mjs";
+import { CATEGORY_NAMES, loadCategoryNames } from "./config.mjs";
 import { buildPlan, applyPlan, listSourceSkills } from "./sync-links.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -29,7 +29,7 @@ export async function buildInstallPlan(options) {
     }
 
     const skillName = kebabCase(options.name || frontmatter.name || path.basename(sourceSkillDir));
-    const category = resolveCategory(options.category, frontmatter);
+    const category = await resolveCategory(options.category, frontmatter, options.sourceRoot);
     const targetRelativePath = path.posix.join("skills", category, skillName);
     const targetPath = path.join(options.sourceRoot, ...targetRelativePath.split("/"));
     const targetExists = await pathExists(targetPath);
@@ -161,13 +161,14 @@ function sanitizeOptions(options) {
   };
 }
 
-function resolveCategory(category, frontmatter) {
+export async function resolveCategory(category, frontmatter, sourceRoot) {
   if (!category) {
-    throw new Error("错误：install 子命令需要指定 --category");
+    category = "auto";
   }
 
   if (category !== "auto") {
-    if (!CATEGORY_NAMES.has(category)) {
+    const validNames = await loadCategoryNames(sourceRoot);
+    if (!validNames.has(category)) {
       throw new Error(`错误：未知 category: ${category}`);
     }
     return category;
@@ -183,9 +184,14 @@ function resolveCategory(category, frontmatter) {
     .toLowerCase();
 
   if (/(金蝶|苍穹|kingdee|cosmic|bos|元数据|sdk)/i.test(text)) return "kingdee";
-  if (/(playwright|browser|web-access|e2e|automation|data|spreadsheet|document)/i.test(text)) return "automation";
-  if (/(darwin|meta|linker|vetter|multi-agent|search)/i.test(text)) return "meta";
-  if (/(explain|review|fix|implement|clarify|core)/i.test(text)) return "core";
+  if (/(playwright|browser|web-access|e2e|automation|data|spreadsheet|document|deploy|ci|cd|pipeline|发布|部署|monitor|log|trace|observ|监控|日志|database|sql|query|数据|查询)/i.test(text)) return "automation";
+  if (/(darwin|meta|linker|vetter|multi-agent|search|cleanup|neat|tidy|sanitiz|清理|洁癖|knowledge|docs|memory|sync|文档|记忆)/i.test(text)) return "meta";
+  if (/(explain|review|fix|implement|clarify|core|security|auth|login|鉴权|安全|frontend|ui|ux|css|design|界面|设计|lint|format|prettier|eslint|格式|test|spec|jest|vitest|测试)/i.test(text)) return "core";
+
+  // 从 tags 派生新分类名
+  if (Array.isArray(frontmatter.tags) && frontmatter.tags.length > 0) {
+    return kebabCase(frontmatter.tags[0]);
+  }
 
   return "incoming";
 }
