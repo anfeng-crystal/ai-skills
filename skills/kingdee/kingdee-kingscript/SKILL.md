@@ -1,6 +1,6 @@
 ---
 name: kingdee-kingscript
-description: KingScript plugin: SDK declarations, runtime errors, risk review.
+description: "KingScript plugin: SDK declarations, runtime errors, risk review."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Kingdee KingScript
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户明确涉及 KingScript、Kingscript、脚本插件、苍穹脚本开发、脚本 SDK、脚本运行错误时使用。
 - 普通苍穹 Java 插件开发不使用；改用 `kingdee-cosmic`。

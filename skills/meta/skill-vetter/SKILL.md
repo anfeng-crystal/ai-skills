@@ -1,6 +1,6 @@
 ---
 name: skill-vetter
-description: Third-party skill security: source verification, script behavior, write risk, secret exposure. For optimizing your own skills, use darwin-skill.
+description: "Third-party skill security: source verification, script behavior, write risk, secret exposure. For optimizing your own skills, use darwin-skill."
 metadata:
   author: anfeng
   version: "0.2.0"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Skill Vetter
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户要安装、评估、引入、分发、复用或审查第三方 skill 时使用。
 - 重点处理本地路径、解包目录、market skill、临时下载目录或别人给的 skill 目录。

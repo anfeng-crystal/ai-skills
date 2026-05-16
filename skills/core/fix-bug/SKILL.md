@@ -1,6 +1,6 @@
 ---
 name: fix-bug
-description: Diagnose and fix bugs: errors, exceptions, failing tests, regressions, unexpected behavior. Minimal fix. Use review-code for review-only, explain-code for understanding.
+description: "Diagnose and fix bugs: errors, exceptions, failing tests, regressions, unexpected behavior. Minimal fix. Use review-code for review-only, explain-code for understanding."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -10,8 +10,6 @@ metadata:
 
 # Fix Bug
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 ## 触发边界
 - 用户提供报错、日志、异常现象、失败测试、回归、线上行为不符合预期，且目标是定位根因并修复时使用。

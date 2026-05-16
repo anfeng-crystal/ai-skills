@@ -1,6 +1,6 @@
 ---
 name: review-code
-description: Code review read-only: bugs, perf, compatibility, maintainability, test gaps. No code changes. Use fix-bug to fix, explain-code to explain.
+description: "Code review read-only: bugs, perf, compatibility, maintainability, test gaps. No code changes. Use fix-bug to fix, explain-code to explain."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -10,8 +10,6 @@ metadata:
 
 # Review Code
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 ## 触发边界
 - 用户要求 review、审查、质量检查、风险分析、找问题、看 PR 或给修改建议时使用。
