@@ -1,0 +1,86 @@
+[
+  {
+    "id": "host_neutral_codex_claude",
+    "prompt": "这个复杂改造我希望在 Codex 和 Claude Code 都能用同一个 multi-agent skill，帮我安排分工。",
+    "expected": "先做 Host Capability Check，不写死 Codex-only 工具名；用 host-neutral Coordination Plan 和 model_profile 表达角色能力需求。",
+    "eval_focus": "是否避免具体宿主 API、模型名和推理参数；是否说明不支持真实子代理时的降级方式",
+    "baseline_risk": "旧规则可能假设当前宿主可 spawn agent，或只按 Codex 行为描述"
+  },
+  {
+    "id": "no_split_small_change",
+    "prompt": "帮我修一个单文件的小 typo，也可以开几个 agent 一起做。",
+    "expected": "应该给出 No split，因为单文件小改动拆分成本高于收益；主 agent 本地处理或给出最小计划。",
+    "eval_focus": "是否敢于不拆分；是否说明不拆原因",
+    "baseline_risk": "为了满足多代理偏好而过度拆分"
+  },
+  {
+    "id": "explorer_only_unknown_root_cause",
+    "prompt": "登录接口偶发 401，根因不清楚，先不要改代码，但可以多个 agent 帮我查。",
+    "expected": "应该选择 Explorer-only，并行只读调查鉴权链路、配置/日志和并发时序；禁止 Worker 写代码。",
+    "eval_focus": "是否先查证而非直接修；Explorer 是否只读且有验证证据",
+    "baseline_risk": "旧规则可能直接拆 Worker 或让主 agent 开始修"
+  },
+  {
+    "id": "single_owner_shared_schema",
+    "prompt": "前端表单和后端校验都要改同一个共享 schema，让两个 worker 分别改两边可以吗？",
+    "expected": "应该选择 Single Worker 或 staged pipeline；共享 schema 只能有一个 owner，另一个 agent 做 consumer 适配或 review。",
+    "eval_focus": "是否建立 Ownership Lock；是否阻止两个 Worker 同时修改共享 contract",
+    "baseline_risk": "两个 Worker 各改各的导致 schema 冲突"
+  },
+  {
+    "id": "staged_worker_then_tester",
+    "prompt": "让开发子代理实现导出功能，再让测试子代理验证；测试子代理不知道开发细节怎么办？",
+    "expected": "应该选择 Staged pipeline；Worker 先交付 handoff、diff 摘要、Behavior Changed、How To Test，再 relay 给 Tester。",
+    "eval_focus": "是否明确 Context Relay Contract；Tester 是否基于具体 handoff 和验收标准",
+    "baseline_risk": "测试代理凭空测试，无法理解实现细节"
+  },
+  {
+    "id": "parallel_workers_independent_scopes",
+    "prompt": "请并行实现后端价格计算和前端价格展示，两边文件不重叠，接口已经稳定。",
+    "expected": "可以选择 Parallel Workers；分别锁定后端和前端写入范围，并要求各自验证，接口契约不再由两边修改。",
+    "eval_focus": "是否识别可并行条件；是否保护稳定接口契约",
+    "baseline_risk": "没有 ownership lock，或让两个 Worker 都改接口"
+  },
+  {
+    "id": "model_profile_routing",
+    "prompt": "这个任务里有快查文件、复杂根因分析、实现修复、代码审查和最终合并判断，不要都用同一个模型档位。",
+    "expected": "应该使用 fast_probe、deep_research、code_worker、reviewer、integrator 五类 model_profile，而不是写死具体模型名。",
+    "eval_focus": "是否按任务类型路由 profile；宿主不支持模型选择时是否降级为默认模型但保留意图",
+    "baseline_risk": "所有子任务使用同一模型或写死某个宿主模型"
+  },
+  {
+    "id": "universal_cli_no_real_subagents",
+    "prompt": "我在一个通用 Agents CLI 里使用这个 skill，但它不一定支持真实子代理，你怎么安排？",
+    "expected": "应该把 host capability 标为 unknown 或 limited，使用 plan-only 或 serial handoff simulation，不声称已真实委派。",
+    "eval_focus": "是否区分计划、串行模拟和真实委派",
+    "baseline_risk": "把计划说成已执行，或假设所有 CLI 都支持并行 agent"
+  },
+  {
+    "id": "worker_out_of_scope_reassign",
+    "prompt": "Worker 越界改了共享配置，Reviewer 也说有风险，主 agent 应该怎么处理？",
+    "expected": "应该暂停该区域新委派，检查 ownership lock，将非 owner 结果降级为 advisory/discard，必要时 reassign 共享配置 owner。",
+    "eval_focus": "是否处理越界、reassign 和 advisory/discard；是否重新验证",
+    "baseline_risk": "直接合并越界改动或让主 agent 静默接手"
+  },
+  {
+    "id": "integrator_conflicting_handoffs",
+    "prompt": "两个 Explorer 对根因判断相互矛盾，一个说是缓存，一个说是鉴权配置，该让谁决定？",
+    "expected": "应该启用 Integrator 或主 agent 仲裁，按证据、ownership、验证强度排序，必要时缩小成更小事实问题。",
+    "eval_focus": "是否按证据仲裁而非按置信语气；是否使用 integrator profile",
+    "baseline_risk": "选择更自信的答案或拼接矛盾结论"
+  },
+  {
+    "id": "existing_assets_before_new_helpers",
+    "prompt": "多个 worker 一起给导出链路加新能力，仓库已有 ExportHelper、WorkbookBuilder、共享 auth fixture 和 download wrapper。",
+    "expected": "Coordination Plan 和 Worker handoff 必须要求先盘点并复用现有 helper/wrapper/fixture/SDK；重复造轮子视为验收失败。",
+    "eval_focus": "是否把现成能力盘点写入 Shared constraints 和 Worker 输出",
+    "baseline_risk": "Worker 各自新增一套重复方法"
+  },
+  {
+    "id": "comment_policy_for_workers",
+    "prompt": "让两个 worker 分别实现 Python 价格计算和 JavaScript 异步重试逻辑，要求以后别人一看就懂。",
+    "expected": "应该在 Shared constraints 和 Worker handoff 中继承目标仓库/skill 注释策略；Reviewer 检查缺少注释和机械复述注释。",
+    "eval_focus": "是否 relay 注释策略；是否避免过程性注释",
+    "baseline_risk": "代码可运行但缺少稳定维护注释"
+  }
+]

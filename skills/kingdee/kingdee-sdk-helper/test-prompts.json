@@ -1,0 +1,23 @@
+[
+  {
+    "id": "sdk-helper-p1",
+    "prompt": "我需要在插件里保存单据，应该用哪个类？有哪些方法？",
+    "expected": "with_skill: 调用 sdk_search.py 查询 SaveServiceHelper，展示方法签名和 Javadoc，给出代码示例；no_skill: 可能凭记忆给出类名但无法提供准确签名和完整 Javadoc",
+    "eval_focus": "SDK 查询准确性、方法签名完整性、Javadoc 展示、代码示例质量",
+    "baseline_risk": "medium"
+  },
+  {
+    "id": "sdk-helper-p2",
+    "prompt": "QueryServiceHelper 有哪些查询方法？我想根据过滤条件查单据",
+    "expected": "with_skill: 精确查询 QueryServiceHelper，列出所有查询方法（query/queryOne/queryDynamicObject 等）及参数说明；no_skill: 可能给出部分方法但签名不全或参数类型错误",
+    "eval_focus": "类查询准确性、方法列表完整性、参数类型准确性",
+    "baseline_risk": "high"
+  },
+  {
+    "id": "sdk-helper-p3",
+    "prompt": "如何获取当前用户信息？有没有相关的 API？",
+    "expected": "with_skill: 通过功能关键词搜索，找到 ContextService 或 UserServiceHelper，展示相关方法；no_skill: 可能给出通用答案但无法提供准确的金蝶 SDK API",
+    "eval_focus": "功能检索能力、模糊查询准确性、API 推荐合理性",
+    "baseline_risk": "high"
+  }
+]

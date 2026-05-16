@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review"
+  short_description: "审查代码问题并给出分级建议"
+  default_prompt: "使用 $review-code 只读审查代码正确性、性能、兼容性、可维护性、注释质量、工具复用和测试缺口，输出分级 findings，不直接改代码。缺少稳定注释、重复造轮子、忽略仓库现成 helper/wrapper/SDK/标准能力或存在 AI 署名时，作为可维护性问题指出。需要解释用 $explain-code，需要修复用 $fix-bug，需要实现用 $implement-feature。"

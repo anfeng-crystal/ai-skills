@@ -1,0 +1,14 @@
+[
+  {"query": "解释一下这个函数的逻辑和数据流", "should_trigger": true},
+  {"query": "帮我梳理一下这个模块的调用链", "should_trigger": true},
+  {"query": "这个类的职责是什么，设计意图是什么", "should_trigger": true},
+  {"query": "帮我理解一下这段代码的关键边界条件", "should_trigger": true},
+  {"query": "这个 wrapper 是怎么参与整体设计的", "should_trigger": true},
+  {"query": "这个接口的入口和出口分别是什么", "should_trigger": true},
+  {"query": "这个函数有 bug，帮我修复一下", "should_trigger": false},
+  {"query": "review 一下这段代码的质量", "should_trigger": false},
+  {"query": "帮我实现一个类似功能的新模块", "should_trigger": false},
+  {"query": "这个代码性能不好，帮我优化", "should_trigger": false},
+  {"query": "帮我写单元测试覆盖这段代码", "should_trigger": false},
+  {"query": "这个 SDK 的方法签名是什么", "should_trigger": false}
+]

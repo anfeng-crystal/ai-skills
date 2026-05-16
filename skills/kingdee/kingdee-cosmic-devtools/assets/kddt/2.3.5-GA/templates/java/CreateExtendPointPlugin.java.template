@@ -1,0 +1,10 @@
+package ${PACKAGE_NAME};
+
+import kd.sdk.plugin.Plugin;
+
+/**
+ * 请implements插件扩展点接口
+ */
+public class ${CLASS_NAME} implements Plugin {
+
+}

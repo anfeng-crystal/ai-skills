@@ -1,0 +1,14 @@
+[
+  {"query": "帮我实现一个用户登录功能", "should_trigger": true},
+  {"query": "给这个模块加一个导出 Excel 的接口", "should_trigger": true},
+  {"query": "扩展一下这个配置，支持多环境", "should_trigger": true},
+  {"query": "补充一下这个业务逻辑的边界处理", "should_trigger": true},
+  {"query": "改造一下现有的审批流程", "should_trigger": true},
+  {"query": "帮我新增一个权限校验功能", "should_trigger": true},
+  {"query": "帮我解释一下这个功能的实现逻辑", "should_trigger": false},
+  {"query": "review 一下这个新功能的代码", "should_trigger": false},
+  {"query": "这个功能有 bug，帮我修复", "should_trigger": false},
+  {"query": "帮我分析一下这个功能的性能", "should_trigger": false},
+  {"query": "帮我写这个功能的测试用例", "should_trigger": false},
+  {"query": "帮我查一下这个 API 的方法签名", "should_trigger": false}
+]

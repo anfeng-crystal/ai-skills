@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kingdee ISCB Script"
+  short_description: "生成、解释、修改和按需校验金蝶集成云 ISCB DSL 脚本"
+  default_prompt: "Use $kingdee-iscb-script when working on 金蝶集成云 ISCB DSL scripts. Confirm the script context, check the current workspace for existing .iscb files, shared script segments, resource alias conventions, and node patterns before writing new logic, then read only the needed references. Generated or modified complex script blocks must use stable // comments for context variables, resources, side effects, and failure boundaries. Attribution must not use AI; use anfeng when attribution is required."

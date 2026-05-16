@@ -1,0 +1,32 @@
+[
+  {
+    "id": "explain-code-1",
+    "category": "happy_path",
+    "prompt": "帮我解释 OrderService#submit 的执行流程，重点说明它怎么决定走成功、失败和补偿分支。",
+    "expected": "先说职责，再讲入口、主流程、关键分支和状态变化，按整体到局部解释。"
+  },
+  {
+    "id": "explain-code-2",
+    "category": "complex_ambiguous",
+    "prompt": "这个缓存加异步刷新的模块为什么有两个定时任务？结合调用链说下潜在竞态和过期边界。",
+    "expected": "说明设计原因、调用链、并发/过期边界和易错点，必要时标注假设。"
+  },
+  {
+    "id": "explain-code-3",
+    "category": "routing_boundary",
+    "prompt": "这个方法偶尔写错数据了，帮我定位并修掉。",
+    "expected": "识别这是 fix-bug 请求，不停留在解释；说明应切换到根因定位和最小修复闭环。"
+  },
+  {
+    "id": "explain-code-4",
+    "category": "reuse_awareness",
+    "prompt": "为什么这个导出模块没有自己拼 CSV，而是绕到 CsvExportHelper 和共享下载 wrapper？请结合调用链解释这种设计。",
+    "expected": "说明模块职责、调用链和复用关系，点明 shared helper/wrapper 承担的能力，以及当前模块为什么不重复实现。"
+  },
+  {
+    "id": "explain-code-5",
+    "category": "blind_tool_reuse",
+    "prompt": "这个导出模块为什么要先走共享导出层再下载，而不是在模块里直接拼内容并下载？请先说该看哪些调用点和共享资产，再解释。",
+    "expected": "先定位模块入口、共享导出层和下载层的调用点，再解释共享层承担的职责、复用收益和为什么不在模块里重复实现。"
+  }
+]

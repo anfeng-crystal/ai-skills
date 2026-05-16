@@ -1,0 +1,7 @@
+interface:
+  display_name: "Kingdee KingScript"
+  short_description: "KingScript 脚本插件生成、SDK 查询、排障和风险审查。"
+  default_prompt: "使用 $kingdee-kingscript 处理 KingScript 脚本开发、SDK 查询和运行错误排查，先检查当前项目/工作区已有脚本模块、共享工具、SDK wrapper 和模板，再读取 references/index.md 选择资料。生成或修改脚本时，模块、类、工具函数、复杂函数和关键业务分支必须写功能性注释；署名不用 AI，需署名统一用 anfeng。"
+
+policy:
+  allow_implicit_invocation: true

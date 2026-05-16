@@ -1,0 +1,8 @@
+timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode	model_set	avg_skill_delta
+2026-04-30T01:42	baseline	skill-linker	-	93.7	baseline	-	初始评估	full_test	opus-4.6	1.8
+2026-04-30T01:45	bc454ec	skill-linker	93.7	94.5	keep	Frontmatter质量	增强核心定位	full_test	opus-4.6	1.8
+2026-04-30T01:47	ec84c99	skill-linker	94.5	99.0	keep	整体架构	消除冗余	full_test	opus-4.6	1.8
+2026-04-30T01:49	0cf8e8e	skill-linker	99.0	100.0	keep	输出规范	补充JSON示例	full_test	opus-4.6	1.8
+2026-04-30T01:27	baseline	e2e-test-loop	5.5	-	71.5	baseline	-	初始评估	dry_run	opus-4.6	0.5
+2026-04-30T09:39	a8977cd	e2e-test-loop	5.5	71.5	78.5	keep	检查点设计	增加用户确认检查点，防止自主失控	dry_run	opus-4.6	+2.35
+2026-04-30T09:46	dd50b42	e2e-test-loop	5.5	78.5	89.0	keep	指令具体性+资源整合度	重构为执行手册，精简51%	dry_run	opus-4.6	+3.35

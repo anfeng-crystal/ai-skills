@@ -1,0 +1,3 @@
+var sql = "SELECT fid FROM t_demo WHERE fnumber = ?";
+var row = query_row(cn, sql, ['A001'], [VARCHAR]);
+return row;

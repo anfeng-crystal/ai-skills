@@ -1,0 +1,29 @@
+# $skill_name 优化成果卡片
+
+## 📊 分数变化
+```
+Before: $score_before/100  →  After: $score_after/100  →  Δ +$score_delta
+```
+
+## 🎨 维度对比
+
+| 维度 | Before | After | Δ |
+|------|--------|-------|---|
+$dimensions_table
+
+## ✨ 关键改进
+
+$improvements_list
+
+## 📈 实测表现
+
+$test_results_list
+
+---
+
+**优化日期**: $date
+**评估模型**: Claude Opus 4.7
+**优化工具**: Darwin Skill v1.0
+
+> "Train your Skills like you train your models"
+> — github.com/alchaincyf/darwin-skill

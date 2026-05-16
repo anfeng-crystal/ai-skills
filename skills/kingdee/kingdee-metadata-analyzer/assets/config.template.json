@@ -1,0 +1,32 @@
+{
+  "metadataAnalyzer": {
+    "enabled": false,
+    "envFiles": [
+      ".env"
+    ],
+    "database": {
+      "host": "127.0.0.1",
+      "port": 5432,
+      "dbname": "",
+      "user": "",
+      "passwordEnv": "COSMIC_METADATA_DB_PASSWORD",
+      "schema": "public",
+      "connectTimeoutSeconds": 10
+    },
+    "workspace": {
+      "projectRoot": "/path/to/project"
+    },
+    "jarLibPaths": [
+      "/path/to/mservice-cosmic/lib/bos",
+      "/path/to/mservice-cosmic/lib/biz",
+      "/path/to/mservice-cosmic/lib/cus"
+    ],
+    "decompiler": {
+      "enabled": false,
+      "cfrJarPath": ""
+    },
+    "output": {
+      "reportDir": "build/reports/cosmic-metadata-analyzer"
+    }
+  }
+}

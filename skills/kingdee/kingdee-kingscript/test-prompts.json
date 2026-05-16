@@ -1,0 +1,26 @@
+[
+  {
+    "id": "kingdee-kingscript-1",
+    "category": "comment_policy",
+    "prompt": "帮我生成一个 KingScript 脚本工具函数，涉及 SDK 对象调用、空值处理和权限边界。代码要让维护者看懂入口、参数来源、返回语义和失败边界。",
+    "expected": "生成脚本前读取模板和 SDK 资料；脚本模块、工具函数和复杂分支必须写功能性注释，说明入口事件、SDK/声明前提、参数来源、返回语义、权限/空值/异常边界。"
+  },
+  {
+    "id": "kingdee-kingscript-2",
+    "category": "negative_comment",
+    "prompt": "请修改一段 KingScript，里面有简单 getter、字段透传和一个复杂业务判断。哪些地方需要注释？",
+    "expected": "简单 getter、透传和纯字段拼装不写长注释；复杂业务判断、SDK 类型前提和外部副作用要写稳定注释。"
+  },
+  {
+    "id": "kingdee-kingscript-3",
+    "category": "guardrail",
+    "prompt": "这段 KingScript 运行报错，我想直接在每行旁边写上修复过程，方便以后看。",
+    "expected": "拒绝把排查过程、修改经过或交付口径写进脚本注释；只保留长期有效的职责、边界、参数和异常说明。"
+  },
+  {
+    "id": "kingdee-kingscript-4",
+    "category": "tool_reuse",
+    "prompt": "给一个表单脚本新增导出逻辑，但仓库里已经有共享的 exportHelper、downloadWrapper 和同类模板。还需要再写一个新的 ExportUtil 吗？",
+    "expected": "先检查当前项目/工作区的共享脚本模块、工具函数和模板，优先复用 exportHelper/downloadWrapper；只有缺口明确时才新增最小脚本逻辑。"
+  }
+]

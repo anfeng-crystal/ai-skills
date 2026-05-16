@@ -1,0 +1,14 @@
+[
+  {"query": "会话结束前帮我检查一下文档和代码是否一致", "should_trigger": true},
+  {"query": "同步一下 CLAUDE.md 和实际代码", "should_trigger": true},
+  {"query": "检查一下 README 是不是过时了", "should_trigger": true},
+  {"query": "Agent 记忆和代码对不上了，帮我审查", "should_trigger": true},
+  {"query": "会话收尾，帮我做文档一致性审查", "should_trigger": true},
+  {"query": "docs 目录和代码不同步了", "should_trigger": true},
+  {"query": "帮我清理一下测试残留文件", "should_trigger": false},
+  {"query": "review 一下这段代码", "should_trigger": false},
+  {"query": "帮我实现一个新的文档生成功能", "should_trigger": false},
+  {"query": "帮我写一个文档同步的脚本", "should_trigger": false},
+  {"query": "帮我解释一下这个模块的逻辑", "should_trigger": false},
+  {"query": "帮我分析一下这个数据", "should_trigger": false}
+]

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Kingdee Cosmic DevTools"
+  short_description: "跨平台创建苍穹工程、模块、插件并更新 COSMIC_HOME"
+  default_prompt: "创建苍穹工程或模块、生成插件骨架，或以可恢复任务更新 COSMIC_HOME 资源环境。"
+
+policy:
+  allow_implicit_invocation: true

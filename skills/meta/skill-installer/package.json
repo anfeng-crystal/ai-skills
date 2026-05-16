@@ -1,0 +1,37 @@
+{
+  "name": "@anfeng1314/skill-installer",
+  "version": "1.1.4",
+  "description": "统一管理多 AI 工具的 skills 目录分发，支持删除管理",
+  "type": "module",
+  "bin": {
+    "skill-installer": "./bin/skill-installer.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anfeng-crystal/ai-workspace.git",
+    "directory": "skills/active/skills/meta/skill-installer"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "SKILL.md"
+  ],
+  "keywords": [
+    "skills",
+    "symlink",
+    "sync",
+    "claude",
+    "codex",
+    "agent",
+    "remove"
+  ],
+  "license": "MIT",
+  "author": "anfeng"
+}

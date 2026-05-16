@@ -1,0 +1,2 @@
+var content = Ftp.getString(ftpCn, "/data", "input.txt", "UTF-8");
+return content;

@@ -1,0 +1,2 @@
+var hash = Hash.SHA256('hello world');
+return hash;

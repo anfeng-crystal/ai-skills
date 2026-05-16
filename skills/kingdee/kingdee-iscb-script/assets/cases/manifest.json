@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "engine-list-transform",
+      "intent": "生成普通引擎层列表转换脚本，并沿用用户给出的变量名 inputList。",
+      "context": "engine",
+      "script_path": "cases/engine/list-transform.iscb",
+      "validation_mode": "engine_compile",
+      "notes": "覆盖普通引擎层列表转换；交互层面代表只生成脚本，不自动运行或保存。"
+    },
+    {
+      "id": "engine-hash-doc-usage",
+      "intent": "查询 Hash.SHA256 的最小用法，返回干净的函数示例。",
+      "context": "engine",
+      "script_path": "cases/engine/hash-doc-usage.iscb",
+      "validation_mode": "engine_compile",
+      "notes": "覆盖 DOC 模式常见函数查询场景。"
+    },
+    {
+      "id": "engine-generate-only-minimal",
+      "intent": "用户只要求生成脚本，要求沿用已有对象结构并保持最小必要写法。",
+      "context": "engine",
+      "script_path": "cases/engine/generate-only-minimal.iscb",
+      "validation_mode": "engine_compile",
+      "notes": "覆盖 generate-only 场景；validator 仍做编译回归，但交互契约保持默认不执行。"
+    },
+    {
+      "id": "engine-static-check-request",
+      "intent": "用户明确要求静态校验脚本。",
+      "context": "engine",
+      "script_path": "cases/engine/static-check-request.iscb",
+      "validation_mode": "engine_compile",
+      "notes": "覆盖静态校验请求；curated regression 额外用真实编译兜底 bundle 可信度。"
+    },
+    {
+      "id": "engine-compile-check-request",
+      "intent": "用户明确要求编译校验脚本。",
+      "context": "engine",
+      "script_path": "cases/engine/compile-check-request.iscb",
+      "validation_mode": "engine_compile",
+      "notes": "覆盖 compile-check 场景。"
+    },
+    {
+      "id": "engine-run-return-value",
+      "intent": "用户明确要求运行验证，并且必须回传真实 return_value。",
+      "context": "engine",
+      "script_path": "cases/engine/run-return-value.iscb",
+      "validation_mode": "engine_run",
+      "expected_output": "4",
+      "notes": "覆盖运行验证状态契约。"
+    },
+    {
+      "id": "engine-base64-run",
+      "intent": "生成并运行编码类脚本，确保 Base64Encode 使用 byte[] 而不是直接传 String。",
+      "context": "engine",
+      "script_path": "cases/engine/base64-run.iscb",
+      "validation_mode": "engine_run",
+      "expected_output": "\"YWJj\"",
+      "notes": "覆盖哈希/编码类请求和真实运行输出。"
+    },
+    {
+      "id": "engine-save-default-name",
+      "intent": "用户只给目录要求保存，默认文件名应为 generated-script.iscb。",
+      "context": "engine",
+      "script_path": "cases/engine/save-default-name.iscb",
+      "validation_mode": "engine_compile",
+      "notes": "覆盖默认保存名约定；validator 只回归脚本有效性。"
+    },
+    {
+      "id": "platform-data-integration-transform",
+      "intent": "用户明确说是数据集成方案转换脚本，可以使用 src / tar。",
+      "context": "data_integration",
+      "script_path": "cases/platform/data-integration-transform.iscb",
+      "validation_mode": "reference_only",
+      "notes": "reference-only case；允许 src / tar，但仍需要真实平台上下文。"
+    },
+    {
+      "id": "platform-missing-resource-reference",
+      "intent": "用户要求平台资源查询脚本，但没有给出实际连接别名或资源上下文。",
+      "context": "platform_reference",
+      "script_path": "cases/platform/missing-resource-reference.iscb",
+      "validation_mode": "reference_only",
+      "notes": "reference-only case；必须提醒需要在苍穹集成平台补齐资源并验证。"
+    },
+    {
+      "id": "platform-ftp-reference",
+      "intent": "用户要求 FTP 获取文件内容脚本，但没有给出真实 FTP/SFTP 连接资源或平台上下文。",
+      "context": "platform_reference",
+      "script_path": "cases/platform/ftp-reference.iscb",
+      "validation_mode": "reference_only",
+      "notes": "reference-only case；锁定 Ftp.* 在弱预检场景下不再被误报成 unknown-namespace。"
+    },
+    {
+      "id": "platform-webapi-reference",
+      "intent": "用户要求 WebAPI / 开放平台脚本，但没有给出完整请求对象结构。",
+      "context": "webapi_reference",
+      "script_path": "cases/platform/webapi-reference.iscb",
+      "validation_mode": "reference_only",
+      "notes": "reference-only case；必须提醒 #request 相关结构待用户补齐。"
+    }
+  ]
+}

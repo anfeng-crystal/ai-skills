@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML Output Quality"
+  short_description: "Gate local HTML reports, dashboards, and result cards before handoff."
+  default_prompt: "Use this skill when a task creates or reviews a local HTML artifact. Keep SKILL.md instructions in Markdown, render HTML from fixed templates and source data, run the shared check-html.mjs gate, then hand off only the path, quality status, High/Medium findings, screenshots, and limitations."

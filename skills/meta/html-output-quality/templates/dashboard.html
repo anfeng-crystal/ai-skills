@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #161d27;
+      --muted: #657085;
+      --line: #d8dee9;
+      --accent: #14532d;
+      --critical: #991b1b;
+      --high: #b45309;
+      --medium: #1d4ed8;
+      --low: #475569;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    header, main { max-width: 1280px; margin: 0 auto; padding: 28px; }
+    h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.15; letter-spacing: 0; }
+    .meta, .filters { display: flex; flex-wrap: wrap; gap: 10px; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .pill, button, input, select { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+    .pill { padding: 4px 10px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 20px 0; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; transition: border-color 150ms ease, transform 150ms ease; }
+    button.card { cursor: pointer; text-align: left; font: inherit; color: inherit; }
+    .card:hover, .card.active { border-color: var(--accent); }
+    .card:active { transform: translateY(1px); }
+    .card strong { display: block; font-size: 28px; line-height: 1.1; }
+    .card span { color: var(--muted); font-size: 13px; }
+    .filters { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+    input, select, button { min-height: 36px; padding: 0 10px; font: inherit; }
+    input { flex: 1 1 260px; min-width: 0; }
+    button { cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease; }
+    button:hover { border-color: var(--accent); }
+    button:active { transform: translateY(1px); }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 42%, transparent); outline-offset: 2px; }
+    .count { align-self: center; color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; background: #fafbfc; position: sticky; top: 0; }
+    th[data-sort] { cursor: pointer; user-select: none; }
+    th[data-sort]::after { content: "  ↕"; color: var(--muted); font-weight: 400; }
+    th[data-sort][aria-sort="ascending"]::after { content: "  ↑"; }
+    th[data-sort][aria-sort="descending"]::after { content: "  ↓"; }
+    tr[hidden] { display: none; }
+    code { overflow-wrap: anywhere; }
+    .level-critical { color: var(--critical); font-weight: 700; }
+    .level-high { color: var(--high); font-weight: 700; }
+    .level-medium { color: var(--medium); font-weight: 700; }
+    .level-low { color: var(--low); font-weight: 700; }
+    @media (max-width: 720px) {
+      header, main { padding: 20px 12px; }
+      h1 { font-size: 24px; }
+      .table-wrap { overflow-x: auto; }
+      table { min-width: 920px; }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{title}}</h1>
+    <div class="meta">
+      <span class="pill">生成时间：{{generatedAt}}</span>
+      <span class="pill">来源：{{sourceLabel}}</span>
+      <span class="pill">记录数：{{recordCount}}</span>
+    </div>
+  </header>
+  <main data-generated-at="{{generatedAt}}" data-source="{{sourceLabel}}" data-source-count="{{recordCount}}">
+    <section class="cards">{{cardsHtml}}</section>
+    <section class="filters" aria-label="筛选">
+      <input id="q" type="search" placeholder="按规则、文件、描述搜索">
+      <select id="level">
+        <option value="">全部等级</option>
+        {{levelOptionsHtml}}
+      </select>
+      <button type="button" id="reset">重置</button>
+      <button type="button" id="copyVisible">复制当前视图</button>
+      <span class="count" id="visibleCount" aria-live="polite"></span>
+    </section>
+    <section class="table-wrap">{{tableHtml}}</section>
+  </main>
+  <script>
+    const q = document.getElementById('q');
+    const level = document.getElementById('level');
+    const reset = document.getElementById('reset');
+    const copyVisible = document.getElementById('copyVisible');
+    const visibleCount = document.getElementById('visibleCount');
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+    function applyFilters() {
+      const needle = q.value.trim().toLowerCase();
+      const selected = level.value;
+      let visible = 0;
+      for (const row of rows) {
+        const text = row.textContent.toLowerCase();
+        const rowLevel = row.dataset.level || '';
+        row.hidden = Boolean((selected && rowLevel !== selected) || (needle && !text.includes(needle)));
+        if (!row.hidden) visible += 1;
+      }
+      visibleCount.textContent = `显示 ${visible} / ${rows.length}`;
+      document.querySelectorAll('[data-filter-level]').forEach((button) => {
+        button.classList.toggle('active', Boolean(selected && button.dataset.filterLevel === selected));
+      });
+    }
+    q.addEventListener('input', applyFilters);
+    level.addEventListener('change', applyFilters);
+    reset.addEventListener('click', () => { q.value = ''; level.value = ''; applyFilters(); });
+    copyVisible.addEventListener('click', async () => {
+      const text = rows.filter((row) => !row.hidden).map((row) => row.innerText.trim().replace(/\s+/g, '\t')).join('\n');
+      try {
+        await navigator.clipboard.writeText(text);
+        visibleCount.textContent = `已复制 ${rows.filter((row) => !row.hidden).length} 行`;
+      } catch {
+        visibleCount.textContent = '当前环境不允许复制';
+      }
+    });
+    document.querySelectorAll('[data-filter-level]').forEach((button) => {
+      button.addEventListener('click', () => {
+        level.value = level.value === button.dataset.filterLevel ? '' : button.dataset.filterLevel;
+        applyFilters();
+      });
+    });
+    document.querySelectorAll('th[data-sort]').forEach((th) => {
+      th.addEventListener('click', () => {
+        const index = Array.from(th.parentElement.children).indexOf(th);
+        const direction = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
+        document.querySelectorAll('th[data-sort]').forEach((item) => item.removeAttribute('aria-sort'));
+        th.setAttribute('aria-sort', direction);
+        const tbody = th.closest('table').querySelector('tbody');
+        rows.sort((a, b) => {
+          const av = a.children[index]?.innerText.trim() || '';
+          const bv = b.children[index]?.innerText.trim() || '';
+          const cmp = av.localeCompare(bv, 'zh-CN', { numeric: true });
+          return direction === 'ascending' ? cmp : -cmp;
+        }).forEach((row) => tbody.appendChild(row));
+      });
+    });
+    applyFilters();
+  </script>
+</body>
+</html>

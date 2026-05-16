@@ -1,0 +1,11 @@
+requests
+python-dotenv
+lxml
+pyimagedl
+yt-dlp
+tavily-python
+loguru
+pydantic>=2.0.0
+firecrawl-py
+pygments
+feedparser

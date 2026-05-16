@@ -1,0 +1,14 @@
+[
+  {"query": "帮我查一下这个库的最新版本号", "should_trigger": true},
+  {"query": "帮我搜索一下最新的技术文档", "should_trigger": true},
+  {"query": "打开这个网页帮我看看内容", "should_trigger": true},
+  {"query": "帮我查一下这个官网的发布说明", "should_trigger": true},
+  {"query": "帮我抓取这个页面的数据", "should_trigger": true},
+  {"query": "帮我交叉验证几个来源的信息", "should_trigger": true},
+  {"query": "帮我登录后访问这个页面", "should_trigger": true},
+  {"query": "用 Playwright 截一个网页的截图", "should_trigger": false},
+  {"query": "帮我搜索多个平台的讨论内容", "should_trigger": false},
+  {"query": "帮我分析一下这个 CSV 数据", "should_trigger": false},
+  {"query": "帮我写一个爬虫脚本", "should_trigger": false},
+  {"query": "帮我实现一个网页功能", "should_trigger": false}
+]

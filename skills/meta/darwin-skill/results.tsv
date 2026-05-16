@@ -1,0 +1,23 @@
+timestamp	commit	skill	baseline_score	old_score	new_score	status	dimension	note	eval_mode	model_set	avg_skill_delta
+2026-04-30T01:42	baseline	skill-linker	-	-	93.7	baseline	-	初始评估	full_test	opus-4.6	1.8
+2026-04-30T01:45	bc454ec	skill-linker	-	93.7	94.5	keep	Frontmatter质量	增强核心定位	full_test	opus-4.6	1.8
+2026-04-30T01:47	ec84c99	skill-linker	-	94.5	99.0	keep	整体架构	消除冗余	full_test	opus-4.6	1.8
+2026-04-30T01:49	0cf8e8e	skill-linker	-	99.0	100.0	keep	输出规范	补充JSON示例	full_test	opus-4.6	1.8
+2026-04-30T01:27	baseline	e2e-test-loop	5.5	-	71.5	baseline	-	初始评估	dry_run	opus-4.6	0.5
+2026-04-30T09:39	a8977cd	e2e-test-loop	5.5	71.5	78.5	keep	检查点设计	增加用户确认检查点，防止自主失控	dry_run	opus-4.6	+2.35
+2026-04-30T09:46	dd50b42	e2e-test-loop	5.5	78.5	89.0	keep	指令具体性+资源整合度	重构为执行手册，精简51%	dry_run	opus-4.6	+3.35
+2026-04-30T04:18	baseline	kingdee-sdk-helper	5.0	-	77.3	baseline	-	初始评估（说明手册式）	dry_run	default	+2.0
+2026-04-30T04:23	391ac59	kingdee-sdk-helper	5.0	77.3	88.0	keep	工作流清晰度+整体架构	从说明手册式改为执行指令式	dry_run	default	+3.0
+2026-04-30T04:27	5df3051	kingdee-sdk-helper	5.0	87.3	89.2	keep	检查点设计	无结果分支增加检查点，防止自动重试	dry_run	default	+3.9
+2026-04-30T04:29	4fae6ac	kingdee-sdk-helper	5.0	89.2	89.7	keep	指令具体性	细化输出格式说明，达到满分	dry_run	default	+4.0
+2026-04-30T12:37:15	2d17ad4	union-search-skill	65.0	56.5	88.5	keep	工作流清晰度+检查点设计	从说明手册式改为执行指令式	dry_run	opus-4.6	+23.5
+2026-04-30T12:38:01	fa4a64e	union-search-skill	65.0	88.5	89.3	keep	Frontmatter质量	精简 description	dry_run	opus-4.6	+24.3
+2026-04-30T12:38:57	3202621	union-search-skill	65.0	89.3	90.0	keep	检查点设计	增强步骤3检查点	dry_run	opus-4.6	+25.0
+2026-04-30T12:51	baseline	kingdee-metadata-analyzer	-	-	92.45	baseline	-	初始评估（执行错位问题）	dry_run	opus-4.6	+3.7
+2026-04-30T12:51	baseline	kingdee-cosmic	-	-	88.55	baseline	-	初始评估（执行错位问题）	dry_run	opus-4.6	+2.33
+2026-04-30T13:05	6963676	kingdee-cosmic	88.55	88.55	91.7	keep	检查点设计+工作流清晰度	增加元数据优先判断门禁检查点	dry_run	opus-4.6	+3.13
+2026-04-30T13:10	b6190b8	kingdee-cosmic	88.55	91.7	93.0	keep	检查点设计+实测表现	增加需求澄清检查点	dry_run	opus-4.6	+4.45
+2026-04-30T13:20	8e1eb8e	kingdee-metadata-analyzer	92.45	92.45	99.5	keep	工作流清晰度+实测表现	增加触发判断检查点和排除清单	dry_run	opus-4.6	+5.0
+2026-05-02T18:09	baseline	web-access	-	80.2	85.7	baseline	-	优化后重评估：Tavily+preset+三级降级+站点经验	full_test	sonnet-4.6	+5.5
+2026-05-02T18:09	baseline	union-search-skill	-	63.9	76.0	baseline	-	优化后重评估：CDP集成+依赖修复+平台分层+metadata	full_test	sonnet-4.6	+12.1
+2026-05-13T10:45:00+0800	working-tree	darwin-skill	79	84	88	keep	边界条件+工作流清晰度	补充复盘型请求只优化本轮实际用到且可编辑的skill，bundled/cache默认只评分	dry_run	default	+9

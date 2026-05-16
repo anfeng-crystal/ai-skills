@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fix Bug"
+  short_description: "定位根因并做最小修复"
+  default_prompt: "使用 $fix-bug 排查报错、异常、回归或失败测试；先确认根因，再做最小修复并报告原因、修改、验证和风险。修复前先查仓库已有 helper、wrapper、SDK 封装和标准服务，优先回到共享能力的正确用法，不顺手再写第二套 util。修改任何语言代码时必须补稳定注释或 docstring，说明职责、边界、副作用和不直观原因；禁止过程性和机械复述注释；署名不用 AI，需署名统一用 anfeng。只解释用 $explain-code，只审查不改用 $review-code，新增能力用 $implement-feature。"

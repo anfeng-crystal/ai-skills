@@ -1,0 +1,95 @@
+{
+  "source": {
+    "plugin": "kingdee-developer-tools-for-idea",
+    "version": "2.3.5-GA",
+    "updateXml": "https://tool.kingdee.com/kddt/idea-updatePlugins.xml",
+    "archive": "kingdee-developer-tools-for-idea-2.3.5-GA.zip"
+  },
+  "files": [
+    {
+      "path": "templates/java/CreateExtendPointPlugin.java.template",
+      "size": 162,
+      "sha256": "42b08ab4fd1352ac1d5955ea2820247a5647c66ae4513226e99a80faa5af5e16"
+    },
+    {
+      "path": "templates/java/CreateInheritPlugin.java.template",
+      "size": 194,
+      "sha256": "a993c4c002d06475d832c35b81ec72e33f52a8fc2ecfbc735a67d0e9871876cd"
+    },
+    {
+      "path": "templates/java/CreateService.java.template",
+      "size": 116,
+      "sha256": "f56522ee56ad0afa205a28c1020496c03910b3a7c8d295bf9a6168fd54c23655"
+    },
+    {
+      "path": "templates/java/Launcher.java.template",
+      "size": 5042,
+      "sha256": "08c055ec426ca4eb00f08334ef6d8d7675828c937c85df0eed83218f7af93f81"
+    },
+    {
+      "path": "templates/projects/code-2-sub.zip",
+      "size": 50648,
+      "sha256": "691f3f642757a36d065120c5c5664af667131896311726655639071f7e1db596"
+    },
+    {
+      "path": "templates/projects/code-2.zip",
+      "size": 339667,
+      "sha256": "21f222f2707a83579bb4d955f454dd01d9558970e678835b808d48accd28d7f9"
+    },
+    {
+      "path": "templates/projects/code-app-2-sub.zip",
+      "size": 18134,
+      "sha256": "bfda6565f46f1447f290b81263bd92ce53e3c69509463faedba080a270ee915b"
+    },
+    {
+      "path": "templates/projects/code-app-2.zip",
+      "size": 304023,
+      "sha256": "e5d3fcccea2853650e6d96613c21309d7fd2096e34d2bfb6a1b6305fe4e4afb0"
+    },
+    {
+      "path": "templates/projects/code-app-sub.zip",
+      "size": 3690,
+      "sha256": "f820e24787f68761780c60ac36f78db68107a5140a6a952f6aae9af637d395b1"
+    },
+    {
+      "path": "templates/projects/code-app.zip",
+      "size": 274142,
+      "sha256": "ecc750bdcf9ec7dcd1a57e9e8a323ebf83a0887d2746aaf35db4d3dcd0f11d71"
+    },
+    {
+      "path": "templates/projects/code-cloud-2-sub.zip",
+      "size": 17336,
+      "sha256": "0b76190591525fdc8080eaf88661f3cdfdcac636bd853e3040f55e65c1991373"
+    },
+    {
+      "path": "templates/projects/code-cloud-2.zip",
+      "size": 304116,
+      "sha256": "21b99c8e66e387872b6ef265bfc23f73ce528c6136e23908e2f6147e31a89068"
+    },
+    {
+      "path": "templates/projects/code-cloud-sub.zip",
+      "size": 3176,
+      "sha256": "90e0d84773d19cf001a67b666dffcef7abb29163b253001f38e07d52b817dcb9"
+    },
+    {
+      "path": "templates/projects/code-cloud.zip",
+      "size": 273664,
+      "sha256": "447740882c3bff4081a756b5f4aefa1aef0126523276e1f5ac190053d894b6ef"
+    },
+    {
+      "path": "templates/projects/code-config.zip",
+      "size": 15614,
+      "sha256": "c37a035a366c93d596f81ad4168b86ca96e02ad20755ca6856693363b3b84ce5"
+    },
+    {
+      "path": "templates/projects/code-sub.zip",
+      "size": 10434,
+      "sha256": "ce17eb6a320025094bef60c9dd6ae29fe68bad4b7bf5dcabc3f843249d1d5ed0"
+    },
+    {
+      "path": "templates/projects/code.zip",
+      "size": 284069,
+      "sha256": "8dac0a4803ce11c249dc5f70e857e0f0c6345a6fca23ffa9a78a1d7140bfa362"
+    }
+  ]
+}

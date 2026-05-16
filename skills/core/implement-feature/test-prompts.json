@@ -1,0 +1,38 @@
+[
+  {
+    "id": "implement-feature-1",
+    "category": "happy_path",
+    "prompt": "给现有订单接口加一个按客户维度导出的 CSV 功能，尽量复用现有权限和分页能力，先给方案。",
+    "expected": "先确认目标、输入输出、影响范围、验收方式，再给 3-5 点方案，最后才进入实现。"
+  },
+  {
+    "id": "implement-feature-2",
+    "category": "complex_ambiguous",
+    "prompt": "我要在列表页增加批量审批，但审批规则依赖角色、组织和单据状态；请先评估改动面和兼容风险。",
+    "expected": "先读近似实现，明确落点、状态变化、权限和验证，不直接开写代码。"
+  },
+  {
+    "id": "implement-feature-3",
+    "category": "routing_boundary",
+    "prompt": "帮我解释下这个接口为什么返回空数组，不要改业务逻辑。",
+    "expected": "识别这是 explain-code 请求，不推进实现；先说明可观察现象和需要补的上下文。"
+  },
+  {
+    "id": "implement-feature-4",
+    "category": "comment_policy",
+    "prompt": "请实现一个多语言都适用的订单金额计算模块，可以用 Python、TypeScript 或 Java。代码要让维护者一眼看出职责、输入输出、边界条件和副作用；不要只给无注释代码。",
+    "expected": "生成代码时在模块/类/公共函数/复杂 helper/关键业务规则处补稳定注释或 docstring，说明职责、边界、副作用和设计原因，不做逐行机械注释。"
+  },
+  {
+    "id": "implement-feature-5",
+    "category": "tool_reuse",
+    "prompt": "给现有导出流程新增 Excel 下载能力。仓库里已经有 CsvExportHelper、WorkbookBuilder、共享 download wrapper 和统一审计日志服务。先给方案，再决定是否需要新增方法。",
+    "expected": "先盘点现成 helper、wrapper、标准服务和三方库能力，优先复用现有 WorkbookBuilder/download wrapper/审计服务；只有缺口明确时才新增最小方法，并说明为什么不能直接复用。"
+  },
+  {
+    "id": "implement-feature-6",
+    "category": "blind_tool_reuse",
+    "prompt": "现有导出流程要加 Excel，先别写代码。先列出你会按什么顺序盘点仓库现成能力，以及在什么情况下才允许新加方法或 helper。",
+    "expected": "先按 helper/wrapper/template/SDK/扩展点/标准服务的顺序盘点现成能力，只有这些路径都不满足时才允许新增最小方法；若触达共享层或新依赖，应先说明并确认。"
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {"query": "清理一下测试残留文件和临时目录", "should_trigger": true},
+  {"query": "工作区有好多未跟踪文件，帮我处理一下", "should_trigger": true},
+  {"query": "收尾了，帮我清理一下脏区", "should_trigger": true},
+  {"query": "删除那些 .tmp 和 .bak 文件", "should_trigger": true},
+  {"query": "帮我压缩一下工作区的脏文件", "should_trigger": true},
+  {"query": "这个目录里有测试产物，帮我清理", "should_trigger": true},
+  {"query": "帮我实现一个新的清理功能模块", "should_trigger": false},
+  {"query": "review 一下清理逻辑的代码", "should_trigger": false},
+  {"query": "解释一下 cleanup 脚本的工作原理", "should_trigger": false},
+  {"query": "这个清理脚本报错了", "should_trigger": false},
+  {"query": "会话结束前检查一下文档一致性", "should_trigger": false},
+  {"query": "帮我写一个数据清洗的 SQL", "should_trigger": false}
+]

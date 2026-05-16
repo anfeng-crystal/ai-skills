@@ -1,0 +1,13 @@
+[
+  {"query": "帮我登录苍穹测试环境", "should_trigger": true},
+  {"query": "列出苍穹的数据中心", "should_trigger": true},
+  {"query": "校验一下苍穹的 Cookie 和 CSRF", "should_trigger": true},
+  {"query": "苍穹登录态过期了，帮我重新鉴权", "should_trigger": true},
+  {"query": "帮我获取苍穹的会话材料", "should_trigger": true},
+  {"query": "写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "苍穹插件报错了，帮我排查", "should_trigger": false},
+  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
+  {"query": "帮我写一个 ISCB 脚本", "should_trigger": false}
+]

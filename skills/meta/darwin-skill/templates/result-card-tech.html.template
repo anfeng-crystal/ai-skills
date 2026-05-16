@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>$skill_name 优化成果</title>
+  <style>
+    :root {
+      --bg-primary: #1e1e1e;
+      --bg-secondary: #252526;
+      --bg-tertiary: #2d2d30;
+      --text-primary: #d4d4d4;
+      --text-secondary: #808080;
+      --text-muted: #6a6a6a;
+      --accent: #4ec9b0;
+      --accent-secondary: #569cd6;
+      --border: #3e3e42;
+      --success: #4ec9b0;
+      --warning: #dcdcaa;
+
+      --font-display: 'Consolas', 'Monaco', 'Courier New', monospace;
+      --font-body: 'Consolas', 'Monaco', 'Courier New', monospace;
+      --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+
+      --title-size: clamp(2rem, 4vw, 3rem);
+      --subtitle-size: clamp(1.2rem, 2.5vw, 1.8rem);
+      --body-size: clamp(0.9rem, 1.5vw, 1.1rem);
+      --small-size: clamp(0.8rem, 1.2vw, 0.95rem);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      padding: clamp(1rem, 3vw, 3rem);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 3rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    h1 {
+      font-size: var(--title-size);
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-family: var(--font-display);
+    }
+
+    .meta {
+      color: var(--text-secondary);
+      font-size: var(--small-size);
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .meta span::before {
+      content: '>';
+      color: var(--accent);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: clamp(1.5rem, 3vw, 2.5rem);
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 8px 0 0 8px;
+    }
+
+    h2 {
+      font-size: var(--subtitle-size);
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    h2::before {
+      content: '//';
+      color: var(--text-muted);
+      font-size: 0.9em;
+    }
+
+    .score-container {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      font-family: var(--font-mono);
+    }
+
+    .score {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      color: var(--accent);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .arrow {
+      font-size: clamp(1.5rem, 3vw, 2.5rem);
+      color: var(--text-secondary);
+    }
+
+    .delta {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .delta::before {
+      content: '+';
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--body-size);
+      font-family: var(--font-mono);
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+      font-size: var(--small-size);
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      color: var(--text-primary);
+    }
+
+    tr:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .delta-cell {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      padding: 0.75rem 0;
+      padding-left: 2rem;
+      position: relative;
+      font-size: var(--body-size);
+      border-bottom: 1px solid var(--border);
+    }
+
+    li:last-child {
+      border-bottom: none;
+    }
+
+    li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .test-result {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .test-id {
+      color: var(--accent-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .test-status {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .test-delta {
+      color: var(--warning);
+      font-family: var(--font-mono);
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: var(--small-size);
+    }
+
+    .quote {
+      font-style: italic;
+      margin-top: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .link {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      .score-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      table {
+        font-size: var(--small-size);
+      }
+
+      th, td {
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>$skill_name</h1>
+      <div class="meta">
+        <span>优化日期: $date</span>
+        <span>评估模型: Claude Opus 4.7</span>
+        <span>优化工具: Darwin Skill v1.0</span>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>分数变化</h2>
+      <div class="score-container">
+        <span class="score">$score_before</span>
+        <span class="arrow">→</span>
+        <span class="score">$score_after</span>
+        <span class="delta">$score_delta</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>维度对比</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>Before</th>
+            <th>After</th>
+            <th>Δ</th>
+          </tr>
+        </thead>
+        <tbody>
+          $dimensions_rows
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>关键改进</h2>
+      <ul>
+        $improvements_items
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>实测表现</h2>
+      <ul>
+        $test_results_items
+      </ul>
+    </section>
+
+    <footer>
+      <p class="quote">"Train your Skills like you train your models"</p>
+      <p><a href="https://github.com/alchaincyf/darwin-skill" class="link">github.com/alchaincyf/darwin-skill</a></p>
+    </footer>
+  </div>
+</body>
+</html>

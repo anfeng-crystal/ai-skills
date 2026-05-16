@@ -1,0 +1,12 @@
+{
+  "source": {
+    "type": "git",
+    "url": "https://github.com/KKKKhazix/khazix-skills",
+    "path": "neat-freak",
+    "branch": "main"
+  },
+  "installedAt": "2026-05-08T14:15:00Z",
+  "installedBy": "skill-installer",
+  "lastCheckedAt": "2026-05-08T07:26:39.429Z",
+  "lastUpstreamHash": "5f4ad56358746c7673aed45d7b4b62f292b92a7c"
+}

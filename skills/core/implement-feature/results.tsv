@@ -1,0 +1,2 @@
+timestamp	commit	skill	baseline_score	old_score	new_score	status	dimension	note	eval_mode	model_set	avg_skill_delta
+2026-05-13T01:58:55+0800	working-tree	implement-feature	74	82	86	keep	方案门禁	补充已审核方案直接执行和当前事实偏差收口规则	dry_run	default	+12

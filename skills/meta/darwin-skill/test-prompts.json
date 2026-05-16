@@ -1,0 +1,16 @@
+[
+  {
+    "id": "retrospective-local-only",
+    "prompt": "复盘刚完成的一次金蝶插件任务，使用 darwin-skill 对本次用到的 skill 进行评分优化。",
+    "expected": "先识别本轮真实用到的 skill，再按可编辑本地 skill 与 bundled/cache skill 分组；默认只修改本地可编辑 skill，并给出 dry_run 评分依据。",
+    "eval_focus": "是否能自动收窄优化范围，避免把所有 skill 或只读缓存一起改掉。",
+    "baseline_risk": "容易把优化范围扩成全部 skill，或者直接去改 bundled/cache skill。"
+  },
+  {
+    "id": "dirty-worktree",
+    "prompt": "当前 active skills 仓已经有未提交改动。请继续用 darwin-skill 做本轮用到 skill 的评分优化。",
+    "expected": "只在目标 skill 文件上做最小改动，记录评分，避免覆盖同仓其它未提交内容。",
+    "eval_focus": "是否能在工作树不干净时缩小编辑范围并保留审计记录。",
+    "baseline_risk": "容易顺手改动同目录其它文件，或者因为工作树脏直接放弃优化。"
+  }
+]

@@ -1,0 +1,3 @@
+[submodule "multi-search"]
+	path = skills/meta/multi-search
+	url = https://github.com/anfeng-crystal/union-search-skill.git

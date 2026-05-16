@@ -1,0 +1,26 @@
+[
+  {
+    "id": "playwright-1",
+    "category": "cli_first",
+    "prompt": "帮我用 Playwright 自动登录并截图，只需要终端命令，不要生成测试文件。",
+    "expected": "保持 CLI-first，使用 open/snapshot/click/type/screenshot 等命令，不因注释策略而生成代码文件。"
+  },
+  {
+    "id": "playwright-2",
+    "category": "comment_policy",
+    "prompt": "请生成一个 Playwright 测试 spec，覆盖登录后异步加载列表和清理测试数据。代码要让后续维护者看懂等待、选择器和清理逻辑。",
+    "expected": "只有用户明确要求 spec 时才生成代码；测试文件中应对测试意图、选择器假设、异步等待、清理和 fixture 副作用写稳定注释。"
+  },
+  {
+    "id": "playwright-3",
+    "category": "tool_reuse",
+    "prompt": "仓库里已经有 playwright.config.ts、auth.setup.ts、共享 fixtures 和 page object。请补一个下单用例，别再新造一套登录 helper 和 selector util。",
+    "expected": "先检查现有 config、auth setup、fixtures、page object 和 test utils，优先在现有结构上扩展；只有现成资产确有缺口时才新增最小 helper。"
+  },
+  {
+    "id": "playwright-4",
+    "category": "blind_tool_reuse",
+    "prompt": "给下单流程补 Playwright 用例前，你会先盘点仓库里的哪些现成测试资产？什么情况下才允许新建 helper？",
+    "expected": "应先盘点 playwright.config、fixtures、auth setup、page object、shared selectors、test utils 和目录约定；只有这些资产都无法吸收变更时，才允许新增最小 helper。"
+  }
+]

@@ -1,0 +1,3 @@
+timestamp	commit	skill	baseline_score	old_score	new_score	status	dimension	note	eval_mode	model_set	avg_skill_delta
+2026-05-13T01:58:55+0800	working-tree	kingdee-cosmic	72	84	89	keep	字段事实确认	补充dev字段标识为最终来源、物理列名规则和字段布局面板走实体字段	dry_run	default	+17
+2026-05-13T10:45:00+0800	working-tree	kingdee-cosmic	72	89	92	keep	工作流清晰度+边界条件	补充派生移动表单必须看full analyze和pageElement/formPage证据	dry_run	default	+20

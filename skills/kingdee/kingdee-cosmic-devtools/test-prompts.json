@@ -1,0 +1,23 @@
+[
+  {
+    "id": "download_latest_dev_env",
+    "prompt": "调用 kingdee-cosmic-devtools，从 http://10.82.11.119:8090/appstore/dev_env 拉取最新资源包到 /Users/anfeng/utils/cosmic_zt，下载中断后继续。",
+    "expected": "先做 manifest 和目标路径预检，下载到 staging，失败后 status/resume 续传，完成后核验数量和 hash，再等待 apply 授权或按用户授权执行。",
+    "eval_focus": "是否避免直接覆盖目标目录；是否能处理网络中断、空目录、隐藏目录授权和下载失败报告。",
+    "baseline_risk": "直接 curl 或解压到目标目录，下载失败后误判成功，缺少续传和 hash 核验。"
+  },
+  {
+    "id": "flatten_custom_jars",
+    "prompt": "下载后的 cus 下面出现 cus/模块名/*.jar 多级目录，要求检查并修复为可加载的本地包布局。",
+    "expected": "识别多级 jar 布局不合格，生成 flatten 清单，校验同名冲突和 sha1 后移动到 cus 平铺目录。",
+    "eval_focus": "是否明确本地 mservice-cosmic/lib/cus 需要平铺；是否先报告冲突再移动。",
+    "baseline_risk": "只看下载完成，不检查目录层级，导致本地启动仍然缺包。"
+  },
+  {
+    "id": "prod_absorb_and_cleanup",
+    "prompt": "把生产快照里 dev 缺少的定制包吸收到 cosmic_zt，然后删除生产快照目录。",
+    "expected": "先比对 cus/biz/bos/trd 中生产独有定制包，复制后校验 sha1，再删除生产快照；平台扩展点包单独处理。",
+    "eval_focus": "是否区分业务定制包和平台扩展点；是否复制后做 hash 验证和编译验证。",
+    "baseline_risk": "把 Qing/DPP/ISC/DTS 平台包和业务 jar 混在一起批量复制或删除，造成首页或集成云异常。"
+  }
+]

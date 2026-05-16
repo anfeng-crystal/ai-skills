@@ -1,0 +1,14 @@
+[
+  {"query": "审查一下这个第三方 skill 的安全性", "should_trigger": true},
+  {"query": "安装前帮我检查一下这个 skill 有没有风险", "should_trigger": true},
+  {"query": "扫描一下这个 skill 的脚本行为", "should_trigger": true},
+  {"query": "这个 skill 有没有写入宿主目录的风险", "should_trigger": true},
+  {"query": "检查一下这个 skill 有没有密钥暴露", "should_trigger": true},
+  {"query": "帮我 vet 一下这个 skill", "should_trigger": true},
+  {"query": "帮我同步 skills 到各个工具", "should_trigger": false},
+  {"query": "帮我写一个新的 skill", "should_trigger": false},
+  {"query": "优化一下这个 skill 的描述", "should_trigger": false},
+  {"query": "review 一下 skill 的代码质量", "should_trigger": false},
+  {"query": "帮我实现一个安全检查功能", "should_trigger": false},
+  {"query": "帮我查一下这个 API 的用法", "should_trigger": false}
+]

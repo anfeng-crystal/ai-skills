@@ -1,0 +1,37 @@
+[
+  {
+    "id": "happy_path",
+    "prompt": "审查 /path/to/skills/active/web-access 这个 skill 的安全性",
+    "expected": "使用 inspect-skill.mjs --json 输出结构化审查报告，给出 recommendation（allow/review_needed/block），列出 findings 和 manualReview",
+    "eval_focus": "是否正确调用 inspect-skill.mjs；输出是否包含 recommendation、findings、rationale；结论是否准确",
+    "baseline_risk": "不带 skill 可能直接读 SKILL.md 做主观判断，没有系统规则扫描，可能遗漏高危命令或误判风险等级"
+  },
+  {
+    "id": "strict_mode",
+    "prompt": "用严格模式审查这个第三方 skill：/path/to/skills/incoming/market/ai-code-improvement-skill/raw",
+    "expected": "使用 --strict --json 模式，如果 recommendation 不是 allow 则返回非零退出码，明确报告所有 high/critical findings",
+    "eval_focus": "是否使用 --strict；是否正确处理非 allow 结果；findings 分类是否准确",
+    "baseline_risk": "不带 skill 可能不用 strict 模式，对风险 skill 也给出模糊结论，不阻断危险安装"
+  },
+  {
+    "id": "multi_skill",
+    "prompt": "审查 /path/to/skills/active 目录下所有 skill 的安全状况",
+    "expected": "识别目录下有多个 skill，逐个或批量审查，汇总各 skill 的 recommendation 和关键风险",
+    "eval_focus": "是否正确处理多 skill 目录；是否汇总结果；是否区分不同 skill 的风险等级",
+    "baseline_risk": "不带 skill 可能只审查其中一个，或混淆多个 skill 的结果"
+  },
+  {
+    "id": "local_symlink_skill",
+    "prompt": "审查 /path/to/skills/active/skill-installer 这个 skill，它管理软链接分发",
+    "expected": "正确识别 symlink 操作、宿主目录写入、绝对路径等风险点，给出 review_needed；同时理解这些风险在 skill-installer 的上下文中是预期行为",
+    "eval_focus": "是否准确识别 symlink 和 host_path_write 风险；结论是否合理（review_needed 而非 block）",
+    "baseline_risk": "不带 skill 可能因看到 symlink 就直接 block，不理解这是 skill 的预期功能；或遗漏 auto_action 风险"
+  },
+  {
+    "id": "edge_multi_root",
+    "prompt": "审查 /path/to/home/.claude/skills/darwin-skill 这个 skill",
+    "expected": "正确识别宿主集成痕迹（claude 目录路径），给出 review_needed，并说明这是本地分发相关的预期痕迹",
+    "eval_focus": "是否正确处理本地 skill 的宿主路径痕迹；结论是否区分 critical/high 与预期行为",
+    "baseline_risk": "不带 skill 可能将本地 skill 的宿主路径痕迹误判为恶意行为，或完全不审查本地路径"
+  }
+]

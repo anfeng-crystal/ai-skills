@@ -1,0 +1,30 @@
+[
+  {
+    "id": "entity-metadata-query",
+    "prompt": "分析 FIN_PAYABLE 单据的插件绑定和字段结构",
+    "expected": "应该运行 cosmic-metadata-analyzer.py，读取 inventory.json 和 sources/*，生成分析报告",
+    "eval_focus": "是否正确执行元数据分析流程；是否生成完整的插件绑定和字段结构报告",
+    "baseline_risk": "可能直接读项目源码或猜测，而不是查元数据库"
+  },
+  {
+    "id": "non-metadata-task",
+    "prompt": "如何使用 SaveServiceHelper 保存单据？",
+    "expected": "这是 SDK 用法问题，应该交给 kingdee-sdk-helper 或 kingdee-cosmic，不应该触发 kingdee-metadata-analyzer",
+    "eval_focus": "是否正确识别不需要元数据分析的场景；是否避免不必要的元数据查询",
+    "baseline_risk": "可能误触发元数据分析，浪费 token"
+  },
+  {
+    "id": "config-missing",
+    "prompt": "分析 bd_customer 单据的元数据，但当前环境缺少数据库凭据",
+    "expected": "应该先检查配置，发现缺少凭据后，询问用户是否补充凭据、使用历史产物或切换环境；不应该直接说'没有能力'",
+    "eval_focus": "是否正确处理凭据缺失场景；是否提供降级方案（历史产物、项目源码）",
+    "baseline_risk": "可能直接报错'无法连接数据库'，而不是提供降级方案"
+  },
+  {
+    "id": "derived-mobile-form-plugins",
+    "prompt": "分析 ztjg_guarant_checkbill 在生产环境里实际挂了哪些移动端页面插件，重点确认 ztjg_riskcheck_group 和移动列表各自命中的类。",
+    "expected": "应该直接用全景分析读取 inventory.json 和 sources/*，至少核对 className、pageElement、formPage，区分业务实体编辑页、MobileBillFormAp 和 MobileListFormAp。",
+    "eval_focus": "是否能识别 quick-query --plugins 只能看一部分挂载，不能替代对派生移动表单和列表的 full analyze。",
+    "baseline_risk": "可能只输出实体级插件清单，把移动表单和移动列表的真实命中类漏掉。"
+  }
+]

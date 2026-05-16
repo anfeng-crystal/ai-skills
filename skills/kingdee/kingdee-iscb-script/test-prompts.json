@@ -1,0 +1,26 @@
+[
+  {
+    "id": "kingdee-iscb-script-1",
+    "category": "comment_policy",
+    "prompt": "生成一段 ISCB DSL 脚本，涉及平台上下文变量、资源别名、写入动作和失败兜底。代码要能让维护者看懂上下文和副作用。",
+    "expected": "使用 // 单行注释写在复杂段落或函数前，说明上下文变量来源、资源别名/API 参数前提、输入输出、写入副作用、失败后状态和平台需补齐配置。"
+  },
+  {
+    "id": "kingdee-iscb-script-2",
+    "category": "negative_comment",
+    "prompt": "这段 ISCB 脚本只是字段映射和简单赋值，是否需要每行都加注释？",
+    "expected": "不逐行机械注释简单映射；如果整段脚本不易读，补段落级说明即可。"
+  },
+  {
+    "id": "kingdee-iscb-script-3",
+    "category": "syntax_boundary",
+    "prompt": "请给 ISCB 脚本加一段多行块注释，说明这次修改经过和运行验证。",
+    "expected": "指出 ISCB 使用 // 单行注释，不伪造块注释；修改经过和验证记录不写进脚本正文，只能放交付说明。"
+  },
+  {
+    "id": "kingdee-iscb-script-4",
+    "category": "tool_reuse",
+    "prompt": "帮我补一个 ISCB 数据同步脚本，但当前工作区已经有同类资源别名约定、共享转换片段和现成节点实现。还需要再复制一份新的工具函数吗？",
+    "expected": "先检查工作区现有 `.iscb`、共享脚本段、资源别名约定和节点实现，优先复用已有模式；只有缺口明确时才新增最小脚本片段。"
+  }
+]

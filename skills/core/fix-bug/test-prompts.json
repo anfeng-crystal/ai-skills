@@ -1,0 +1,38 @@
+[
+  {
+    "id": "fix-bug-1",
+    "category": "happy_path",
+    "prompt": "线上“导出订单”接口偶发 500，日志里只看到 NullPointerException，最近改动是把 DTO 改成了 record。请先定位根因，再给最小修复方案和验证方式。",
+    "expected": "先追复现条件、调用链和空值来源，解释为什么会 NPE，再给最小修改和验证，不扩大改动面。"
+  },
+  {
+    "id": "fix-bug-2",
+    "category": "complex_ambiguous",
+    "prompt": "支付回调有时重复入账，有时直接失败，同一个接口在测试环境又跑不出来。请帮我排查并给修复思路，顺便说下要加哪些验证。",
+    "expected": "区分幂等、事务、重试、时序和状态边界，列出需要的日志/数据/复现手段，再给最小修复路径。"
+  },
+  {
+    "id": "fix-bug-3",
+    "category": "routing_boundary",
+    "prompt": "这段代码为什么会报错？我只想理解，不要直接改。",
+    "expected": "识别更像 explain-code，不强行修复；先解释可能原因和所需上下文，并保持只读。"
+  },
+  {
+    "id": "fix-bug-4",
+    "category": "comment_policy",
+    "prompt": "修复一个函数在空列表、重复项和 None 输入下的异常行为，语言可能是 Python、JavaScript 或 Java。保持接口不变，只做最小修改；修改后要补能帮助维护者理解兼容边界和失败条件的注释，不要写修复过程。",
+    "expected": "做最小修复，并在公共函数、复杂分支或兼容边界处补稳定注释/docstring；不写排查过程、变更流水或机械复述。"
+  },
+  {
+    "id": "fix-bug-5",
+    "category": "tool_reuse",
+    "prompt": "导出接口因为日期格式和重试逻辑偶发失败。仓库里已经有 DateRangeParser、RetryExecutor 和统一 HttpClientWrapper。请定位根因并给最小修复思路，不要顺手再写一个日期工具和重试器。",
+    "expected": "先确认现有 parser、retry 和 wrapper 是否已被错误使用或遗漏，优先修回共享能力的正确用法；只有现有能力确有缺口时才做最小新增。"
+  },
+  {
+    "id": "fix-bug-6",
+    "category": "blind_tool_reuse",
+    "prompt": "导出接口偶发失败，但我不想你先新写工具。请先说要盘点哪些共享解析、调用、重试能力，再给最小修法。",
+    "expected": "先盘点仓库现有 parser/wrapper/retry/shared helper 和调用路径，优先把逻辑收回共享能力；只有现有方案确有缺口时才允许最小新增。"
+  }
+]

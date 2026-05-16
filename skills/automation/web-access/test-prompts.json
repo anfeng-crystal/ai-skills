@@ -1,0 +1,44 @@
+[
+  {
+    "id": "happy_path",
+    "prompt": "联网查询最新的 AI 日报",
+    "expected": "30 秒内返回有效结果，列出主要动态并附来源",
+    "eval_focus": "是否直接走轻路径（curl/jina.ai），不走串行探测；是否避免空转等待",
+    "baseline_risk": "不带skill可能层层检查依赖、逐个试脚本，最终浪费时间"
+  },
+  {
+    "id": "speed_critical",
+    "prompt": "快速查一下 OpenAI 最新模型版本号",
+    "expected": "优先直接来源 URL 或轻量搜索，不触发 CDP/浏览器探测",
+    "eval_focus": "是否区分快速查询和深度调研；最快路径是什么",
+    "baseline_risk": "不带skill可能同样走全套流程，无法快速返回"
+  },
+  {
+    "id": "cdp_fallback",
+    "prompt": "打开一个需要登录才能看的内部系统页面，告诉我状态",
+    "expected": "CDP 未开启时自动临时启动，或 2 步内明确告知需要用户接管",
+    "eval_focus": "环境缺口是否自补；不自补时是否干净利落报告",
+    "baseline_risk": "不带skill可能只报告未开启然后停住，等用户手动操作"
+  },
+  {
+    "id": "mixed_sources",
+    "prompt": "查一下 Google 和 Anthropic 最新投资动态，需要交叉验证两个来源",
+    "expected": "并行查询多个来源，对比信息后给出综合结论，标明哪些信息已交叉验证、哪些只有单来源",
+    "eval_focus": "是否并行抓多个来源；是否区分已验证和未验证信息",
+    "baseline_risk": "不带skill可能只查一个来源就下结论，不做交叉验证"
+  },
+  {
+    "id": "js_render",
+    "prompt": "查一下某个 SPA 单页应用的实时数据（比如 React 渲染的仪表板）",
+    "expected": "识别需要 JS 渲染，先尝试 jina.ai 摘要，不行再自动启动 CDP 抓取",
+    "eval_focus": "是否正确识别动态页面需求；降级路径是否合理",
+    "baseline_risk": "不带skill可能直接用 curl 拿到空页面，不知道需要 JS 渲染"
+  },
+  {
+    "id": "extreme_edge",
+    "prompt": "我没有 API key，浏览器也没装，CDP 也开不了，但需要查一个网页的内容",
+    "expected": "诚实报告所有路径都不可用，给出最小可行建议（比如让用户手动 curl 或换一个环境），不假装能行",
+    "eval_focus": "是否诚实报告限制；是否给出最小可行替代方案；是否不停住等喂饭",
+    "baseline_risk": "不带skill可能陷入无目标尝试循环，或假装能行给出虚假结果"
+  }
+]

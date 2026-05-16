@@ -1,0 +1,14 @@
+[
+  {"query": "分析一下这个 CSV 文件的趋势", "should_trigger": true},
+  {"query": "帮我写 SQL 查询这个数据的指标", "should_trigger": true},
+  {"query": "这个 Excel 数据帮我做数据清洗", "should_trigger": true},
+  {"query": "帮我对比这几组数据的异常", "should_trigger": true},
+  {"query": "生成一个数据分析报表", "should_trigger": true},
+  {"query": "帮我计算这个数据集的关键指标", "should_trigger": true},
+  {"query": "帮我写一个数据处理的 Python 脚本", "should_trigger": false},
+  {"query": "review 一下这个数据分析的代码", "should_trigger": false},
+  {"query": "帮我解释一下这个 SQL 的逻辑", "should_trigger": false},
+  {"query": "帮我实现一个数据导入功能", "should_trigger": false},
+  {"query": "帮我查一下这个数据库表的结构", "should_trigger": false},
+  {"query": "帮我画一个数据可视化的图表", "should_trigger": false}
+]

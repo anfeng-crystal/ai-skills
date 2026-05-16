@@ -1,0 +1,2 @@
+var doubled = [1, 2, 3].each($ * 2);
+return doubled;

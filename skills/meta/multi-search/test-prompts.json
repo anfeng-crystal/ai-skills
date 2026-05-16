@@ -1,0 +1,23 @@
+[
+  {
+    "id": "union-search-p1",
+    "prompt": "帮我在 GitHub 和 Reddit 上搜索关于 'AI Agent' 的内容，每个平台返回 5 条结果",
+    "expected": "with_skill: 直接执行 union_search_cli.py，指定平台和数量，展示结果；no_skill: 可能不知道有统一 CLI，或者分别调用不同工具",
+    "eval_focus": "是否使用统一 CLI、参数是否正确、结果展示是否清晰",
+    "baseline_risk": "medium"
+  },
+  {
+    "id": "union-search-p2",
+    "prompt": "我想搜索小红书上关于'护肤'的笔记，按互动量排序，返回 10 条",
+    "expected": "with_skill: 执行 union_search_cli.py platform xiaohongshu，使用正确的排序参数；no_skill: 可能不知道小红书搜索工具或参数不正确",
+    "eval_focus": "平台识别准确性、排序参数使用、结果数量控制",
+    "baseline_risk": "high"
+  },
+  {
+    "id": "union-search-p3",
+    "prompt": "搜索 'machine learning' 相关内容，使用不需要 API key 的搜索引擎",
+    "expected": "with_skill: 识别 no_api_key 组，使用 DuckDuckGo/Brave/Yahoo 等；no_skill: 可能使用需要 API key 的工具或不知道有无 key 工具",
+    "eval_focus": "平台组识别、无 API key 工具选择、配置检查",
+    "baseline_risk": "high"
+  }
+]

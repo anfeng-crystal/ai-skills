@@ -1,0 +1,37 @@
+[
+  {
+    "id": "happy_path",
+    "prompt": "帮我把 web-access skill 同步到所有 AI 工具",
+    "expected": "默认走 dry-run，用 sync-links.mjs 输出 JSON 结果，展示所有工具目录的链接状态，确认无误后才执行 apply",
+    "eval_focus": "是否默认 dry-run；是否使用 sync-links.mjs 脚本；是否正确处理 5 个宿主目录",
+    "baseline_risk": "不带 skill 可能直接 ln -s 创建链接，不做审计、不区分 Hermes 特殊逻辑、不检测冲突"
+  },
+  {
+    "id": "partial_sync",
+    "prompt": "只把 web-access 和 multi-agent-collab 同步到 codex 和 claude，先看看会有什么变化",
+    "expected": "使用 --skill 和 --tool 白名单过滤，dry-run 输出只涉及指定 skill 和工具，确认后再 apply",
+    "eval_focus": "是否正确使用 --skill 和 --tool 参数；是否只影响指定范围",
+    "baseline_risk": "不带 skill 可能全量同步，或手动 ln -s 容易遗漏/误操作"
+  },
+  {
+    "id": "audit_all",
+    "prompt": "audit 一下我所有 skill 的链接状态，看看有没有冲突或问题",
+    "expected": "dry-run 扫描所有 skill 和工具，输出冲突列表（real_path_conflict、external_symlink_conflict、hermes_local_shadow_conflict）",
+    "eval_focus": "是否全面扫描；是否正确识别各类冲突状态；Hermes 是否按 external_dirs 逻辑处理",
+    "baseline_risk": "不带 skill 可能只 ls -l 看几个目录，不系统检查冲突，忽略 Hermes shadow 问题"
+  },
+  {
+    "id": "hermes_special",
+    "prompt": "检查 Hermes 是否正确接入了 active skills，有没有 local shadow conflict",
+    "expected": "检查 Hermes config.yaml 的 skills.external_dirs 是否包含 active 目录；检查 ~/.hermes/skills/ 下是否有会 shadow external_dirs 的本地目录",
+    "eval_focus": "是否区分 Hermes 的特殊处理逻辑（external_dirs 而非软链接）；是否正确识别 shadow conflict",
+    "baseline_risk": "不带 skill 可能像处理其他工具一样给 Hermes 创建软链接，不知道 external_dirs 机制"
+  },
+  {
+    "id": "edge_new_skill",
+    "prompt": "我刚写了一个新 skill，帮我把它分发到所有工具",
+    "expected": "先确认新 skill 在 active 目录且包含 SKILL.md，再 dry-run，最后等用户确认才 apply",
+    "eval_focus": "是否验证源目录存在且含 SKILL.md；是否默认 dry-run；是否等用户确认",
+    "baseline_risk": "不带 skill 可能直接创建链接，不验证源目录是否合格"
+  }
+]

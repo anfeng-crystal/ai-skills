@@ -1,0 +1,30 @@
+[
+  {
+    "id": "should-query-metadata",
+    "prompt": "查询 bd_material 单据的字段定义和插件配置",
+    "expected": "应该先调用 kingdee-metadata-analyzer 查元数据库，获取字段定义、插件绑定、挂载点等强证据",
+    "eval_focus": "是否优先调用 kingdee-metadata-analyzer；是否直接查元数据库而不是猜测或读源码",
+    "baseline_risk": "可能直接读项目源码、猜测字段定义，或给出通用建议，而不是先查元数据库获取强证据"
+  },
+  {
+    "id": "should-not-query-metadata",
+    "prompt": "这段 Java 代码有语法错误：List<String> list = new ArrayList<>(); list.add(123);",
+    "expected": "应该直接分析语法错误（类型不匹配），不需要调用 kingdee-metadata-analyzer",
+    "eval_focus": "是否直接处理语法问题；是否避免不必要的元数据查询",
+    "baseline_risk": "可能误触发 kingdee-metadata-analyzer，浪费 token"
+  },
+  {
+    "id": "ambiguous-case",
+    "prompt": "如何实现单据保存功能？",
+    "expected": "应该先判断：如果涉及具体单据（如 bd_material），需要查元数据库；如果是通用逻辑，可以直接给出 SaveServiceHelper 用法",
+    "eval_focus": "是否正确判断是否需要查元数据库；是否在需求不明确时询问用户",
+    "baseline_risk": "可能直接给出通用代码，忽略具体单据的元数据约束；或者无脑查元数据库，浪费 token"
+  },
+  {
+    "id": "mobile-derived-form-plugin-chain",
+    "prompt": "生产环境 ztjg_guarant_checkbill 移动端新建时有没有默认赋值当前用户，为什么用户明明只有一个风险管控项目却没有自动带出？",
+    "expected": "应该先让 kingdee-metadata-analyzer 走全景分析，核对业务实体、MobileBillFormAp、MobileListFormAp 和 ztjg_riskcheck_* 派生表单的插件挂载，再回到源码分析默认人和唯一项目口径。",
+    "eval_focus": "是否意识到实体 quick-query --plugins 不足以判断移动端真实执行链路；是否主动看 inventory.json 的 pageElement/formPage。",
+    "baseline_risk": "可能只看实体级插件列表，漏掉移动表单专用插件，导致根因判断偏掉。"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "review-code-1",
+    "category": "happy_path",
+    "prompt": "请 review 这次改动：OrderQueryService.java 新增 queryOrders 接口，CacheKeyFactory.java 把缓存 key 从 tenantId:userId:query 改成 tenantId:query。看看有没有风险。",
+    "expected": "按严重程度指出缓存粒度变粗导致跨用户数据污染、权限/隔离和测试缺口，给出具体文件范围和建议。"
+  },
+  {
+    "id": "review-code-2",
+    "category": "complex_ambiguous",
+    "prompt": "下面这段改动涉及事务、重试和异步消息：OrderApproveService 先提交数据库事务，再发送 approve 消息；失败后由 RetryJob 每 5 分钟重试。帮我找潜在回归和线上事故点，按严重程度排序。",
+    "expected": "重点检查事务后发消息的丢消息窗口、重复消费、状态机幂等、重试风暴和异常处理，输出严重/一般/建议优化。"
+  },
+  {
+    "id": "review-code-3",
+    "category": "routing_boundary",
+    "prompt": "请直接帮我修这段代码里的 bug。",
+    "expected": "识别这是 fix-bug 请求，不直接改；说明当前能 review 的风险点和需要补的证据。"
+  },
+  {
+    "id": "review-code-4",
+    "category": "comment_policy",
+    "prompt": "请 review 这次改动：新增了一个跨模块价格计算工具和一个异步重试流程，但代码完全没有注释。看看可维护性有没有问题。",
+    "expected": "将公共工具、复杂业务规则、异步/重试/异常边界缺少稳定注释作为可维护性问题指出，并区分缺注释和机械复述注释。"
+  },
+  {
+    "id": "review-code-5",
+    "category": "tool_reuse",
+    "prompt": "请 review 这次改动：仓库已经有统一 HttpClientWrapper、CsvExportHelper 和 RetryExecutor，但新代码又手写了一个 SimpleHttp、CsvWriter 和 while 重试循环。看看有没有问题。",
+    "expected": "应把重复封装现有 helper/标准能力作为可维护性问题指出，说明会带来行为分叉、配置漂移、测试重复和后续维护成本。"
+  },
+  {
+    "id": "review-code-6",
+    "category": "blind_tool_reuse",
+    "prompt": "请 review 这次改动：业务代码里又加了一套 HTTP、导出和重试实现，而仓库本来就有统一公共层。你会按什么证据判断它是不是重复造轮子？",
+    "expected": "应先从公共层职责、调用入口、横切能力一致性、共享治理和测试分叉这些证据判断是否重复造轮子，并将其作为设计层面的 review 问题。"
+  }
+]

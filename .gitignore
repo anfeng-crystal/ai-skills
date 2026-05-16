@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.*.local
+!.env.example
+.venv/
+node_modules/
+.npm-cache/
+dist/
+*.tmp
+*.pyc
+*.pyo
+__pycache__/
+.DS_Store
+doctor-report*.json
+.metadata_cache/
+responses/
+downloads/

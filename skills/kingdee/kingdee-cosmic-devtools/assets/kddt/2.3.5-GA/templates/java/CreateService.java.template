@@ -1,0 +1,7 @@
+package ${PACKAGE_NAME};
+
+import kd.sdk.service.Service;
+
+public class ${CLASS_NAME} implements Service {
+
+}

@@ -1,0 +1,13 @@
+[
+  {"query": "帮我做一个高设计质量的 landing page", "should_trigger": true},
+  {"query": "实现一个精美的用户注册页面", "should_trigger": true},
+  {"query": "帮我设计并实现一个 dashboard 界面", "should_trigger": true},
+  {"query": "做一个视觉效果很好的产品展示页", "should_trigger": true},
+  {"query": "帮我构建一个 production-grade 的前端界面", "should_trigger": true},
+  {"query": "review 一下这个页面的视觉设计质量", "should_trigger": false},
+  {"query": "这个前端组件报错了", "should_trigger": false},
+  {"query": "帮我解释一下这个 UI 组件的实现", "should_trigger": false},
+  {"query": "帮我加一个表单验证功能", "should_trigger": false},
+  {"query": "优化一下这个页面的加载性能", "should_trigger": false},
+  {"query": "帮我写前端单元测试", "should_trigger": false}
+]

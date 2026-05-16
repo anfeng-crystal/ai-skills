@@ -1,0 +1,15 @@
+[
+  {"query": "帮我写一个苍穹表单插件", "should_trigger": true},
+  {"query": "开发一个苍穹报表", "should_trigger": true},
+  {"query": "帮我配置苍穹工作流", "should_trigger": true},
+  {"query": "苍穹 BOTP 转换规则怎么写", "should_trigger": true},
+  {"query": "苍穹 OpenAPI 接口开发", "should_trigger": true},
+  {"query": "苍穹插件故障诊断", "should_trigger": true},
+  {"query": "苍穹代码质量核查", "should_trigger": true},
+  {"query": "帮我写一个 KingScript 脚本插件", "should_trigger": false},
+  {"query": "帮我写一个 ISCB 数据集成脚本", "should_trigger": false},
+  {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false}
+]

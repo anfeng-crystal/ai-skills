@@ -1,0 +1,11 @@
+package ${PACKAGE_NAME};
+
+import ${PARENT_FULL_NAME};
+import kd.sdk.plugin.Plugin;
+
+/**
+ * ${DESC}
+ */
+public class ${CLASS_NAME} extends ${PARENT_SIMPLE_NAME} implements Plugin {
+
+}
