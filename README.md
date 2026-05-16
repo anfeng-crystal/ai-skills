@@ -12,7 +12,7 @@
 ## Quick start
 
 ```bash
-git clone https://github.com/anfeng/skills.git ~/AI/skills
+git clone https://github.com/anfeng-crystal/ai-skills.git ~/AI/skills
 node ~/AI/skills/install.mjs
 ```
 
