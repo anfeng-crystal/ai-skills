@@ -1,6 +1,6 @@
 ---
 name: kingdee-metadata-analyzer
-description: Kingdee metadata forensics: entities, forms, plugin mount points, field R/W, dependencies.
+description: "Kingdee metadata forensics: entities, forms, plugin mount points, field R/W, dependencies."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Kingdee Metadata Analyzer
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - **适用场景**：按实体标识分析苍穹元数据、绑定插件、页面/操作挂载点、插件源码、字段读写、服务调用和上下游单据关系。
 - **不适用场景**（应交给其他 skills）：

@@ -1,6 +1,6 @@
 ---
 name: skill-installer
-description: Skill distribution: symlink sync to multiple AI tools, audit and conflict detection.
+description: "Skill distribution: symlink sync to multiple AI tools, audit and conflict detection."
 metadata:
   author: anfeng
   version: "0.2.1"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Skill Installer
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户要安装、同步、卸载本地 skill 到多个 AI 工具，检查软链接是否正确，补齐缺失链接，预览将发生的链接变化时使用。
 - 只修改单个 skill 内容、不涉及分发目录时不要触发。

@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Kingdee SDK Helper
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户询问金蝶云苍穹 SDK 的类定义、方法签名、Javadoc 注释或 API 用法时使用。
 - 用户描述功能需求（如”单据保存”、”数据库查询”）且当前只需要查找匹配 API 或确认 SDK 归属时使用。

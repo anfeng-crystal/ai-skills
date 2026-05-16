@@ -1,6 +1,6 @@
 ---
 name: explain-code
-description: Explain code read-only: logic, call chain, data flow, module responsibilities, design intent. Use fix-bug to fix, review-code to review.
+description: "Explain code read-only: logic, call chain, data flow, module responsibilities, design intent. Use fix-bug to fix, review-code to review."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -10,8 +10,6 @@ metadata:
 
 # Explain Code
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 ## 触发边界
 - 用户要求解释代码、梳理流程、说明设计意图、分析函数或模块职责、理解错误原因但未要求修复时使用。

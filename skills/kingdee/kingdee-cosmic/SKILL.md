@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic
-description: Kingdee Cosmic Java dev: plugins, reports, workflows, BOTP, OpenAPI, troubleshooting.
+description: "Kingdee Cosmic Java dev: plugins, reports, workflows, BOTP, OpenAPI, troubleshooting."
 metadata:
   author: anfeng
   version: "1.2.0"
@@ -10,8 +10,6 @@ metadata:
 
 # Kingdee Cosmic
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 **核心原则**：封装优先，原生兜底。优先使用 `kd.cd.common.plugin` 包下的扩展基类（`AbstractBillPlugInExt`、`AbstractFormPluginExt`、`AbstractListPluginExt`、`AbstractOperationServicePlugInExt`）和项目封装工具类（`OpUtils`、`BotpUtils`、`QueryUtils`、`DynamicObjectUtils` 等），避免在仓库已封装的场景里退回到 BOS 原生低层 API。
 

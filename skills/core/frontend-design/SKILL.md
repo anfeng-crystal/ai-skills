@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Production frontend: build distinctive UI with bold aesthetics. No generic AI slop. Use design-review to review existing pages.
+description: "Production frontend: build distinctive UI with bold aesthetics. No generic AI slop. Use design-review to review existing pages."
 license: Complete terms in LICENSE.txt
 ---
 

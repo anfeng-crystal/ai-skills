@@ -10,8 +10,6 @@ metadata:
 
 # Web Access
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 ## 何时触发
 需要联网查事实、登录态页面、浏览器交互、动态页面读取或多来源调研时用。纯静态文本问答、纯代码、纯本地文件处理时不用。

@@ -1,6 +1,6 @@
 ---
 name: multi-search
-description: Multi-platform search: 20+ platforms, result filtering/sorting, batch image download. Use web-access for single-URL fetches or CDP login-state reuse.
+description: "Multi-platform search: 20+ platforms, result filtering/sorting, batch image download. Use web-access for single-URL fetches or CDP login-state reuse."
 metadata:
   author: anfeng
   version: "0.2.0"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # 联合搜索技能
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户需要在多个平台搜索内容（GitHub、Reddit、社交媒体、搜索引擎）时使用。
 - 用户需要按时间范围、互动指标或内容类型过滤结果时使用。

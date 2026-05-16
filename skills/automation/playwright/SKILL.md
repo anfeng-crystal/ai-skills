@@ -1,6 +1,6 @@
 ---
 name: playwright
-description: Playwright browser automation: screenshots, clicks, form filling, web actions.
+description: "Playwright browser automation: screenshots, clicks, form filling, web actions."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -10,8 +10,6 @@ metadata:
 
 # Playwright CLI
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 终端驱动浏览器，用跨平台 Node wrapper 优先调用 `npx --package @playwright/cli`。如果 npm registry、网络或 npm cache 出现解析层错误，并且本地已安装依赖，则自动回退到本地 `node_modules/.bin/playwright-cli`。
 

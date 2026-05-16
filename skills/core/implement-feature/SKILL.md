@@ -1,6 +1,6 @@
 ---
 name: implement-feature
-description: Implement features: add business logic, APIs, configs, or transform existing flows.
+description: "Implement features: add business logic, APIs, configs, or transform existing flows."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -10,8 +10,6 @@ metadata:
 
 # Implement Feature
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
 
 ## 触发边界
 - 用户要求新增能力、补充业务逻辑、扩展接口、增加配置、改造流程或改变预期行为时使用。

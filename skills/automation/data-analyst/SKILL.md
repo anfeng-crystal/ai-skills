@@ -1,6 +1,6 @@
 ---
 name: data-analyst
-description: Data analyst: SQL/CSV/Excel cleaning, metric computation, trend comparison, report conclusions.
+description: "Data analyst: SQL/CSV/Excel cleaning, metric computation, trend comparison, report conclusions."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Data Analyst
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户要分析 SQL 查询结果、CSV、Excel、TSV 或多份表格数据，并输出结论、图表、报告或分析型工作簿时使用。
 - 重点处理指标定义、数据体检、分析路径、图表选择、结论表述和结果校验。

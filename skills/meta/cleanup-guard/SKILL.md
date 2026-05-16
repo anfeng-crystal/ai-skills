@@ -1,6 +1,6 @@
 ---
 name: cleanup-guard
-description: Cleanup: remove test artifacts, handle untracked files, compact dirty state. Confirmation required.
+description: "Cleanup: remove test artifacts, handle untracked files, compact dirty state. Confirmation required."
 metadata:
   author: anfeng
   version: "0.1.0"
@@ -9,8 +9,6 @@ metadata:
 ---
 
 # Cleanup Guard
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
 > 用于收尾阶段的安全清理，不负责功能实现、代码修复或提交发布。
 
 ## 触发边界

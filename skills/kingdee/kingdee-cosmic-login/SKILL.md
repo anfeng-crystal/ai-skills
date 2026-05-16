@@ -13,10 +13,6 @@ metadata:
 ---
 
 # Cosmic Login Skill
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 Use this skill when a task needs to log in to a Kingdee Cloud Cosmic test environment before calling APIs, running probes, or validating automated test flows. The skill ships a self-contained Python helper, `cosmic_login.py`, that performs the browser-equivalent RSA login flow and prints machine-readable `KEY=VALUE` output.
 
 ## Routing Boundary

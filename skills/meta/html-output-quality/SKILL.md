@@ -1,6 +1,6 @@
 ---
 name: html-output-quality
-description: Quality gate for local HTML artifacts: review cards, dashboards, comparison charts. Not for quick answers.
+description: "Quality gate for local HTML artifacts: review cards, dashboards, comparison charts. Not for quick answers."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -9,8 +9,6 @@ metadata:
 ---
 
 # HTML Output Quality
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
 > 控制 HTML 产物的触发、模板、自动检查和设计复核，不替代原有 Markdown 交付。
 
 ## 触发边界

@@ -1,6 +1,6 @@
 ---
 name: kingdee-iscb-script
-description: ISCB DSL: integration flows, value transforms, service process scripts, WebAPI scripts.
+description: "ISCB DSL: integration flows, value transforms, service process scripts, WebAPI scripts."
 metadata:
   author: anfeng
   version: "1.0.0"
@@ -9,10 +9,6 @@ metadata:
 ---
 
 # Kingdee ISCB Script
-
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
-
 ## 触发边界
 - 用户明确涉及集成云脚本、ISCB、ISC 脚本、ISCB DSL、数据集成方案脚本、值转换规则、服务流程脚本节点、自定义 API 或 WebAPI 脚本时使用。
 - 普通苍穹 Java 二开不使用；改用 `kingdee-cosmic`。
