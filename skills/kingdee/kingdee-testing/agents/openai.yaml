@@ -1,0 +1,8 @@
+interface:
+  display_name: "Kingdee Testing"
+  short_description: "金蝶云苍穹 Java 单测、Gradle 验证、dev runtime probe 和运行时证据采集"
+  default_prompt: |
+    使用 $kingdee-testing 处理金蝶云苍穹 Java 测试与验证任务。先区分单元测试、Gradle 验证、运行时探针或证据采集；按需读取 references，并优先使用 scripts 下的安全只读工具。不得自动 commit，不得自动修改生产或元数据配置；需要生产、元数据或数据库变更时只输出待确认方案。验证结果需说明命令、摘要、未确认项和风险。
+
+policy:
+  allow_implicit_invocation: true

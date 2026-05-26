@@ -31,6 +31,10 @@ import kd.cd.common.plugin.AbstractFormPluginExt;
 import kd.cd.common.plugin.AbstractOperationServicePlugInExt;
 import kd.cd.core.util.CharSequenceUtils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import java.util.Map;
 
 public class OperationOptionBridgeSample {
@@ -53,6 +57,7 @@ public class OperationOptionBridgeSample {
     public static class BillViewSide extends AbstractFormPluginExt {
         @Override
         public void beforeDoOperation(BeforeDoOperationEventArgs e) {
+            super.beforeDoOperation(e);
             FormOperate operate = (FormOperate) e.getSource();
             if (!OP_SUBMIT.equals(operate.getOperateKey())) {
                 return;
@@ -69,6 +74,7 @@ public class OperationOptionBridgeSample {
 
         @Override
         public void afterDoOperation(AfterDoOperationEventArgs e) {
+            super.afterDoOperation(e);
             FormOperate operate = (FormOperate) e.getSource();
             if (!OP_SUBMIT.equals(operate.getOperateKey()) || !e.getOperationResult().isSuccess()) {
                 return;
@@ -92,6 +98,7 @@ public class OperationOptionBridgeSample {
 
         @Override
         public void closedCallBack(ClosedCallBackEvent e) {
+            super.closedCallBack(e);
             // 回调数据类型和复核页的回传类型保持一致即可。
             if (!REVIEW_CALLBACK_ID.equals(e.getActionId())) {
                 return;
@@ -164,6 +171,7 @@ public class OperationOptionBridgeSample {
     public static class SaveSubmitOpSide extends AbstractOperationServicePlugInExt {
         @Override
         public void beginOperationTransaction(BeginOperationTransactionArgs e) {
+            super.beginOperationTransaction(e);
             if (!OP_SUBMIT.equals(e.getOperationKey())) {
                 return;
             }
@@ -182,23 +190,21 @@ public class OperationOptionBridgeSample {
 
         @Override
         public void afterExecuteOperationTransaction(AfterOperationArgs e) {
+            super.afterExecuteOperationTransaction(e);
             if (!OP_SUBMIT.equals(e.getOperationKey()) || !getOperationResult().isSuccess()) {
                 return;
             }
 
-            StringBuilder billNos = new StringBuilder();
+            List<String> billNoList = new ArrayList<>();
             boolean hasRiskBill = false;
             for (DynamicObject bill : e.getDataEntities()) {
                 String billNo = bill.getString("billno");
                 if (CharSequenceUtils.isNotBlank(billNo)) {
-                    if (billNos.length() > 0) {
-                        billNos.append("、");
-                    }
-                    billNos.append(billNo);
+                    billNoList.add(billNo);
                 }
                 hasRiskBill = hasRiskBill || isRiskBill(bill);
             }
-            getOption().setVariableValue(OPTION_ALL_BILL_NO, billNos.toString());
+            getOption().setVariableValue(OPTION_ALL_BILL_NO, String.join("、", billNoList));
             if (hasRiskBill) {
                 getOption().setVariableValue(OPTION_WARNING_SUMMARY, "命中风险复核，已按复核意见继续提交");
             }

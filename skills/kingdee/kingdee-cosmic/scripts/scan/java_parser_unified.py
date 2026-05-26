@@ -19,8 +19,8 @@ from typing import Optional, List, Dict, Any, Union
 SCRIPT_DIR = Path(__file__).parent
 
 # 项目根目录（工作空间根目录）
-# 脚本位于: .qoder/skills/cosmic-cus-java-scan/scripts/
-# 项目根目录是 .qoder 的父目录
+# 脚本位于: <skill-root>/scripts/scan/
+# 默认项目根目录按当前工作目录或显式参数传入
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
 
 # 是否启用调试日志
@@ -194,8 +194,6 @@ class JavaParserBridge:
         
         # 2. 查找 JavaParser jar 包
         jar_paths = [
-            PROJECT_ROOT / ".qoder" / "lib" / "javaparser-core-3.25.8.jar",
-            PROJECT_ROOT / ".qoder" / "lib" / "javaparser-core.jar",
             SCRIPT_DIR / "javaparser-core-3.25.8.jar",
             SCRIPT_DIR / "javaparser-core.jar",
         ]
@@ -207,7 +205,7 @@ class JavaParserBridge:
                 break
         
         if jar_file is None:
-            cls._init_error = "JavaParser jar 包不存在，请下载到 .qoder/lib/ 目录"
+            cls._init_error = "JavaParser jar 包不存在，请放到当前 scan 脚本目录"
             return False
         
         cls._jar_path = str(jar_file)

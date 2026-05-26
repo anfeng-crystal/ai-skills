@@ -9,6 +9,8 @@ metadata:
 ---
 
 # Kingdee Metadata Analyzer
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 触发边界
 - **适用场景**：按实体标识分析苍穹元数据、绑定插件、页面/操作挂载点、插件源码、字段读写、服务调用和上下游单据关系。
 - **不适用场景**（应交给其他 skills）：
@@ -65,7 +67,9 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 - 看到 `WARNING`、`ERROR`、`...`、`省略`、`truncated`、`showing first`、`仅展示前`、缓存写入失败、连接重试、字段列表不完整等信号时，quick query 只能作为摸底结果，不能作为最终事实；必须改用 `--all`、全景分析、直接读取 `t_meta_entitydesign.fdata` / `t_meta_formdesign.fdata`，或明确写为“未确认”。
 - 需要证明“单据头 vs 单据体/分录”“字段类型/枚举值/复选框口径”“生产 vs dev 环境差异”时，不能只凭平铺字段清单；必须拿到字段所属控件层级、父容器/entry、字段类型和环境配置来源后再下结论。
 - 苍穹字段类型不止固定白名单；`CheckBoxField`、`QuerySelectField`、`BasedataPropField`、`BigIntField`、`QtyField`、`TextAreaField`、`MulComboField` 等平台字段都应识别为字段。quick query 遇到未知 `*Field` 标签时必须展示原始类型，不能因为类型未匹配就当字段不存在。
-- `--plugins` 适合快速看当前实体直接挂载的插件；如果任务要判断 `MobileBillFormAp`、`MobileListFormAp`、`CardEntryViewAp` 或 `ztjg_riskcheck_*` 这类派生表单页面到底命中哪个插件，不能只停在 quick query，必须切到全景分析。
+- `--plugins` 必须同时输出实体操作插件和关联表单页面插件，并保留 `operation`、`formPage`、`pageElement` 三类挂载证据；页面插件类名可能存放在 `ClassName` 或 `oid`，快查不能漏掉 `oid` 形式。
+- 操作 XML 只有 `action=edit` 且没有 `Key/Name/OperationKey` 时，快查和全景分析只能输出 `edit#N[oid]` 这类无语义标签；不能按固定顺序推断成暂存、提交、审核或反审核，真实业务语义必须看插件描述、源码或操作设计元数据。
+- 如果任务要判断 `MobileBillFormAp`、`MobileListFormAp`、`CardEntryViewAp` 或 `ztjg_riskcheck_*` 这类派生表单页面到底命中哪个插件，quick query 只能作为插件清单摸底；源码证据、JAR 反查和最终执行链路仍必须切到全景分析。
 
 ---
 
@@ -100,13 +104,17 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
    - 输出字段证据时要分层标注：`fieldKey`、中文名、字段类型、物理列名、PC/移动布局位置分别来自哪里；缺少任一层证据时写“未确认”，不要把其它层证据外推。
    - 涉及单据字段时必须标注字段在单据头还是具体分录/子单据体；只证明“实体里有这个 fieldKey”不等于证明“目标代码可按单据头读取”。
    - 输出插件挂载证据时至少同时核对 `className`、`pageElement`、`formPage` 三层；同一个类在业务实体、移动表单、移动列表上可重复出现，不能因为类名相同就默认是同一个执行入口。
-9. **用户确认检查点**：展示关键发现摘要（插件数量、高风险关系、可复用资源），询问用户：”是否需要深入分析某个插件或关系？”等待用户确认后再生成完整报告。
-10. 按 references 生成分析报告；如果已经存在可复用的插件源码、模板、helper、服务调用链或标准平台能力，也在报告中点明，避免后续重复实现。
+9. 需要给其它 Kingdee skill 消费时，运行 `scripts/metadata_contract.py --inventory <inventory.json> --environment <dev|prod|test|unknown>` 生成 machine-readable 摘要；如果只有 quick query 缓存，可用 `--quick-cache scripts/.metadata_cache/<entity>.json` 补字段摘要。
+10. **用户确认检查点**：展示关键发现摘要（插件数量、高风险关系、可复用资源），询问用户：”是否需要深入分析某个插件或关系？”等待用户确认后再生成完整报告。
+11. 按 references 生成分析报告；如果已经存在可复用的插件源码、模板、helper、服务调用链或标准平台能力，也在报告中点明，避免后续重复实现。
 
 ## References
 - 分析口径：`references/analysis-rubric.md`
 - 报告模板：`references/report-template.md`
 - 配置说明：`references/config.md`
+- 页面挂载：`references/page-binding.md`
+- 字段证据：`references/field-evidence.md`
+- 输出契约：`references/output-contract.md`
 - SDK 查询协作：当需要查询插件中使用的 SDK API 详情时，使用 `kingdee-sdk-helper` skill
 
 ## Guardrails

@@ -30,9 +30,10 @@ import kd.bos.orm.query.QFilter;
 import kd.cd.common.entity.EntityUtils;
 import kd.cd.common.form.ShowParameterUtils;
 import kd.cd.common.plugin.AbstractFormPluginExt;
-import kd.cd.common.util.QueryUtils;
+import kd.cd.common.util.DynamicObjectUtils;
 import kd.cd.core.util.BigDecimalUtils;
 import kd.cd.core.util.CollectionUtils;
+import kd.bos.servicehelper.QueryServiceHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,6 +57,7 @@ public class BeforeOperationConfirmSample extends AbstractFormPluginExt {
 
     @Override
     public void beforeDoOperation(BeforeDoOperationEventArgs args) {
+        super.beforeDoOperation(args);
         if (args.isCancel()) {
             return;
         }
@@ -90,6 +92,7 @@ public class BeforeOperationConfirmSample extends AbstractFormPluginExt {
 
     @Override
     public void afterDoOperation(AfterDoOperationEventArgs args) {
+        super.afterDoOperation(args);
         FormOperate operate = (FormOperate) args.getSource();
         if (OP_SAVE.equals(operate.getOperateKey())) {
             handleSaveAfterCheck(operate, args);
@@ -104,6 +107,7 @@ public class BeforeOperationConfirmSample extends AbstractFormPluginExt {
 
     @Override
     public void closedCallBack(ClosedCallBackEvent e) {
+        super.closedCallBack(e);
         // 回调数据类型和确认页的回传类型保持一致即可。
         String actionId = e.getActionId();
         if (!CHECK_WARNING_CALLBACK_ID.equals(actionId) && !CHECK_RESULT_CALLBACK_ID.equals(actionId)) {
@@ -171,7 +175,8 @@ public class BeforeOperationConfirmSample extends AbstractFormPluginExt {
             return Collections.emptyList();
         }
         QFilter filter = new QFilter("sourcebill.id", QCP.equals, billPk);
-        return QueryUtils.queryMatchedPkList(CHECK_RESULT_FORM_ID, filter.toArray());
+        DynamicObjectCollection rows = QueryServiceHelper.query(CHECK_RESULT_FORM_ID, "id", filter.toArray());
+        return DynamicObjectUtils.listOf(rows, "id");
     }
 
     private boolean shouldContinueSubmit(Map<String, Object> returnData) {

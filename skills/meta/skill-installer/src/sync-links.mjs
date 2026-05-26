@@ -11,6 +11,12 @@ const TARGET_DIR_SUFFIXES = {
   junie: ".junie/skills",
   agents: ".agents/skills",
   hermes: ".hermes/skills",
+  "antigravity-cli": ".gemini/antigravity-cli/skills",
+  "antigravity-desktop": ".gemini/config/plugins/anfeng-active-skills/skills",
+};
+
+const TOOL_ALIASES = {
+  agy: "antigravity-cli",
 };
 
 const DEFAULT_EXCLUDED_SOURCE_PREFIXES = ["skills/incoming/"];
@@ -86,7 +92,8 @@ export function resolveTools(requestedTools, hostHome, config = {}) {
   }
 
   return requestedTools.map((tool) => {
-    const match = targets.find((candidate) => candidate.name === tool);
+    const resolvedTool = TOOL_ALIASES[tool] || tool;
+    const match = targets.find((candidate) => candidate.name === resolvedTool);
     if (!match) {
       return {
         name: tool,

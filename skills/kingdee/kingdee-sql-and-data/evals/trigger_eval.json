@@ -1,0 +1,14 @@
+[
+  {"query": "帮我校验一下这个 KSQL 语句能不能在苍穹跑", "should_trigger": true},
+  {"query": "生成苍穹编码规则的预置数据脚本", "should_trigger": true},
+  {"query": "帮我解析一下项目里的 KSQL config.ini", "should_trigger": true},
+  {"query": "苍穹的 KSQL 和标准 SQL 有什么区别", "should_trigger": true},
+  {"query": "生成 DELETE INSERT 预置数据迁移脚本", "should_trigger": true},
+  {"query": "检查一下项目里有没有把数据库密码提交到 Git", "should_trigger": true},
+  {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "帮我写一个 KingScript 脚本", "should_trigger": false},
+  {"query": "对 dev 接口跑安全 POC 验证", "should_trigger": false}
+]

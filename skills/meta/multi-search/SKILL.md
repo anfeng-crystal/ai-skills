@@ -9,6 +9,8 @@ metadata:
 ---
 
 # 联合搜索技能
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 触发边界
 - 用户需要在多个平台搜索内容（GitHub、Reddit、社交媒体、搜索引擎）时使用。
 - 用户需要按时间范围、互动指标或内容类型过滤结果时使用。

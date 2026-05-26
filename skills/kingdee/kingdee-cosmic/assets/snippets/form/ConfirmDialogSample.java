@@ -43,12 +43,14 @@ public class ConfirmDialogSample extends AbstractFormPluginExt {
     // --- 在 registerListener 中注册工具栏按钮 ---
     @Override
     public void registerListener(EventObject e) {
+        super.registerListener(e);
         addItemClickListeners(ENTRY_TOOLBAR, MAIN_TOOLBAR);
     }
 
     // --- 标准工具栏按钮：先拦截，再确认后重放原动作 ---
     @Override
     public void beforeItemClick(BeforeItemClickEvent evt) {
+        super.beforeItemClick(evt);
         if (!ITEM_COPY_HISTORY.equals(evt.getItemKey())) {
             return;
         }
@@ -69,6 +71,7 @@ public class ConfirmDialogSample extends AbstractFormPluginExt {
     // --- 按钮点击后先弹确认框 ---
     @Override
     public void itemClick(ItemClickEvent evt) {
+        super.itemClick(evt);
         if (!ITEM_MARK_SELECTED.equals(evt.getItemKey())) {
             return;
         }
@@ -86,6 +89,7 @@ public class ConfirmDialogSample extends AbstractFormPluginExt {
     // --- 用户确认后执行实际逻辑 ---
     @Override
     public void confirmCallBack(MessageBoxClosedEvent evt) {
+        super.confirmCallBack(evt);
         String callBackId = evt.getCallBackId();
         if (CALLBACK_MARK_SELECTED.equals(callBackId)) {
             if (MessageBoxResult.Yes.equals(evt.getResult())) {

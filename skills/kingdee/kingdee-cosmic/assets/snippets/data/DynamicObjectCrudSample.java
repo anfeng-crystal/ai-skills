@@ -147,6 +147,32 @@ public class DynamicObjectCrudSample {
         );
     }
 
+    // ==================== 特殊情况：基础资料属性字段（BasedataPropField）查询取值 ====================
+    // BasedataPropField 是基础资料的派生显示字段，它的标识（如 e_materialname）是表单控件标识，
+    // 在查询的 select 字段和 QFilter 中必须使用元数据中的「引用关系」路径。
+    //
+    // 示例：元数据查询结果
+    //   标识: e_materialname | 类型: BasedataPropField | 引用关系: e_material.name
+    //
+    // ✅ 正确：使用引用关系路径
+    //   select: "entryentity.e_material.name"
+    //   filter: new QFilter("entryentity.e_material.name", QCP.like, "%某物料%")
+    //
+    // ❌ 错误：使用控件标识（查询时无法识别）
+    //   select: "entryentity.e_materialname"
+
+    /**
+     * 按分录物料名称查询，演示 BasedataPropField 在查询中的正确用法。
+     */
+    public DynamicObjectCollection queryByMaterialName(String materialName) {
+        return QueryServiceHelper.query(
+                FORM_ID,
+                // ✅ select 中使用引用关系路径 e_material.name，而非控件标识 e_materialname
+                "id,billno," + ENTRY_KEY + ".e_material.name," + ENTRY_KEY + ".e_material.number",
+                new QFilter(ENTRY_KEY + ".e_material.name", QCP.like, "%" + materialName + "%").toArray()
+        );
+    }
+
     /**
      * 批量复制单据作为备份包，适合修改前先批量做快照。
      */

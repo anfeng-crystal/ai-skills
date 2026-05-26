@@ -1,8 +1,8 @@
 /**
- * QueryUtils.queryDataSet(...) + DataSet 聚合示例。
+ * QueryServiceHelper.queryDataSet(...) + DataSet 聚合示例。
  * <p>
  * 适用插件：表单插件、报表插件、服务层
- * 优先封装：QueryUtils、AlgoUtils
+ * 优先封装：QueryServiceHelper、AlgoUtils
  * 原生兜底：DataSet、Row、QFilter
  * 相关 lint 规则：RESOURCE-004、STYLE-015
  * <p>
@@ -17,9 +17,10 @@ import kd.bos.algo.Row;
 import kd.bos.dataentity.resource.ResManager;
 import kd.bos.orm.query.QCP;
 import kd.bos.orm.query.QFilter;
+import kd.bos.servicehelper.QueryServiceHelper;
 import kd.cd.common.plugin.AbstractFormPluginExt;
 import kd.cd.common.util.AlgoUtils;
-import kd.cd.common.util.QueryUtils;
+import kd.cd.common.util.SelectFieldBuilder;
 import kd.cd.core.util.BigDecimalUtils;
 
 import java.math.BigDecimal;
@@ -37,7 +38,8 @@ public class DataSetQueryStatSample extends AbstractFormPluginExt {
                 .and(new QFilter("supplier.number", QCP.equals, supplierNumber))
                 .and(new QFilter("org.id", QCP.equals, orgId));
 
-        try (DataSet ds = QueryUtils.queryDataSet(PUR_ORDER_FORM_ID, "id,billno,amountandtax", "billno desc", 200, filter.toArray())) {
+        try (DataSet ds = QueryServiceHelper.queryDataSet(PUR_ORDER_FORM_ID, PUR_ORDER_FORM_ID,
+                "id,billno,amountandtax", filter.toArray(), "billno desc", 200)) {
             BigDecimal totalAmount = BigDecimalUtils.nullToZero(AlgoUtils.sumOf(ds.copy(), "amountandtax"));
             if (ds.hasNext()) {
                 Row latestRow = ds.next();
@@ -54,10 +56,10 @@ public class DataSetQueryStatSample extends AbstractFormPluginExt {
     public Set<Object> queryAuditedOrderIds(Object orgId) {
         QFilter filter = new QFilter("billstatus", QCP.equals, "C")
                 .and(new QFilter("org.id", QCP.equals, orgId));
-        try (DataSet ds = QueryUtils.queryDataSet(
-                PUR_ORDER_FORM_ID,
+        try (DataSet ds = QueryServiceHelper.queryDataSet(
+                PUR_ORDER_FORM_ID, PUR_ORDER_FORM_ID,
                 "id",
-                filter.toArray())
+                filter.toArray(), null, -1)
         ) {
             return AlgoUtils.setOf(ds, "id");
         }
@@ -67,15 +69,21 @@ public class DataSetQueryStatSample extends AbstractFormPluginExt {
     public BigDecimal queryUninvoicedAmount(Object orgId) {
         QFilter filter = new QFilter("billstatus", QCP.equals, "C")
                 .and(new QFilter("org.id", QCP.equals, orgId));
-        try (DataSet orderDs = QueryUtils.queryDataSet(
-                PUR_ORDER_FORM_ID,
-                "supplier.id supplierId,amountandtax",
-                filter.toArray()
+        String orderFields = new SelectFieldBuilder()
+                .append("supplier.id", "supplierId")
+                .appendAll("amountandtax")
+                .toString();
+        String invoiceFields = new SelectFieldBuilder()
+                .append("receivablessupp.id", "supplierId")
+                .append("pricetaxtotal", "invoicedamount")
+                .toString();
+        try (DataSet orderDs = QueryServiceHelper.queryDataSet(
+                PUR_ORDER_FORM_ID, PUR_ORDER_FORM_ID,
+                orderFields, filter.toArray(), null, -1
         );
-             DataSet invoiceDs = QueryUtils.queryDataSet(
-                     AP_INVOICE_FORM_ID,
-                     "receivablessupp.id supplierId,pricetaxtotal invoicedamount",
-                     filter.toArray()
+             DataSet invoiceDs = QueryServiceHelper.queryDataSet(
+                     AP_INVOICE_FORM_ID, AP_INVOICE_FORM_ID,
+                     invoiceFields, filter.toArray(), null, -1
              );
              DataSet invoiceSum = invoiceDs.groupBy(new String[]{"supplierId"}).sum("invoicedamount").finish();
              DataSet joined = orderDs.leftJoin(invoiceSum)
@@ -97,18 +105,20 @@ public class DataSetQueryStatSample extends AbstractFormPluginExt {
     public void previewOrderSummary(Object orgId, boolean orderByAmount, boolean keepSupplierField) {
         QFilter filter = new QFilter("billstatus", QCP.equals, "C")
                 .and(new QFilter("org.id", QCP.equals, orgId));
-        try (DataSet ds = QueryUtils.queryDataSet(
-                PUR_ORDER_FORM_ID,
-                "id,billno,supplier.number supplierNumber,amountandtax",
-                filter.toArray())
+        List<String> orderBys = new ArrayList<>(32);
+        orderBys.add(orderByAmount ? "amountandtax desc" : "billno desc");
+        orderBys.add("billno asc");
+        // orderBy 返回派生 DataSet，统一纳入 try-with-resources 确保关闭
+        SelectFieldBuilder builder = new SelectFieldBuilder()
+                .appendAll("id", "billno", "amountandtax");
+        if (keepSupplierField) {
+            builder.append("supplier.number", "supplierNumber");
+        }
+        String fields = builder.toString();
+        try (DataSet ds = QueryServiceHelper.queryDataSet(
+                PUR_ORDER_FORM_ID, PUR_ORDER_FORM_ID, fields, filter.toArray(), null, -1);
+             DataSet result = ds.orderBy(orderBys.toArray(new String[0]))
         ) {
-            List<String> orderBys = new ArrayList<>(32);
-            orderBys.add(orderByAmount ? "amountandtax desc" : "billno desc");
-            orderBys.add("billno asc");
-            DataSet result = ds.orderBy(orderBys.toArray(new String[0]));
-            if (!keepSupplierField) {
-                result = result.removeFields("supplierNumber");
-            }
             if (result.hasNext()) {
                 Row firstRow = result.next();
                 getView().showTipNotification(String.format(
@@ -118,5 +128,4 @@ public class DataSetQueryStatSample extends AbstractFormPluginExt {
             }
         }
     }
-
 }

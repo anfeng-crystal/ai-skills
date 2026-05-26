@@ -9,6 +9,7 @@ metadata:
 ---
 
 # Explain Code
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 
 ## 触发边界

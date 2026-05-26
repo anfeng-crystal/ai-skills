@@ -26,7 +26,9 @@ import kd.cd.common.util.DynamicObjectUtils;
 import kd.cd.core.util.BigDecimalUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class OpAddValidatorsSample extends AbstractOperationServicePlugInExt {
     private static final String TARGET_BILL_TYPE = "kdcd_measuresettlebill_B_02";
@@ -42,6 +44,7 @@ public class OpAddValidatorsSample extends AbstractOperationServicePlugInExt {
 
     @Override
     public void onPreparePropertys(PreparePropertysEventArgs e) {
+        super.onPreparePropertys(e);
         List<String> fieldKeys = e.getFieldKeys();
         fieldKeys.add(FIELD_BILL_NO);
         fieldKeys.add(FIELD_CONTRACT);
@@ -54,6 +57,7 @@ public class OpAddValidatorsSample extends AbstractOperationServicePlugInExt {
 
     @Override
     public void onAddValidators(AddValidatorsEventArgs e) {
+        super.onAddValidators(e);
         e.addValidator(new ContractRequiredValidator());
         e.addValidator(new InvoiceAmountEqualsValidator());
         e.addValidator(new InvoiceAmountPositiveValidator());
@@ -104,24 +108,18 @@ public class OpAddValidatorsSample extends AbstractOperationServicePlugInExt {
                 }
 
                 DynamicObjectCollection invoiceRows = bill.getDynamicObjectCollection(ENTRY_INVOICE_DETAIL);
-                StringBuilder invalidSeqMsg = new StringBuilder();
-                for (DynamicObject row : invoiceRows) {
-                    BigDecimal rowAmount = BigDecimalUtils.nullToZero(row.getBigDecimal(FIELD_PRICE_TAX_TOTAL));
-                    if (BigDecimalUtils.largeThanZero(rowAmount)) {
-                        continue;
-                    }
-                    if (invalidSeqMsg.length() > 0) {
-                        invalidSeqMsg.append("、");
-                    }
-                    invalidSeqMsg.append(row.get(FIELD_SEQ));
-                }
-                if (invalidSeqMsg.length() > 0) {
+                List<String> invalidSeqs = invoiceRows.stream()
+                        .filter(row -> !BigDecimalUtils.largeThanZero(
+                                BigDecimalUtils.nullToZero(row.getBigDecimal(FIELD_PRICE_TAX_TOTAL))))
+                        .map(row -> String.valueOf(row.get(FIELD_SEQ)))
+                        .collect(Collectors.toList());
+                if (!invalidSeqs.isEmpty()) {
                     addMessageWithErrCode(
                             ext,
                             "kdcd_invoice_row_amount_not_positive",
                             String.format(
                                     ResManager.loadKDString("发票明细第%s行价税合计必须大于 0", "OpAddValidatorsSample_0", "kd-cd-common-snippets"),
-                                    invalidSeqMsg
+                                    String.join("、", invalidSeqs)
                             )
                     );
                 }
@@ -134,6 +132,6 @@ public class OpAddValidatorsSample extends AbstractOperationServicePlugInExt {
     }
 
     private static boolean shouldSkip(DynamicObject bill) {
-        return !isTargetBill(bill) || bill.getBoolean(FIELD_INITIALIZATION);
+        return !isTargetBill(bill) || Boolean.TRUE.equals(DynamicObjectUtils.nullSafeGet(bill, FIELD_INITIALIZATION));
     }
 }

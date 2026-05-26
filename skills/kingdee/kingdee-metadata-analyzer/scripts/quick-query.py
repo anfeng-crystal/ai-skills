@@ -40,11 +40,15 @@ FORM_L_TABLE = "t_meta_formdesign_l"
 
 FORM_AP_NAMES = {
     "BillFormAp": "单据编辑页面",
+    "BasedataFormAp": "基础资料页面",
     "FormAp": "列表页面",
     "TreeFormAp": "树形页面",
     "ReportFormAp": "报表页面",
     "MobBillFormAp": "移动单据页面",
     "MobFormAp": "移动列表页面",
+    "MobileBillFormAp": "移动单据页面",
+    "MobileListFormAp": "移动列表页面",
+    "CardEntryViewAp": "卡片入口页面",
 }
 
 BUILTIN_EDIT_ORDER = ["save(暂存)", "submit(提交)", "audit(审核)", "unaudit(反审核)"]
@@ -196,6 +200,23 @@ def _is_real_plugin(cls: str) -> bool:
     return not (cls_lower in ("null", "none", "undefined") or cls_lower.startswith("placeholder"))
 
 
+def operation_label(op, edit_index: int) -> str:
+    """生成操作显示名；无 Key 的 edit 不按固定顺序猜测具体业务操作。"""
+    key = op.findtext('Key', '').strip()
+    name = op.findtext('Name', '').strip()
+    action = op.get('action', '').strip()
+    oid = op.get('oid', '').strip()
+
+    if key:
+        return f"{key}({name})" if name else key
+    if action == 'remove':
+        return "delete(删除)"
+    if action == 'edit':
+        suffix = f"[{oid}]" if oid else ""
+        return f"edit#{edit_index}{suffix}"
+    return action or "unknown"
+
+
 # ── 缓存管理 ──────────────────────────────────────────────────────────────
 CACHE_DIR = None  # 全局缓存目录，由 main() 初始化
 
@@ -342,16 +363,9 @@ def extract_operations(root) -> List[Dict[str, Any]]:
         name = op.findtext('Name', '').strip()
         action = op.get('action', '').strip()
         op_type = action or 'custom'
-
-        if key:
-            op_label = f"{key}({name})" if name else key
-        elif action == 'edit':
-            op_label = BUILTIN_EDIT_ORDER[edit_counter] if edit_counter < len(BUILTIN_EDIT_ORDER) else f"标准操作#{edit_counter}"
+        if action == 'edit' and not key:
             edit_counter += 1
-        elif action == 'remove':
-            op_label = "delete(删除)"
-        else:
-            op_label = action or "unknown"
+        op_label = operation_label(op, edit_counter)
 
         # 统计插件数量
         plugin_count = 0
@@ -376,7 +390,7 @@ def extract_operations(root) -> List[Dict[str, Any]]:
 
 # ── 插件提取 ──────────────────────────────────────────────────────────────
 def extract_plugins(root, entity_number: str) -> List[Dict[str, Any]]:
-    """从实体 XML 提取所有插件"""
+    """从实体 XML 提取操作插件"""
     plugins = []
     if root is None:
         return plugins
@@ -385,18 +399,10 @@ def extract_plugins(root, entity_number: str) -> List[Dict[str, Any]]:
     edit_counter = 0
     for op in root.iter('Operation'):
         key = op.findtext('Key', '').strip()
-        name = op.findtext('Name', '').strip()
         action = op.get('action', '').strip()
-
-        if key:
-            op_label = f"{key}({name})" if name else key
-        elif action == 'edit':
-            op_label = BUILTIN_EDIT_ORDER[edit_counter] if edit_counter < len(BUILTIN_EDIT_ORDER) else f"标准操作#{edit_counter}"
+        if action == 'edit' and not key:
             edit_counter += 1
-        elif action == 'remove':
-            op_label = "delete(删除)"
-        else:
-            op_label = action or "unknown"
+        op_label = operation_label(op, edit_counter)
 
         plugins_node = op.find('Plugins')
         if plugins_node is None:
@@ -413,6 +419,45 @@ def extract_plugins(root, entity_number: str) -> List[Dict[str, Any]]:
                 plugins.append({
                     "type": "操作插件",
                     "operation": op_label,
+                    "className": cls,
+                    "enabled": enabled,
+                    "description": desc,
+                })
+
+    return plugins
+
+
+def extract_form_plugins(root, form_number: str = "", form_name: str = "") -> List[Dict[str, Any]]:
+    """从表单 XML 提取页面插件，并保留页面和控件挂载证据"""
+    plugins = []
+    if root is None:
+        return plugins
+
+    parent_map = {child: parent for parent in root.iter() for child in parent}
+    form_label = f"{form_number}({form_name})" if form_name else form_number
+    for plugins_node in root.iter('Plugins'):
+        parent = parent_map.get(plugins_node)
+        if parent is not None and parent.tag == 'Operation':
+            continue
+
+        parent_tag = parent.tag if parent is not None else "unknown"
+        parent_action = parent.get('action', '').strip() if parent is not None else ""
+        page_element = FORM_AP_NAMES.get(parent_tag, parent_tag)
+        if parent_action:
+            page_element += f"({parent_action})"
+
+        for p in plugins_node.findall('Plugin'):
+            cls = p.findtext('ClassName', '').strip()
+            if not cls:
+                cls = p.get('oid', '').strip()
+            enabled = p.findtext('Enabled', '').strip()
+            desc = p.findtext('Description', '').strip()
+
+            if _is_real_plugin(cls):
+                plugins.append({
+                    "type": "页面插件",
+                    "formPage": form_label,
+                    "pageElement": page_element,
                     "className": cls,
                     "enabled": enabled,
                     "description": desc,
@@ -498,6 +543,28 @@ def query_entity(cur, entity_number: str) -> Optional[Tuple[Any, str, str, Any]]
         WHERE e.fnumber = %s
     """, (ZH_LOCALE, entity_number))
     return cur.fetchone()
+
+
+def query_forms_for_entity(cur, entity_fid: Any, entity_number: str) -> List[Tuple[Any, str, str, Any]]:
+    """查询实体关联表单，兼容直接关联和编号派生的页面"""
+    cur.execute(f"""
+        SELECT f.fid, f.fnumber, f.fdata, l.fname
+        FROM {FORM_TABLE} f
+        LEFT JOIN {FORM_L_TABLE} l ON f.fid = l.fid AND l.flocaleid = %s
+        WHERE f.fentityid = %s OR f.fnumber ILIKE %s
+        ORDER BY f.fnumber
+        LIMIT 50
+    """, (ZH_LOCALE, entity_fid, f"%{entity_number}%"))
+    return cur.fetchall()
+
+
+def query_all_plugins(cur, entity_fid: Any, entity_number: str, entity_root) -> List[Dict[str, Any]]:
+    """查询实体操作插件和关联表单页面插件"""
+    plugins = extract_plugins(entity_root, entity_number)
+    for _, form_number, form_data, form_name in query_forms_for_entity(cur, entity_fid, entity_number):
+        form_root = parse_fdata(form_data)
+        plugins.extend(extract_form_plugins(form_root, form_number, form_name or ""))
+    return plugins
 
 
 def search_entities(cur, keyword: str) -> List[Tuple]:
@@ -703,24 +770,25 @@ def command_plugins(args):
 
     entity_fid, entity_fnumber, entity_fdata, entity_fname = row
     root = parse_fdata(entity_fdata)
-    plugins = extract_plugins(root, entity_fnumber)
+    plugins = query_all_plugins(cur, entity_fid, entity_fnumber, root)
     cur.close()
     conn.close()
 
     print(f"实体 {entity_fnumber}({entity_fname or ''}) 共 {len(plugins)} 个插件：\n")
     table_rows = []
     for i, p in enumerate(plugins):
-        bind_loc = p.get("operation", "")
+        bind_loc = p.get("operation", "") or p.get("pageElement", "")
         enabled_str = "启用" if p.get("enabled") == "true" else "禁用" if p.get("enabled") else ""
         table_rows.append((
             str(i + 1),
             p["type"],
             bind_loc,
+            p.get("formPage", ""),
             p["className"],
             enabled_str,
             p.get("description", ""),
         ))
-    print_table(["序号", "类型", "挂载点", "类名", "状态", "说明"], table_rows)
+    print_table(["序号", "类型", "挂载点", "表单页面", "类名", "状态", "说明"], table_rows)
 
     return 0
 
@@ -785,11 +853,17 @@ def command_all(args):
     # 字段
     fields = extract_fields(root)
     print(f"=== 字段 ({len(fields)}) ===")
-    for field in fields[:10]:
-        ref_info = f" -> {field['refEntity']}" if field['refEntity'] else ""
-        print(f"  {field['fieldKey']}: {field['name']} [{field['type']}]{ref_info}")
-    if len(fields) > 10:
-        print(f"  ... 还有 {len(fields) - 10} 个字段")
+    field_rows = []
+    for field in fields:
+        ref_info = f"[关联:{field['refEntity']}]" if field['refEntity'] else ""
+        field_rows.append((
+            field["fieldKey"],
+            field["name"],
+            field["type"],
+            "是" if field.get("isBasedata") else "",
+            ref_info,
+        ))
+    print_table(["fieldKey", "中文名", "类型", "基础资料", "备注"], field_rows)
     print()
 
     # 操作
@@ -801,13 +875,17 @@ def command_all(args):
     print()
 
     # 插件
-    plugins = extract_plugins(root, entity_fnumber)
+    plugins = query_all_plugins(cur, entity_fid, entity_fnumber, root)
     print(f"=== 插件 ({len(plugins)}) ===")
-    for plugin in plugins[:10]:
-        print(f"  {plugin['type']} @ {plugin['operation']}")
-        print(f"    {plugin['className']}")
-    if len(plugins) > 10:
-        print(f"  ... 还有 {len(plugins) - 10} 个插件")
+    plugin_rows = []
+    for plugin in plugins:
+        plugin_rows.append((
+            plugin["type"],
+            plugin.get("operation", "") or plugin.get("pageElement", ""),
+            plugin.get("formPage", ""),
+            plugin["className"],
+        ))
+    print_table(["类型", "挂载点", "表单页面", "类名"], plugin_rows)
     print()
 
     # 枚举

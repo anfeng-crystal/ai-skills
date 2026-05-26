@@ -1,6 +1,7 @@
 package kd.cd.common;
 
 import kd.bos.dataentity.entity.DynamicObject;
+import kd.bos.dataentity.resource.ResManager;
 import kd.bos.entity.ExtendedDataEntity;
 import kd.bos.entity.plugin.AddValidatorsEventArgs;
 import kd.bos.entity.plugin.PreparePropertysEventArgs;
@@ -25,7 +26,6 @@ import java.util.List;
  * @medFreqEvents beforeExecuteOperationTransaction, beginOperationTransaction, afterExecuteOperationTransaction
  * @lowFreqEvents onReturnOperation
  * @relatedDocs references/adv/operate-chain.md, references/base/plugin/plugin-operation.md
- * @snippets assets/snippets/silent-audit.java
  */
 public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
 
@@ -54,7 +54,8 @@ public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
     private static final String OPTION_KEY_DEMO = "key3";
     private static final String OPTION_VALUE_DEMO = "value1";
     private static final String ERROR_CODE_DEMO = "OperateError_001";
-    private static final String ERROR_MSG_REQUIRED_BILL_NO = "单据编号不能为空";
+    private static final String ERROR_MSG_REQUIRED_BILL_NO = "OperateError_002";
+    private static final String RES_APP_ID = "kd-cd-common-template";
     private static final String ERROR_MSG_DEMO = "xxxxxx";
 
     // ===== 字段准备事件 =====
@@ -184,16 +185,15 @@ public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
     private static class BillNoRequiredValidator extends AbstractValidatorExt {
         @Override
         public void validate() {
-        super.validate();
+            super.validate();
             for (ExtendedDataEntity ext : getDataEntities()) {
                 DynamicObject bill = ext.getDataEntity();
                 String billNo = bill.getString(FIELD_BILL_NO);
                 if (CharSequenceUtils.isBlank(billNo)) {
                     // 强制校验拦截
-                    this.addErrorMessage(ext, ERROR_MSG_REQUIRED_BILL_NO);
-                    // 弱提示拦截
-                    this.addWarningMessage(ext, ERROR_MSG_DEMO);
-                    // this.addWarningMessage(billDataEntity,
+                    this.addErrorMessage(ext, ResManager.loadKDString("单据编号不能为空", ERROR_MSG_REQUIRED_BILL_NO, RES_APP_ID));
+                    // 弱提示拦截（示例）
+                    this.addWarningMessage(ext, ResManager.loadKDString("xxxxxx", ERROR_CODE_DEMO, RES_APP_ID));
                 }
             }
         }

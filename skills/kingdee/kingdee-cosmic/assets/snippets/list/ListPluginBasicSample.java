@@ -35,6 +35,7 @@ import kd.bos.orm.query.QCP;
 import kd.bos.orm.query.QFilter;
 import kd.cd.common.form.ShowParameterUtils;
 import kd.cd.common.plugin.AbstractListPluginExt;
+import kd.cd.common.util.DynamicObjectUtils;
 import kd.cd.common.util.FilterUtils;
 import kd.cd.core.util.CollectionUtils;
 
@@ -51,6 +52,7 @@ public class ListPluginBasicSample extends AbstractListPluginExt {
     // --- setFilter: 列表加载时追加过滤条件 ---
     @Override
     public void setFilter(SetFilterEvent e) {
+        super.setFilter(e);
         IPageCache cache = getView().getPageCache();
         String fuzzyFilterStr = cache.get(FUZZY_CACHE_KEY);
         if (fuzzyFilterStr != null) {
@@ -76,8 +78,8 @@ public class ListPluginBasicSample extends AbstractListPluginExt {
         // 操作列按钮显隐控制
         if (source instanceof ListOperationColumnDesc) {
             DynamicObject rowData = e.getRowData();
-            boolean isAudited = rowData != null && Objects.equals("C", rowData.get(STATUS));
-            boolean isEnabled = rowData != null && Objects.equals("1", rowData.get(ENABLE));
+            boolean isAudited = "C".equals(DynamicObjectUtils.nullSafeGet(rowData, STATUS));
+            boolean isEnabled = "1".equals(DynamicObjectUtils.nullSafeGet(rowData, ENABLE));
 
             List<OperationColItem> items = (List<OperationColItem>) e.getFormatValue();
             for (OperationColItem item : items) {
@@ -96,7 +98,7 @@ public class ListPluginBasicSample extends AbstractListPluginExt {
                 e.setFormatValue(port == null || port == 0 ? "-" : String.valueOf(port));
             } else if ("connectstate".equals(fieldKey)) {
                 DynamicObject rowData = e.getRowData();
-                if (rowData == null || !Objects.equals("C", rowData.get(STATUS))) {
+                if (!"C".equals(DynamicObjectUtils.nullSafeGet(rowData, STATUS))) {
                     e.setFormatValue("");
                 }
             }
@@ -106,6 +108,7 @@ public class ListPluginBasicSample extends AbstractListPluginExt {
     // --- afterDoOperation: 操作完成后打开关联页面 ---
     @Override
     public void afterDoOperation(AfterDoOperationEventArgs args) {
+        super.afterDoOperation(args);
         String opKey = getOpKey(args);
         if (!SHOW_LOG_OP.equals(opKey)) {
             return;

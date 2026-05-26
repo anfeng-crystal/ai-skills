@@ -2,7 +2,7 @@
  * BOTP 链路查询与下推示例。
  * <p>
  * 适用插件：操作插件、转换插件、服务层
- * 优先封装：BotpUtils、OpUtils、QueryUtils
+ * 优先封装：BotpUtils、OpUtils
  * 原生兜底：PushArgs、DrawArgs、ConvertServiceHelper、OperationServiceHelper
  * 相关 lint 规则：STYLE-003、STYLE-004、STYLE-005
  * <p>
@@ -16,14 +16,16 @@
 package kd.cd.common.snippets.botp;
 
 import kd.bos.dataentity.entity.DynamicObject;
+import kd.bos.dataentity.entity.DynamicObjectCollection;
 import kd.bos.dataentity.resource.ResManager;
 import kd.bos.orm.query.QCP;
 import kd.bos.orm.query.QFilter;
 import kd.cd.common.operate.OpUtils;
 import kd.cd.common.util.BotpUtils;
+import kd.cd.common.util.DynamicObjectUtils;
 import kd.cd.common.util.PushResult;
-import kd.cd.common.util.QueryUtils;
 import kd.cd.core.util.CollectionUtils;
+import kd.bos.servicehelper.QueryServiceHelper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -105,7 +107,8 @@ public class BotpTracePushSample {
      * 构建“源单 -> 指定目标单”的映射，适合附件复制、状态回写、批量关联处理。
      */
     public static Map<Long, Set<Long>> findMeasureToDeductionMap(QFilter filter) {
-        Set<Long> measureIds = QueryUtils.queryMatchedPkSet(MEASURE_SETTLE, filter.toArray());
+        DynamicObjectCollection rows = QueryServiceHelper.query(MEASURE_SETTLE, "id", filter.toArray());
+        Set<Long> measureIds = DynamicObjectUtils.setOf(rows, "id");
         if (CollectionUtils.isEmpty(measureIds)) {
             return Collections.emptyMap();
         }
@@ -125,12 +128,12 @@ public class BotpTracePushSample {
             return null;
         }
         QFilter filter = new QFilter("id", QCP.in, payApplyIds);
-        Map<Long, String> billNoMap = QueryUtils.queryAsMap(
-                AP_PAYAPPLY,
-                "id",
-                "billno",
-                filter.toArray()
-        );
+        DynamicObjectCollection rows = QueryServiceHelper.query(AP_PAYAPPLY, "id,billno", filter.toArray());
+        Map<Long, String> billNoMap = rows.stream().collect(Collectors.toMap(
+                row -> row.getLong("id"),
+                row -> row.getString("billno"),
+                (left, right) -> left
+        ));
         String payApplyNos = billNoMap.values().stream().sorted().collect(Collectors.joining("、"));
         return String.format(
                 ResManager.loadKDString("计量结算单[%s]已生成付款申请单：%s", "BotpTracePushSample_0", RES_APP_ID),

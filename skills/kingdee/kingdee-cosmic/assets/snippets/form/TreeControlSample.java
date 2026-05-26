@@ -42,6 +42,7 @@ public class TreeControlSample extends AbstractFormPluginExt implements TreeNode
     // --- 注册树控件和搜索框监听 ---
     @Override
     public void registerListener(EventObject e) {
+        super.registerListener(e);
         TreeView tree = getTreeView();
         tree.addTreeNodeClickListener(this);
         Search search = getControl("kdcd_searchap");
@@ -101,6 +102,7 @@ public class TreeControlSample extends AbstractFormPluginExt implements TreeNode
     // --- 确定按钮点击：返回选中数据 ---
     @Override
     public void itemClick(ItemClickEvent evt) {
+        super.itemClick(evt);
         if (BTN_OK.equals(evt.getItemKey())) {
             closeAndReturnData();
         }

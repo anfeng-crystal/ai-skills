@@ -9,6 +9,7 @@ metadata:
 ---
 
 # Playwright CLI
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 
 终端驱动浏览器，用跨平台 Node wrapper 优先调用 `npx --package @playwright/cli`。如果 npm registry、网络或 npm cache 出现解析层错误，并且本地已安装依赖，则自动回退到本地 `node_modules/.bin/playwright-cli`。

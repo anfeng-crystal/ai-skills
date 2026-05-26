@@ -1,0 +1,8 @@
+interface:
+  display_name: "Kingdee SQL And Data"
+  short_description: "金蝶苍穹 KSQL 校验、预置数据脚本生成和项目级 SQL 配置管理"
+  default_prompt: |
+    使用 $kingdee-sql-and-data 处理金蝶苍穹 KSQL 校验、预置数据脚本生成、只读数据核对和 ksql config.ini 管理。先确认目标项目、环境、数据库路由和凭据边界；真实查询或生成脚本前优先解析项目级配置，禁止把真实密码写入模板或提交文件。KSQL 兼容性先运行 validate_ksql.py，再结合 references/ksql-spec.md 人工复核；预置数据脚本生成先读取 references/preset-data-script.md 并显式传入 config_resolver.py 解析出的配置路径。
+
+policy:
+  allow_implicit_invocation: true

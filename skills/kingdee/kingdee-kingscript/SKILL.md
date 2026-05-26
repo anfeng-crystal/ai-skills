@@ -9,6 +9,8 @@ metadata:
 ---
 
 # Kingdee KingScript
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 触发边界
 - 用户明确涉及 KingScript、Kingscript、脚本插件、苍穹脚本开发、脚本 SDK、脚本运行错误时使用。
 - 普通苍穹 Java 插件开发不使用；改用 `kingdee-cosmic`。

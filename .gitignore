@@ -16,6 +16,12 @@ doctor-report*.json
 responses/
 downloads/
 
+# Binary assets and sensitive config
+*.jar
+*.db
+config.ini
+!templates/config.example.ini
+
 # darwin-skill eval/test artifacts
 skills/meta/darwin-skill/test-prompts.json
 skills/meta/darwin-skill/results.tsv

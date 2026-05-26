@@ -29,8 +29,8 @@ DEBUG_LOG = False
 SCRIPT_DIR = Path(__file__).parent
 
 # 项目根目录（工作空间根目录）
-# 脚本位于: .qoder/skills/cosmic-cus-java-scan/scripts/
-# 项目根目录是 .qoder 的父目录
+# 脚本位于: <skill-root>/scripts/scan/
+# 默认项目根目录按当前工作目录或显式参数传入
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
 
 # 规则文件路径（相对于脚本目录）
@@ -925,7 +925,7 @@ def scan_project(project_root=None, rule_file=None):
     
     参数:
         project_root: 项目根目录，默认为当前项目
-        rule_file: 规则文件路径，默认为 .qoder/references/sonar_cve_class.md
+        rule_file: 规则文件路径，默认为 skill-local references 规则文件
     
     返回:
         list: 违规对象列表

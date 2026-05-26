@@ -127,7 +127,7 @@ public class GetAndSetValueSample extends AbstractFormPluginExt {
         DynamicObject row = entryRows.addNew();
         row.set(FIELD_QTY, BigDecimalUtils.valueOf(1));
         // 基础资料赋值方式1：从缓存加载基础资料对象后再 set
-        DynamicObject supplier = BusinessDataServiceHelper.loadSingleFromCache("bd_supplier", "id", 10001L);
+        DynamicObject supplier = BusinessDataServiceHelper.loadSingleFromCache(10001L, "bd_supplier", "id");
         if (supplier != null) {
             row.set("kdtest_supplier", supplier);
         }

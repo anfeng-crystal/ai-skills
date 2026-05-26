@@ -39,6 +39,7 @@ public class EntryRowCalculateSample extends AbstractFormPluginExt {
     // --- 数量/单价/税率变化后，只重算当前行，再刷新表头汇总 ---
     @Override
     public void propertyChanged(PropertyChangedArgs e) {
+        super.propertyChanged(e);
         String fieldKey = e.getProperty().getName();
         if (!isCalcField(fieldKey)) {
             return;
@@ -51,6 +52,7 @@ public class EntryRowCalculateSample extends AbstractFormPluginExt {
     // --- 新增分录后初始化默认值，并刷新表头汇总 ---
     @Override
     public void afterAddRow(AfterAddRowEventArgs e) {
+        super.afterAddRow(e);
         if (ENTRY_KEY.equals(e.getEntryProp().getName())) {
             int rowIndex = getModel().getEntryCurrentRowIndex(ENTRY_KEY);
             getModel().beginInit();
@@ -67,6 +69,7 @@ public class EntryRowCalculateSample extends AbstractFormPluginExt {
     // --- 删除分录后触发重算 ---
     @Override
     public void afterDeleteRow(AfterDeleteRowEventArgs e) {
+        super.afterDeleteRow(e);
         if (ENTRY_KEY.equals(e.getEntryProp().getName())) {
             recalcEntrySummary();
         }

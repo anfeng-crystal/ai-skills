@@ -9,6 +9,7 @@ metadata:
 ---
 
 # HTML Output Quality
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 > 控制 HTML 产物的触发、模板、自动检查和设计复核，不替代原有 Markdown 交付。
 
 ## 触发边界

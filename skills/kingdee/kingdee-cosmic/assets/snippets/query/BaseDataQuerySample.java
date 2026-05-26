@@ -2,14 +2,14 @@
  * 基础资料查询示例。
  * <p>
  * 适用插件：表单插件、操作插件、服务层
- * 优先封装：QueryUtils、BusinessDataServiceHelper.loadFromCache(...)
+ * 优先封装：BusinessDataServiceHelper.loadFromCache(...)
  * 原生兜底：BaseDataServiceHelper、QFilter、QueryServiceHelper
  * 相关 lint 规则：STYLE-008、STYLE-015
  * <p>
  * 使用场景：根据编码、ID 或批量条件加载基础资料并回写界面。
  * 关键点：
  * 1. 基础资料优先走 BusinessDataServiceHelper.loadFromCache(...)。
- * 2. 需要先按编码查主键时，优先用 QueryUtils.queryPkByNumber(...)。
+ * 2. 需要先按编码查主键时，优先用 QueryServiceHelper.query(...)。
  * 3. 批量场景先查主键集合，再一次性 loadFromCache，避免循环查库。
  * 4. 带组织权限过滤时使用 BaseDataServiceHelper.queryBaseData(...)。
  */
@@ -20,12 +20,12 @@ import kd.bos.dataentity.entity.DynamicObjectCollection;
 import kd.bos.orm.query.QCP;
 import kd.bos.orm.query.QFilter;
 import kd.bos.servicehelper.BusinessDataServiceHelper;
+import kd.bos.servicehelper.QueryServiceHelper;
 import kd.bos.servicehelper.basedata.BaseDataServiceHelper;
 import kd.cd.common.plugin.AbstractFormPluginExt;
-import kd.cd.common.util.QueryUtils;
+import kd.cd.common.util.DynamicObjectUtils;
 import kd.cd.core.util.CollectionUtils;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -76,7 +76,9 @@ public class BaseDataQuerySample extends AbstractFormPluginExt {
         }
         Map<Object, DynamicObject> map = BusinessDataServiceHelper.loadFromCache(BOS_USER,
                 new QFilter[]{new QFilter(FIELD_ID, QCP.in, userIds)});
-        return Arrays.toString(map.values().stream().map(o -> o.get(FIELD_NAME)).toArray());
+        return map.values().stream()
+                .map(o -> String.valueOf(o.get(FIELD_NAME)))
+                .collect(Collectors.joining("、"));
     }
 
     /**
@@ -101,10 +103,8 @@ public class BaseDataQuerySample extends AbstractFormPluginExt {
             return Collections.emptyMap();
         }
         QFilter filter = new QFilter(FIELD_NUMBER, QCP.in, supplierNumbers);
-        Set<Object> supplierIds = QueryUtils.queryMatchedPkSet(
-                BD_SUPPLIER,
-                filter.toArray()
-        );
+        DynamicObjectCollection rows = QueryServiceHelper.query(BD_SUPPLIER, "id", filter.toArray());
+        Set<Object> supplierIds = DynamicObjectUtils.setOf(rows, "id");
         return loadEnabledAuditedSuppliers(supplierIds);
     }
 
@@ -188,6 +188,7 @@ public class BaseDataQuerySample extends AbstractFormPluginExt {
      * @return 主键集合
      */
     public Set<Object> queryPkSetForBatchProcess(String formId, QFilter filter) {
-        return QueryUtils.queryMatchedPkSet(formId, filter.toArray());
+        DynamicObjectCollection rows = QueryServiceHelper.query(formId, "id", filter.toArray());
+        return DynamicObjectUtils.setOf(rows, "id");
     }
 }

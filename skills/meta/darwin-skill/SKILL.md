@@ -9,6 +9,7 @@ metadata:
 ---
 
 # Darwin Skill
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 > 借鉴 Karpathy autoresearch 的自主实验循环，对 skills 进行持续优化。
 > 核心理念：**评估 → 改进 → 实测验证 → 人类确认 → 保留或回滚 → 生成成果卡片**
 > GitHub: https://github.com/alchaincyf/darwin-skill

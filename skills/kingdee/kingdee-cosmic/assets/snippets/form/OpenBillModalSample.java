@@ -117,6 +117,7 @@ public class OpenBillModalSample extends AbstractFormPluginExt {
 
     @Override
     public void closedCallBack(ClosedCallBackEvent e) {
+        super.closedCallBack(e);
         // 回调数据类型和对应选择页的回传类型保持一致即可。
         String actionId = e.getActionId();
         Object returnData = e.getReturnData();

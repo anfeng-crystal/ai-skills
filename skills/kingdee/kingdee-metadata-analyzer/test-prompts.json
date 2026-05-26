@@ -26,5 +26,12 @@
     "expected": "应该直接用全景分析读取 inventory.json 和 sources/*，至少核对 className、pageElement、formPage，区分业务实体编辑页、MobileBillFormAp 和 MobileListFormAp。",
     "eval_focus": "是否能识别 quick-query --plugins 只能看一部分挂载，不能替代对派生移动表单和列表的 full analyze。",
     "baseline_risk": "可能只输出实体级插件清单，把移动表单和移动列表的真实命中类漏掉。"
+  },
+  {
+    "id": "quick-query-page-plugin-regression",
+    "prompt": "生产环境快查 ztjg_jyjg_dswpp 的字段和插件，确认页面插件是否完整。",
+    "expected": "quick-query --all/--plugins 应输出完整字段，并同时列出操作插件和 ztjg_jyjg_dswpp 表单页面插件；页面插件要保留 formPage/pageElement，且不能漏掉 oid 形式的插件类。",
+    "eval_focus": "快查是否避免字段截断、实体插件与页面插件是否都能识别、输出是否能和全景分析的插件清单对齐。",
+    "baseline_risk": "可能只解析实体设计里的操作插件，漏掉 t_meta_formdesign 中的 CodeRulePlugin、模板插件或自定义页面插件。"
   }
 ]

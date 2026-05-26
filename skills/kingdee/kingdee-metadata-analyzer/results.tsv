@@ -1,3 +1,4 @@
 timestamp	commit	skill	baseline_score	old_score	new_score	status	dimension	note	eval_mode	model_set	avg_skill_delta
 2026-05-13T01:58:55+0800	working-tree	kingdee-metadata-analyzer	76	86	89	keep	证据分层	补充字段标识、物理列名和布局位置分层确认规则	dry_run	default	+13
 2026-05-13T10:45:00+0800	working-tree	kingdee-metadata-analyzer	76	89	93	keep	工作流清晰度+指令具体性	补充quick query与full analyze在派生移动表单插件上的边界	dry_run	default	+17
+2026-05-25T21:17:26+0800	working-tree	kingdee-metadata-analyzer	76	93	97	keep	实测表现+边界条件	生产ztjg_jyjg_dswpp回归：quick-query补齐表单页面插件和oid类名fallback，取消--all字段/插件截断，并停止把无Key的edit操作猜成暂存/提交	full_test	default	+21

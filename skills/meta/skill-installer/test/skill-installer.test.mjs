@@ -120,7 +120,9 @@ test("windows uses junction while posix uses directory symlink", () => {
 
 async function makeActiveRoot() {
   const active = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-active-"));
-  await fs.mkdir(path.join(active, "skills"), { recursive: true });
+  for (const category of ["automation", "core", "kingdee", "meta"]) {
+    await fs.mkdir(path.join(active, "skills", category), { recursive: true });
+  }
   return active;
 }
 
@@ -134,7 +136,7 @@ async function makeSkillAt(dir, name, extraFrontmatter) {
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(
     path.join(dir, "SKILL.md"),
-    `---\nname: ${name}\ndescription: Test skill\n${extraFrontmatter}\n---\n# ${name}\n`,
+    `---\nname: ${name}\ndescription: Sample capability\n${extraFrontmatter}\n---\n# ${name}\n`,
     "utf8",
   );
 }

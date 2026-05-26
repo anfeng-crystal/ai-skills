@@ -46,12 +46,14 @@ public class F7FilterSample extends AbstractFormPluginExt {
     // --- 在 registerListener 中注册 F7 监听 ---
     @Override
     public void registerListener(EventObject e) {
+        super.registerListener(e);
         addBeforeF7SelectListeners(FIELD_MATERIAL, FIELD_SUPPLIER, FIELD_MODEL, FIELD_YEAR, FIELD_PERIOD);
     }
 
     // --- 打开 F7 前按业务条件加过滤 ---
     @Override
     public void beforeF7Select(BeforeF7SelectEvent e) {
+        super.beforeF7Select(e);
         String fieldKey = e.getProperty().getName();
         if (FIELD_MATERIAL.equals(fieldKey)) {
             Object orgId = resolveOrgId();
@@ -92,7 +94,7 @@ public class F7FilterSample extends AbstractFormPluginExt {
             }
             configureShowParameter(showParameter, true);
 
-            Object supplierId = DynamicObjectUtils.nullSafeGet(getModel().getValue(FIELD_SUPPLIER, rowIndex), "id");
+            Object supplierId = DynamicObjectUtils.nullSafeGet((DynamicObject) getModel().getValue(FIELD_SUPPLIER, rowIndex), "id");
             if (EntityUtils.isNotEmptyPk(supplierId)) {
                 showParameter.setSelectedRow(supplierId);
                 showParameter.setSelectedRows(new Object[]{supplierId});

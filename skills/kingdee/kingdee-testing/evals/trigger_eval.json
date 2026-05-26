@@ -1,0 +1,14 @@
+[
+  {"query": "帮我生成苍穹插件的单元测试", "should_trigger": true},
+  {"query": "跑一下苍穹项目的 Gradle 测试", "should_trigger": true},
+  {"query": "生成一个本地 Java 测试 harness", "should_trigger": true},
+  {"query": "对苍穹 dev 环境做运行时探测", "should_trigger": true},
+  {"query": "采集苍穹插件的运行时证据", "should_trigger": true},
+  {"query": "这个插件怎么做运行时验证", "should_trigger": true},
+  {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "校验 KSQL 语句兼容性", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "对 dev 接口跑安全 POC 验证", "should_trigger": false}
+]

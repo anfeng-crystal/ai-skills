@@ -1,0 +1,14 @@
+[
+  {"query": "对苍穹 OpenAPI 接口做安全审计", "should_trigger": true},
+  {"query": "对 dev 环境跑 POC 验证", "should_trigger": true},
+  {"query": "帮我做苍穹代码安全审查", "should_trigger": true},
+  {"query": "苍穹接口有没有越权风险", "should_trigger": true},
+  {"query": "对苍穹接口做 redteam-lite 检查", "should_trigger": true},
+  {"query": "写一个苍穹安全审计报告", "should_trigger": true},
+  {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
+  {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
+  {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
+  {"query": "校验 KSQL 语句兼容性", "should_trigger": false},
+  {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "帮我生成苍穹插件的单元测试", "should_trigger": false}
+]

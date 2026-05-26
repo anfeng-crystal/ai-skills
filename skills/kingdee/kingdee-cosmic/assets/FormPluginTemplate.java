@@ -49,6 +49,46 @@ import java.util.Set;
  * 低频事件（分录移动/置顶/拖拽/合计、导入、定时器、自定义事件等）已省略，
  * 需要时请查阅 references/base/plugin/plugin-form.md 获取方法签名。
  *
+ * <pre>
+ * ═══ 方法索引（按需跳转，无需通读） ═══
+ *
+ * ─ 生命周期事件
+ *   initialize()             — 初始化变量/缓存
+ *   registerListener()        — 注册控件/菜单/F7 监听
+ *   preOpenForm()             — 表单打开前参数准备
+ *   beforeClosed()            — 关闭前校验/回传数据
+ *
+ * ─ 数据创建/绑定事件
+ *   createNewData()           — 新增数据包创建前
+ *   afterCreateNewData()      — 新增后设置默认值
+ *   beforeBindData()          — 数据绑定前（禁止 setValue/UI 控制）
+ *   afterBindData()           — 数据绑定后，设置界面状态
+ *   afterCopyData()           — 复制后清理字段
+ *
+ * ─ 菜单/按钮事件
+ *   beforeItemClick()         — 菜单点击前校验
+ *   itemClick()               — 菜单点击后处理（弹窗/确认框）
+ *
+ * ─ 操作事件
+ *   beforeDoOperation()       — 保存/提交/审核前校验
+ *   afterDoOperation()        — 操作完成后处理
+ *
+ * ─ 字段变化事件
+ *   propertyChanged()         — 字段联动/级联更新
+ *
+ * ─ 回调/弹框事件
+ *   confirmCallBack()         — 确认框 Yes/No 回调
+ *   closedCallBack()          — 子页面关闭回调
+ *
+ * ─ F7 过滤事件
+ *   beforeF7Select()          — F7 下拉添加过滤条件
+ *
+ * ─ 分录增删改事件
+ *   afterAddRow()             — 新增分录行后初始化
+ *   afterDeleteRow()          — 删除分录行后清理
+ *   afterDeleteEntry()        — 清空分录后处理
+ * </pre>
+ *
  * @template FormPluginTemplate
  * @extends AbstractFormPluginExt (kd.cd.common.plugin)
  * @highFreqEvents afterBindData, propertyChanged, beforeDoOperation, afterDoOperation, itemClick, closedCallBack

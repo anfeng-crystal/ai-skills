@@ -87,7 +87,7 @@ Options:
   --apply            Install skills (default behavior)
   --dry-run          Preview changes without applying
   --tool <name>      Install for a specific host tool; repeatable
-                     (claude, codex, junie, agents, hermes)
+                     (claude, codex, junie, agents, hermes, antigravity-cli, agy, antigravity-desktop)
   --skill <name>     Install a specific skill; repeatable
   --list             List all available skills
   --skip-doctor      Skip dependency checks
@@ -97,6 +97,7 @@ Examples:
   node install.mjs                          # install all skills
   node install.mjs --dry-run                # preview only
   node install.mjs --tool claude            # Claude Code only
+  node install.mjs --tool antigravity-cli   # Antigravity CLI only
   node install.mjs --skill fix-bug          # one skill
   node install.mjs --skill fix-bug --skill explain-code  # two skills
 `);

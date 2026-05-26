@@ -9,6 +9,7 @@
 - ✅ 查询字段列表（支持继承链）
 - ✅ 查询操作列表
 - ✅ 查询已绑定插件
+- ✅ 同时查询实体操作插件和关联表单页面插件
 - ✅ 查询枚举字段
 - ✅ 模糊搜索实体
 - ✅ 按模块列出实体
@@ -26,7 +27,7 @@
 | **本地缓存** | 支持（`.metadata_cache/`） | 支持（`inventory.json`） |
 | **继承链** | 支持（`--inherit`） | 支持 |
 | **按模块列出** | 支持（`--list --module`） | 不支持 |
-| **适用场景** | 开发时快速查字段/操作/枚举 | 插件绑定分析、上下游关系、复用建议 |
+| **适用场景** | 开发时快速查字段、操作、枚举和插件清单 | 插件绑定分析、源码证据、上下游关系、复用建议 |
 
 ## 环境引导
 
@@ -93,11 +94,11 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 
 **清理缓存**：
 ```bash
-# 删除所有缓存
-rm -rf .metadata_cache/
+# 预览将清理的缓存
+python3 "$METADATA_SKILL_ROOT/scripts/cache_manager.py" clean
 
-# 删除特定实体的缓存
-rm .metadata_cache/sal_order.json
+# 确认后清理所有缓存
+python3 "$METADATA_SKILL_ROOT/scripts/cache_manager.py" clean --apply
 ```
 
 ## 使用方法
@@ -169,12 +170,16 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 ```
 实体 sal_order(销售订单) 共 6 个插件：
 
-  序号  类型      挂载点          类名                                    状态  说明
-  1     操作插件  save(暂存)      com.example.SalOrderSavePlugin         启用  保存前校验
-  2     操作插件  submit(提交)    com.example.SalOrderSubmitPlugin       启用  提交后推送
-  3     操作插件  audit(审核)     com.example.SalOrderAuditPlugin        启用  审核后通知
+  序号  类型      挂载点              表单页面                类名                                    状态  说明
+  1     操作插件  save(暂存)                                  com.example.SalOrderSavePlugin         启用  保存前校验
+  2     操作插件  submit(提交)                                com.example.SalOrderSubmitPlugin       启用  提交后推送
+  3     页面插件  单据编辑页面(edit)  sal_order(销售订单)     com.example.SalOrderFormPlugin
   ...
 ```
+
+插件快查会合并实体设计中的操作插件和关联表单设计中的页面插件；页面插件类名会同时兼容 `ClassName` 和 `oid`。如果需要源码、JAR 反查或判断 PC/移动页面真实执行链路，继续使用全景分析。
+
+如果操作 XML 只有 `action=edit` 且没有 `Key/Name/OperationKey`，快查只输出 `edit#N[oid]` 这类无语义标签，不推断为暂存、提交、审核或反审核；真实业务语义需要结合插件描述、源码或操作设计元数据确认。
 
 ---
 

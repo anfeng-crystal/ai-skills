@@ -54,12 +54,14 @@ public class ReturnParentDataSample extends AbstractFormPluginExt implements Row
 
     @Override
     public void registerListener(EventObject e) {
+        super.registerListener(e);
         addClickListeners(BTN_OK);
         addEntryRowClickListeners(ENTRY_KEY);
     }
 
     @Override
     public void click(EventObject evt) {
+        super.click(evt);
         Control control = (Control) evt.getSource();
         if (BTN_OK.equalsIgnoreCase(control.getKey())) {
             returnSelectedData();
@@ -202,6 +204,7 @@ public class ReturnParentDataSample extends AbstractFormPluginExt implements Row
 
         @Override
         public void closedCallBack(ClosedCallBackEvent e) {
+            super.closedCallBack(e);
             // 回调数据类型和子页面 returnDataToParent(...) 的回传类型保持一致即可。
             if (!CALLBACK_CHILD_SELECT.equals(e.getActionId())) {
                 return;

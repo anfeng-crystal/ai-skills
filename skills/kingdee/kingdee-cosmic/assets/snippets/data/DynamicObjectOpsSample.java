@@ -42,6 +42,19 @@ public class DynamicObjectOpsSample {
         return number == null ? "" : String.valueOf(number);
     }
 
+    // ==================== 特殊情况：基础资料属性字段（BasedataPropField）取值 ====================
+    // BasedataPropField 是基础资料的派生显示字段，它的标识（如 e_materialname）是表单控件标识，
+    // 在 DynamicObject 上取值时必须使用元数据中的「引用关系」路径。
+    //
+    // 示例：元数据查询结果
+    //   标识: e_materialname | 类型: BasedataPropField | 引用关系: e_material.name
+    //
+    // ✅ 正确：使用引用关系路径
+    //   DynamicObjectUtils.nullSafeGet(entryRow, "e_material.name");
+    //
+    // ❌ 错误：使用控件标识（DynamicObject 上不存在该属性）
+    //   DynamicObjectUtils.nullSafeGet(entryRow, "e_materialname");
+
     // ==================== 场景2：原生赋值 ====================
 
     public static void setValue(DynamicObject bill, String fieldKey, Object value) {
@@ -60,8 +73,7 @@ public class DynamicObjectOpsSample {
     // ==================== 场景3：分录集合操作 ====================
 
     public static DynamicObjectCollection getEntryRows(DynamicObject bill, String entryKey) {
-        DynamicObjectCollection rows = bill.getDynamicObjectCollection(entryKey);
-        return rows;
+        return bill.getDynamicObjectCollection(entryKey);
     }
 
     public static BigDecimal sumEntryAmount(DynamicObject bill, String entryKey, String amountField) {
