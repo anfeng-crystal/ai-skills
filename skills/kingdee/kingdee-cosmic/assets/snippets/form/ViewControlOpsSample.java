@@ -39,6 +39,7 @@ public class ViewControlOpsSample extends AbstractFormPluginExt {
 
     @Override
     public void preOpenForm(PreOpenFormEventArgs e) {
+        super.preOpenForm(e);
         if (LocalDate.now().getDayOfWeek() == DayOfWeek.SUNDAY) {
             e.setCancel(true);
             e.setCancelMessage(ResManager.loadKDString("对不起，周日不能制单。", "ViewControlOpsSample_0", RES_APP_ID));
@@ -47,6 +48,7 @@ public class ViewControlOpsSample extends AbstractFormPluginExt {
 
     @Override
     public void afterBindData(EventObject e) {
+        super.afterBindData(e);
         FormShowParameter showParameter = getView().getFormShowParameter();
         OperationStatus status = showParameter.getStatus();
         if (OperationStatus.ADDNEW.equals(status)) {
@@ -118,6 +120,7 @@ public class ViewControlOpsSample extends AbstractFormPluginExt {
 
     @Override
     public void beforeClosed(BeforeClosedEvent e) {
+        super.beforeClosed(e);
         if ("true".equalsIgnoreCase(getPageCache().get(PAGE_CACHE_SKIP_DIRTY_CHECK))) {
             e.setCheckDataChange(false);
         }

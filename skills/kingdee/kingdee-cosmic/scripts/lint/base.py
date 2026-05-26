@@ -4,7 +4,10 @@
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+import tree_sitter
+import tree_sitter_java
 
 
 # ──────────────────────────────────────────────
@@ -57,11 +60,23 @@ def classify_lines(lines: List[str]) -> List[bool]:
 
     使用状态机追踪多行注释块（/* ... */），
     单行内同时识别行注释、字符串字面量，避免误判。
+    支持行中间开始的块注释（如 `code; /* comment start`）。
     """
     result: List[bool] = []
     in_block_comment = False
+    in_text_block = False
 
     for line in lines:
+        if in_text_block:
+            end_idx = line.find('"""')
+            if end_idx >= 0:
+                in_text_block = False
+                remainder = line[end_idx + 3:].strip()
+                result.append(not bool(remainder))
+            else:
+                result.append(True)
+            continue
+
         if in_block_comment:
             # 当前处于 /* ... */ 块注释中
             end_idx = line.find("*/")
@@ -75,6 +90,13 @@ def classify_lines(lines: List[str]) -> List[bool]:
             continue
 
         stripped = line.strip()
+
+        # 检查是否进入 Text Block (""")
+        if '"""' in stripped and stripped.count('"""') % 2 != 0:
+            in_text_block = True
+            result.append(False) # 开启"""的这一行本身属于代码声明
+            continue
+        stripped = line.strip()
         # 空行
         if not stripped:
             result.append(True)
@@ -87,7 +109,7 @@ def classify_lines(lines: List[str]) -> List[bool]:
         if stripped.startswith("*") and not stripped.startswith("*/"):
             result.append(True)
             continue
-        # 检查块注释开始
+        # 检查块注释开始（行首或行中间）
         if stripped.startswith("/*"):
             close_idx = stripped.find("*/", 2)
             if close_idx >= 0:
@@ -99,10 +121,54 @@ def classify_lines(lines: List[str]) -> List[bool]:
                 result.append(True)
             continue
 
+        # 代码行：检查行中间是否有未闭合的 /* 开始块注释
+        # 需要排除字符串字面量内的 /*
+        if _has_unclosed_block_comment_start(stripped):
+            in_block_comment = True
+            # 行本身有代码部分，标记为代码行
+            result.append(False)
+            continue
+
         # 其他情况：代码行（可能包含行尾注释，但行本身有代码）
         result.append(False)
 
     return result
+
+
+def _has_unclosed_block_comment_start(line: str) -> bool:
+    """检测行中间是否有未闭合的 /* 块注释开始（排除字符串内的 /*）。"""
+    i = 0
+    in_str = False
+    str_char = ''
+    while i < len(line):
+        c = line[i]
+        if in_str:
+            if c == '\\' and i + 1 < len(line):
+                i += 2  # 跳过转义字符
+                continue
+            if c == str_char:
+                in_str = False
+            i += 1
+            continue
+        if c in ('"', "'"):
+            in_str = True
+            str_char = c
+            i += 1
+            continue
+        if c == '/' and i + 1 < len(line):
+            if line[i + 1] == '/':
+                return False  # 行注释，不可能有 /* 了
+            if line[i + 1] == '*':
+                # 找到 /*，检查本行内是否有 */
+                close_idx = line.find('*/', i + 2)
+                if close_idx >= 0:
+                    # 同行闭合 /* ... */，跳过继续
+                    i = close_idx + 2
+                    continue
+                else:
+                    return True  # 未闭合的 /* 块注释开始
+        i += 1
+    return False
 
 
 def is_comment_or_string(line: str) -> bool:
@@ -120,8 +186,29 @@ def is_comment_or_string(line: str) -> bool:
 
 
 def strip_line_comment(line: str) -> str:
-    """移除单行注释部分，保留代码主体。"""
-    return re.sub(r"//.*$", "", line)
+    """移除单行注释部分，保留代码主体（正确跳过字符串字面量内的 //）。"""
+    i = 0
+    in_str = False
+    str_char = ''
+    while i < len(line):
+        c = line[i]
+        if in_str:
+            if c == '\\' and i + 1 < len(line):
+                i += 2
+                continue
+            if c == str_char:
+                in_str = False
+            i += 1
+            continue
+        if c in ('"', "'"):
+            in_str = True
+            str_char = c
+            i += 1
+            continue
+        if c == '/' and i + 1 < len(line) and line[i + 1] == '/':
+            return line[:i]
+        i += 1
+    return line
 
 
 def strip_string_literals(line: str) -> str:
@@ -143,6 +230,7 @@ METHOD_DECL_RE = re.compile(
 )
 
 LOOP_HEADER_RE = re.compile(r"\bfor\s*\(|\bwhile\s*\(|^\s*do\b")
+LAMBDA_ITER_RE = re.compile(r"\.\s*(forEach|map|flatMap|peek)\s*\(")
 CLASS_DECL_RE = re.compile(r"\bclass\s+[A-Za-z_]\w*")
 
 
@@ -151,55 +239,55 @@ def looks_like_loop_header(line: str) -> bool:
     return bool(LOOP_HEADER_RE.search(code_for_structure(line)))
 
 
-def analyze_java_context(lines: List[str]) -> Tuple[List[Optional[str]], List[bool]]:
+def parse_java(lines: List[str]) -> Tuple[Any, Any]:
+    """解析 Java 源码，返回 (tree, language) 供多处复用，避免重复解析。"""
+    lang = tree_sitter.Language(tree_sitter_java.language())
+    parser = tree_sitter.Parser(lang)
+    src_bytes = "\n".join(lines).encode('utf-8')
+    tree = parser.parse(src_bytes)
+    return tree, lang
+
+
+def analyze_java_context(lines: List[str], tree=None) -> Tuple[List[Optional[str]], List[bool]]:
     """
-    基于轻量 brace 分析构建上下文：
+    基于 AST 构建上下文：
     - 每行所在方法名
     - 每行是否位于循环体中
     """
-    method_context: List[Optional[str]] = [None] * len(lines)
-    loop_context: List[bool] = [False] * len(lines)
+    if tree is None:
+        tree, _ = parse_java(lines)
 
-    brace_depth = 0
-    current_method: Optional[str] = None
-    method_depth: Optional[int] = None
-    pending_single_line_loop = False
-    loop_depth_stack: List[int] = []
+    method_ctx: List[Optional[str]] = [None] * len(lines)
+    loop_ctx: List[bool] = [False] * len(lines)
 
-    for i, line in enumerate(lines):
-        code = code_for_structure(line)
-        stripped = code.strip()
+    def walk(node, current_method=None, in_loop=False):
+        m_name = current_method
+        if node.type in ("method_declaration", "constructor_declaration"):
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                m_name = name_node.text.decode('utf-8')
 
-        if pending_single_line_loop and stripped:
-            loop_context[i] = True
-            pending_single_line_loop = False
-        else:
-            loop_context[i] = bool(loop_depth_stack)
+        is_loop = in_loop
+        if node.type in ("for_statement", "enhanced_for_statement", "while_statement", "do_statement"):
+            is_loop = True
+        elif node.type == "method_invocation":
+            name_node = node.child_by_field_name("name")
+            if name_node and name_node.text.decode('utf-8') in ("forEach", "map", "flatMap", "peek"):
+                is_loop = True
 
-        method_context[i] = current_method
+        start_row = node.start_point[0]
+        end_row = node.end_point[0]
+        for r in range(start_row, end_row + 1):
+            if r < len(lines):
+                method_ctx[r] = m_name
+                if is_loop:
+                    loop_ctx[r] = True
 
-        method_match = METHOD_DECL_RE.match(stripped)
-        if method_match and not stripped.endswith(";"):
-            if "{" in stripped:
-                current_method = method_match.group(1)
-                method_depth = brace_depth + 1
+        for child in node.children:
+            walk(child, m_name, is_loop)
 
-        if looks_like_loop_header(line):
-            if "{" in stripped:
-                loop_depth_stack.append(brace_depth + 1)
-            elif stripped.endswith(")") or stripped.endswith("do"):
-                pending_single_line_loop = True
-
-        brace_depth += code.count("{") - code.count("}")
-
-        while loop_depth_stack and brace_depth < loop_depth_stack[-1]:
-            loop_depth_stack.pop()
-
-        if current_method and method_depth is not None and brace_depth < method_depth:
-            current_method = None
-            method_depth = None
-
-    return method_context, loop_context
+    walk(tree.root_node)
+    return method_ctx, loop_ctx
 
 
 # 操作插件的类标识模式

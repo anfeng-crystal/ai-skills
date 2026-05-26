@@ -9,6 +9,8 @@ metadata:
 ---
 
 # Skill Installer
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 触发边界
 - 用户要安装、同步、卸载本地 skill 到多个 AI 工具，检查软链接是否正确，补齐缺失链接，预览将发生的链接变化时使用。
 - 只修改单个 skill 内容、不涉及分发目录时不要触发。

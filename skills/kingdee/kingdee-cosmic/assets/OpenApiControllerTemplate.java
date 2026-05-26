@@ -15,6 +15,7 @@ import kd.bos.openapi.common.custom.annotation.ApiPostMapping;
 import kd.bos.openapi.common.custom.annotation.ApiRequestBody;
 import kd.bos.openapi.common.custom.annotation.ApiResponseBody;
 import kd.bos.openapi.common.result.CustomApiResult;
+import kd.cd.common.entity.EntityUtils;
 
 /**
  * 开放平台自定义 API 骨架模板（注解模式）。
@@ -43,7 +44,7 @@ public class OpenApiControllerTemplate implements Serializable {
     @ApiGetMapping(value = "/getById", desc = "按 id 查询示例")
     public CustomApiResult<String> getById(
             @ApiParam(value = "主键ID", required = true, example = "1001") Long id) {
-        if (id == null || id <= 0L) {
+        if (EntityUtils.isEmptyPk(id)) {
             return CustomApiResult.fail(ERR_CODE_PARAM, ResManager.loadKDString("id 必须大于 0", "OpenApiControllerTemplate_0", RES_APP_ID));
         }
         return CustomApiResult.success("U-" + id);
@@ -52,7 +53,7 @@ public class OpenApiControllerTemplate implements Serializable {
     @ApiPostMapping(value = "/saveMap", desc = "Map 入参保存示例")
     public CustomApiResult<@ApiResponseBody("true-成功，false-失败") Boolean> saveMap(
             @ApiParam(value = "业务数据", required = true) Map<String, Object> data) {
-        if (data == null || data.get("id") == null) {
+        if (data == null || EntityUtils.isEmptyPk(data.get("id"))) {
             throw new KDBizException(new ErrorCode(
                     ERR_CODE_PARAM,
                     ResManager.loadKDString("id 不能为空", "OpenApiControllerTemplate_1", RES_APP_ID)

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "sourceRootKind": "active-skills-root",
+  "hosts": [
+    {
+      "id": "codex",
+      "label": "Codex",
+      "default": "enabled",
+      "installMode": "symlink",
+      "targetDir": "~/.codex/skills",
+      "adapter": "../../adapters/codex/adapter.md"
+    },
+    {
+      "id": "claude-code",
+      "aliases": ["claude"],
+      "label": "Claude Code",
+      "default": "enabled",
+      "installMode": "symlink",
+      "targetDir": "~/.claude/skills",
+      "adapter": "../../adapters/claude-code/adapter.md"
+    },
+    {
+      "id": "hermes",
+      "label": "Hermes",
+      "default": "optional",
+      "installMode": "external_dirs",
+      "targetDir": "~/.hermes/skills",
+      "configPath": "~/.hermes/config.yaml",
+      "adapter": "../../adapters/hermes/adapter.md"
+    },
+    {
+      "id": "openclaw",
+      "label": "OpenClaw",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.openclaw/workspace/skills",
+      "adapter": "../../adapters/openclaw/adapter.md"
+    },
+    {
+      "id": "opencode",
+      "label": "opencode",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.opencode/skills",
+      "adapter": "../../adapters/opencode/adapter.md"
+    },
+    {
+      "id": "antigravity",
+      "aliases": ["antigravity-cli"],
+      "label": "Antigravity",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.gemini/antigravity-cli/skills",
+      "adapter": "../../adapters/antigravity/adapter.md"
+    },
+    {
+      "id": "qoder",
+      "label": "qoder",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.qoder/skills",
+      "adapter": "../../adapters/qoder/adapter.md"
+    }
+  ]
+}

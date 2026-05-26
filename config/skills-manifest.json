@@ -5,9 +5,17 @@
     "defaultRepo": "skills/active",
     "defaultInstallScope": "all root-level directories with SKILL.md",
     "excludedTrees": ["legacy", "incoming"],
-    "hosts": ["codex", "claude", "junie", "agents", "hermes"]
+    "hosts": ["codex", "claude", "junie", "agents", "hermes", "antigravity-cli", "antigravity-desktop"]
   },
   "skills": [
+    {
+      "name": "agent-health",
+      "runtime": [
+        "markdown"
+      ],
+      "requiresKnowledge": false,
+      "optional": false
+    },
     {
       "name": "darwin-skill",
       "runtime": ["node", "playwright"],
@@ -17,6 +25,14 @@
     {
       "name": "data-analyst",
       "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
+      "name": "delivery-check",
+      "runtime": [
+        "markdown"
+      ],
       "requiresKnowledge": false,
       "optional": false
     },
@@ -79,6 +95,14 @@
       "runtime": ["npx", "@playwright/cli"],
       "requiresKnowledge": false,
       "optional": true
+    },
+    {
+      "name": "plan-decision",
+      "runtime": [
+        "markdown"
+      ],
+      "requiresKnowledge": false,
+      "optional": false
     },
     {
       "name": "review-code",

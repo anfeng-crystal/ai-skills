@@ -9,6 +9,8 @@ metadata:
 ---
 
 # Kingdee ISCB Script
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 触发边界
 - 用户明确涉及集成云脚本、ISCB、ISC 脚本、ISCB DSL、数据集成方案脚本、值转换规则、服务流程脚本节点、自定义 API 或 WebAPI 脚本时使用。
 - 普通苍穹 Java 二开不使用；改用 `kingdee-cosmic`。

@@ -9,9 +9,9 @@ from .base import (
     Severity,
     analyze_java_context,
     analyze_plugin_context,
+    classify_lines,
     code_for_structure,
     detect_plugin_type,
-    is_comment_or_string,
     looks_like_loop_header,
     strip_line_comment,
 )
@@ -22,16 +22,16 @@ STYLE_RULES = [
     {
         "pattern": r"\bStringUtils\s*\.\s*(isBlank|isNotBlank|isEmpty|isNotEmpty|equals)\b",
         "rule_id": "STYLE-001",
-        "severity": Severity.INFO,
+        "severity": Severity.WARNING,
         "message": "字符串判空应使用 CharSequenceUtils 而非 StringUtils",
         "fix_hint": "使用 CharSequenceUtils.isBlank() / isNotBlank()",
     },
     {
-        "pattern": r"!=\s*null\s*&&\s*!\w+\.isEmpty\(\)",
+        "pattern": r"(?:!=\s*null\s*&&\s*!\w+\.isEmpty\(\))|(?:==\s*null\s*\|\|\s*\w+\.isEmpty\(\))",
         "rule_id": "STYLE-002",
-        "severity": Severity.INFO,
-        "message": "集合判空应使用 CollectionUtils 封装",
-        "fix_hint": "使用 CollectionUtils.isNotEmpty(collection)",
+        "severity": Severity.WARNING,
+        "message": "手写 null/isEmpty 判空应使用工具类封装",
+        "fix_hint": "字符串用 CharSequenceUtils.isBlank() / isNotBlank()；集合用 CollectionUtils.isEmpty() / isNotEmpty()",
     },
     {
         "pattern": r"\bOperationServiceHelper\s*\.\s*(save|submit|audit)\b",
@@ -59,21 +59,21 @@ STYLE_RULES = [
         "rule_id": "STYLE-006",
         "severity": Severity.WARNING,
         "message": "不应直接深链式 .get(\"a.b.c\")，中间节点为空时会抛异常",
-        "fix_hint": "使用 DynamicObjectUtils.safeGet(dynamicObject, \"field\")",
+        "fix_hint": "使用 DynamicObjectUtils.nullSafeGet(dynamicObject, \"field\")",
     },
     {
         "pattern": r"\bAttachmentServiceHelper\s*\.",
         "rule_id": "STYLE-007",
-        "severity": Severity.INFO,
+        "severity": Severity.WARNING,
         "message": "附件处理应优先使用 AttachmentUtils 封装",
         "fix_hint": "使用 AttachmentUtils 和 uploader",
     },
     {
         "pattern": r"\bQueryServiceHelper\s*\.\s*queryOne\s*\([^)]*\)\s*(?:!=|==)\s*null",
         "rule_id": "STYLE-008",
-        "severity": Severity.INFO,
-        "message": "判断数据是否存在时，优先使用 QueryServiceHelper.exist(...)",
-        "fix_hint": "将 queryOne(...) != null / == null 改为 QueryServiceHelper.exist(...)",
+        "severity": Severity.WARNING,
+        "message": "判断数据是否存在时，优先使用 QueryServiceHelper.exists(...)",
+        "fix_hint": "将 queryOne(...) != null / == null 改为 QueryServiceHelper.exists(...)",
     },
     {
         "pattern": r"\bprintStackTrace\s*\(",
@@ -110,7 +110,41 @@ STYLE_RULES = [
         "message": "不要对页面对象/事件对象/数据对象整包 JSON 序列化打印，成本高且可能打印大对象",
         "fix_hint": "只按需提取关键字段打印，如 log.info(\"billNo={}\", data.getString(\"billno\"))",
     },
+    {
+        "pattern": r"\bBusinessDataServiceHelper\s*\.\s*load\s*\([^,]+,\s*(?:EntityUtils\.getMainEntityType|BusinessDataServiceHelper\.newDynamicObject|EntityMetadataCache\.getDataEntityType)",
+        "rule_id": "STYLE-025",
+        "severity": Severity.WARNING,
+        "message": "加载实体时应指定必要字段，避免全量加载",
+        "fix_hint": "使用 BusinessDataServiceHelper.load(entityName, selectFields, filters) 指定查询字段",
+    },
 ]
+
+# 主键/id 判空检测（STYLE-026）
+# 检测模式：xxxId/xxxPk 变量与 null/0/0L 比较，或 .get("id"/"xxx_id") 与 null 比较
+PK_NULL_CHECK_PATTERNS = [
+    # xxxId == null / xxxId != null / xxxPk == null / xxxPk != null
+    re.compile(r'\b\w*(?:[Ii]d|[Pp]k)\s*(?:==|!=)\s*null\b'),
+    # xxxId == 0L / xxxId == 0 / xxxId <= 0L / xxxId <= 0 / xxxId < 1
+    re.compile(r'\b\w*(?:[Ii]d|[Pp]k)\s*(?:==|<=|<)\s*(?:0L?|1)\b'),
+    # .get("id") == null / .get("id") != null
+    re.compile(r'\.\s*get\s*\(\s*"\w*[Ii]d"\s*\)\s*(?:==|!=)\s*null'),
+]
+
+# BigDecimal 原生运算检测（STYLE-027）
+# 检测加减乘除 + compareTo 比较
+BIGDECIMAL_RAW_PATTERNS = [
+    # 链式 .add/.subtract/.multiply/.divide + BigDecimal/new 上下文
+    re.compile(r'\.\s*(?:add|subtract|multiply|divide)\s*\(\s*(?:new\s+BigDecimal|BigDecimal\.)'),
+    # .divide(..., RoundingMode) —— 有 RoundingMode 参数必定是 BigDecimal 除法
+    re.compile(r'\.\s*divide\s*\([^)]*RoundingMode'),
+    # .compareTo(BigDecimal → BigDecimalUtils.equals/largeThan
+    re.compile(r'\.\s*compareTo\s*\(\s*BigDecimal'),
+]
+
+# QFilter 字符串运算符检测（P0：编译通过但运行时崩溃）
+QFILTER_STRING_OP_PATTERN = re.compile(
+    r'new\s+QFilter\s*\([^,]+,\s*"[^"]*"\s*,'
+)
 
 SQL_CONCAT_PATTERN = re.compile(
     r'("[^"]*\b(select|insert|update|delete|from|where)\b[^"]*"\s*\+)'
@@ -126,17 +160,16 @@ CHINESE_CONCAT_PATTERN = re.compile(
 )
 LOOP_UPDATE_VIEW_PATTERN = re.compile(r"\bupdateView\s*\(")
 LOOP_DB_PATTERN = re.compile(
-    r"\b(BusinessDataServiceHelper|QueryServiceHelper)\s*\.\s*"
-    r"(load|loadSingle|loadSingleFromCache|loadFromCache|query|queryOne|queryDataSet|exist)\b"
+    r"\b(BusinessDataServiceHelper|QueryServiceHelper|SaveServiceHelper)\s*\.\s*"
+    r"(load|loadSingle|loadSingleFromCache|loadFromCache|query|queryOne|queryDataSet|exists?|save|update)\b"
 )
-LOOP_DB_HELPER_PATTERN = re.compile(r"\b(BusinessDataServiceHelper|QueryServiceHelper)\b")
+LOOP_DB_HELPER_PATTERN = re.compile(r"\b(BusinessDataServiceHelper|QueryServiceHelper|SaveServiceHelper)\b")
 LOOP_DB_METHOD_PATTERN = re.compile(
-    r"\.\s*(load|loadSingle|loadSingleFromCache|loadFromCache|query|queryOne|queryDataSet|exist)\b"
+    r"\.\s*(load|loadSingle|loadSingleFromCache|loadFromCache|query|queryOne|queryDataSet|exists?|save|update)\b"
 )
 LOOP_REDIS_PATTERN = re.compile(r"\b(RedisTemplate|StringRedisTemplate|Jedis|Redisson|redisTemplate|redisClient)\b")
 LOOP_ORM_CREATE_PATTERN = re.compile(r"\bORM\s*\.\s*create\s*\(")
 LOOP_DISPATCH_PATTERN = re.compile(r"\bDispatchServiceHelper\s*\.\s*invoke\w*\s*\(")
-LOOP_MODEL_SET_VALUE_PATTERN = re.compile(r"(?:getModel\s*\(\)|\bmodel)\s*\.\s*setValue\s*\(")
 QUERY_RESULT_DECL_PATTERN = re.compile(
     r"\b(?:DynamicObjectCollection|var)\s+([A-Za-z_]\w*)\s*=\s*QueryServiceHelper\s*\.\s*query\b"
 )
@@ -158,6 +191,7 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
     issues: List[LintIssue] = []
     _, loop_context = analyze_java_context(lines)
     plugin_context = analyze_plugin_context(lines)
+    skip_lines = classify_lines(lines)
     query_result_vars: dict[str, int] = {}
     query_result_entity_vars: dict[str, int] = {}
     active_query_loop_vars: dict[str, int] = {}
@@ -203,7 +237,7 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
             else:
                 single_line_query_loop_vars[loop_var] = lineno + 1
 
-        if is_comment_or_string(line):
+        if skip_lines[i]:
             brace_depth += code_line.count("{") - code_line.count("}")
             continue
 
@@ -234,14 +268,19 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
             ))
 
         if SQL_CONCAT_PATTERN.search(line):
-            issues.append(LintIssue(
-                file=filepath, line=lineno,
-                severity=Severity.ERROR,
-                rule_id="STYLE-011",
-                message="SQL/KSQL 传参不要通过字符串拼接构造",
-                fix_hint="改为参数化查询或平台查询构造，避免手拼 SQL 条件",
-                source_line=line.strip(),
-            ))
+            # 降低误报：移除所有字符串字面量后，检查 + 附近是否有变量/标识符
+            # 纯字面量拼接（如 "Please select" + " an option"）不构成 SQL 注入风险
+            line_without_strings = re.sub(r'"[^"]*"', '', line)
+            has_var_concat = bool(re.search(r'\w\s*\+|\+\s*\w', line_without_strings))
+            if has_var_concat:
+                issues.append(LintIssue(
+                    file=filepath, line=lineno,
+                    severity=Severity.ERROR,
+                    rule_id="STYLE-011",
+                    message="SQL/KSQL 传参不要通过字符串拼接构造",
+                    fix_hint="改为参数化查询或平台查询构造，避免手拼 SQL 条件",
+                    source_line=line.strip(),
+                ))
 
         if SQL_DIALECT_PATTERN.search(line):
             issues.append(LintIssue(
@@ -252,6 +291,47 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
                 fix_hint="改为 KSQL 或平台查询接口，避免 limit/rownum/nvl/isnull/top 等方言写法",
                 source_line=line.strip(),
             ))
+
+        # STYLE-024: QFilter 使用字符串运算符代替 QCP 枚举（编译通过但运行时崩溃）
+        if QFILTER_STRING_OP_PATTERN.search(raw_code_line):
+            issues.append(LintIssue(
+                file=filepath, line=lineno,
+                severity=Severity.ERROR,
+                rule_id="STYLE-024",
+                message="QFilter 第二个参数必须使用 QCP 枚举，不能用字符串（编译通过但运行时崩溃）",
+                fix_hint='\u5c06 new QFilter(field, "=", value) \u6539\u4e3a new QFilter(field, QCP.equals, value)\uff1b\u5e38\u7528\u679a\u4e3e: QCP.equals / not_equals / large_equals / less_equals / like / in',
+                source_line=line.strip(),
+            ))
+
+        # STYLE-027: BigDecimal 原生运算，应优先使用 BigDecimalUtils
+        if 'BigDecimalUtils' not in code_line:
+            for bd_pat in BIGDECIMAL_RAW_PATTERNS:
+                if bd_pat.search(code_line):
+                    issues.append(LintIssue(
+                        file=filepath, line=lineno,
+                        severity=Severity.WARNING,
+                        rule_id="STYLE-027",
+                        message="BigDecimal 原生运算应优先使用 BigDecimalUtils 工具方法",
+                        fix_hint="使用 BigDecimalUtils.valueOf() / add() / subtract() / multiply() / divide() / largeThanZero() / nullToZero() 等",
+                        source_line=line.strip(),
+                    ))
+                    break
+
+        # STYLE-026: 主键/id 用 == null / != null / == 0L 等方式判空
+        if not any(kw in code_line for kw in ('isEmptyPk', 'isNotEmptyPk')):
+            # 前两个 pattern 检测变量名，用 code_line；第三个 pattern 检测 .get("id")，用 raw_code_line（保留字符串字面量）
+            pk_sources = [code_line, code_line, raw_code_line]
+            for pk_pat, src in zip(PK_NULL_CHECK_PATTERNS, pk_sources):
+                if pk_pat.search(src):
+                    issues.append(LintIssue(
+                        file=filepath, line=lineno,
+                        severity=Severity.WARNING,
+                        rule_id="STYLE-026",
+                        message="主键/id 判空不应直接用 == null / != null / == 0L，苍穹主键默认值为 0L",
+                        fix_hint="使用 EntityUtils.isEmptyPk(pk) 或 EntityUtils.isNotEmptyPk(pk)，兼容 null 和 0L",
+                        source_line=line.strip(),
+                    ))
+                    break
 
         if "ResManager.loadKDString" not in line and "String.format" not in line and CHINESE_CONCAT_PATTERN.search(line):
             issues.append(LintIssue(
@@ -299,7 +379,7 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
         if loop_line and LOOP_ORM_CREATE_PATTERN.search(code_line):
             issues.append(LintIssue(
                 file=filepath, line=lineno,
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
                 rule_id="STYLE-022",
                 message="禁止在循环中频繁调用 ORM.create()，容易造成性能问题",
                 fix_hint="先批量组织数据，按批次处理",
@@ -309,7 +389,7 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
         if loop_line and LOOP_DISPATCH_PATTERN.search(code_line):
             issues.append(LintIssue(
                 file=filepath, line=lineno,
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
                 rule_id="STYLE-023",
                 message="禁止在循环中调用 DispatchServiceHelper.invoke*()，远程调用放进循环容易放大时延和失败面",
                 fix_hint="合并调用、批量调用或先聚合参数",

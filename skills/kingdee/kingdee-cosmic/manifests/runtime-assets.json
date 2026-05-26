@@ -1,0 +1,25 @@
+{
+  "generatedBy": "anfeng",
+  "assets": [
+    {
+      "path": "setup/cuslib/kd-cd-cosmic-commons.jar",
+      "sha256": "afde671be2a0941271e86f05a89f29974a76aaf5e1d0d90b60ea5656f59369f9",
+      "size": 281445
+    },
+    {
+      "path": "setup/cuslib/kd-cd-cosmic-features.jar",
+      "sha256": "2560e3b667e9935876d469adb63e3868afd2b270965a03a187eeea04f1e4b272",
+      "size": 150809
+    },
+    {
+      "path": "setup/ok-cosmic-docs.db",
+      "sha256": "2cb8419d5d0c2b57aa2780d9c6f13a4e33cb98799d861419f76b87c61b649ee6",
+      "size": 9490432
+    },
+    {
+      "path": "setup/setup.jar",
+      "sha256": "584ed60c56312ec848f3a37d55c1d88794c72b03ef071ddac610101ef15757b6",
+      "size": 3292846
+    }
+  ]
+}

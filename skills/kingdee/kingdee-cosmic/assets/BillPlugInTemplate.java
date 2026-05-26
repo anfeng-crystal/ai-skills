@@ -113,7 +113,7 @@ public class BillPlugInTemplate extends AbstractBillPlugInExt {
         super.beforeDoOperation(e);
         String opKey = getOpKey(e);
         if (OP_KEY_SAVE.equals(opKey)) {
-            BigDecimal qty = this.getValue(BASEDATAFIELD);
+            BigDecimal qty = this.getValue(FIELD_QTY);
             if (qty != null && qty.compareTo(BigDecimal.ZERO) <= 0) {
                 e.setCancel(true);
                 this.getView().showErrorNotification(ResManager.loadKDString("数量必须大于 0", "BillPlugInTemplate_3", RES_APP_ID));

@@ -2,7 +2,7 @@
  * 后台定时任务示例。
  * <p>
  * 适用插件：后台任务、服务层
- * 优先封装：当前仓库无专门任务封装，简单查询场景可优先考虑 QueryUtils
+ * 优先封装：当前仓库无专门任务封装，简单查询场景可优先考虑 QueryServiceHelper
  * 原生兜底：AbstractTask、QueryServiceHelper、Log
  * 相关 lint 规则：STYLE-009、STYLE-015
  * <p>
@@ -36,7 +36,6 @@ import java.util.Map;
 
 public class ScheduleTaskSample extends AbstractTask {
     private static final Log log = LogFactory.getLog(ScheduleTaskSample.class);
-
     private static final String STAT_FORM_ID = "outapilogdailystats";
     private static final String PARAM_FAIL_RATE_LIMIT = "failRateLimit";
     private static final String PARAM_DRY_RUN = "dryRun";
@@ -131,7 +130,7 @@ public class ScheduleTaskSample extends AbstractTask {
     }
 
     private BigDecimal resolveFailRateLimit(Map<String, Object> params) {
-        if (params == null) {
+        if (CollectionUtils.isEmpty(params)) {
             return DEFAULT_FAIL_RATE_LIMIT;
         }
         Object value = params.get(PARAM_FAIL_RATE_LIMIT);

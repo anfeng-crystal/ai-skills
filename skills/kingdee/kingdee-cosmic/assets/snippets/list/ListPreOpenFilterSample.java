@@ -33,12 +33,13 @@ public class ListPreOpenFilterSample extends AbstractListPluginExt {
     // --- 从父页面打开列表前，动态追加过滤 ---
     @Override
     public void preOpenForm(PreOpenFormEventArgs e) {
+        super.preOpenForm(e);
         ListShowParameter showParameter = (ListShowParameter) e.getFormShowParameter();
         if (!PARENT_FORM_ID.equals(showParameter.getParentFormId())) {
             return;
         }
-
-        IFormView parentView = FormUtils.getViewByPageId(showParameter.getParentPageId());
+        // 获取noPlugin的parentView，防止跨节点报错
+        IFormView parentView = FormUtils.getViewByPageId(showParameter.getParentPageId(), true);
         if (parentView == null) {
             return;
         }

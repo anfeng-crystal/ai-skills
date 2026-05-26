@@ -1,0 +1,50 @@
+{
+  "$schema": "kingdee-testing cross-module-allowed v1",
+  "description": "Cross-product-line dependency whitelist for Kingdee Cosmic test and refactor checks. Matches downgrade a warning to informational output.",
+  "maintainerNote": "New entries must include a complete reason explaining why the cross-product-line dependency is intentional.",
+  "lastUpdated": "2026-05-14",
+  "rules": [
+    {
+      "from": "kd.repc.*",
+      "to": "kd.scm.bid.*",
+      "reason": "Tendering shared documents: repc and scm.bid share bidding/opening base data by design."
+    },
+    {
+      "from": "kd.repc.*",
+      "to": "kd.scm.ten.*",
+      "reason": "Tendering supplier relationship: repc evaluation flow depends on scm.ten supplier recruitment data."
+    },
+    {
+      "from": "kd.ec.*",
+      "to": "kd.pccs.bascs.*",
+      "reason": "Engineering project contract base data is shared with pccs."
+    },
+    {
+      "from": "kd.ec.*",
+      "to": "kd.fi.ap.*",
+      "reason": "Engineering settlement needs accounts-payable status."
+    },
+    {
+      "from": "kd.repc.*",
+      "to": "kd.fi.cas.*",
+      "reason": "Tendering deposit refund uses cash receipt/payment documents."
+    },
+    {
+      "from": "kd.fi.gl.*",
+      "to": "kd.fi.ap.*",
+      "reason": "General ledger and accounts payable are both finance cloud submodules."
+    },
+    {
+      "from": "kd.fi.gl.*",
+      "to": "kd.fi.ar.*",
+      "reason": "General ledger and accounts receivable are both finance cloud submodules."
+    }
+  ],
+  "_examples_negative": [
+    {
+      "from": "kd.repc.*",
+      "to": "kd.pccs.concs.common.util.*",
+      "comment": "Negative example: repc numeric calculation should prefer kd.repc.rebas.common.util.ReDigitalUtil."
+    }
+  ]
+}

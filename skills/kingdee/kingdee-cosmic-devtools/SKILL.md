@@ -9,6 +9,8 @@ metadata:
 ---
 
 # Kingdee Cosmic DevTools
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 路由边界
 - 本 skill 只负责工程骨架、模块模板、插件/服务类模板和 `COSMIC_HOME` 资源环境处理。
 - 业务插件逻辑、运行时诊断和最终改造收口交给 `kingdee-cosmic`；实体、字段、表单或插件挂载证据交给 `kingdee-metadata-analyzer`；SDK/API 签名查询交给 `kingdee-sdk-helper`。

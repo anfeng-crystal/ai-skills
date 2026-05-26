@@ -15,7 +15,7 @@ package kd.cd.common.snippets.form;
 import kd.bos.bill.BillShowParameter;
 import kd.bos.bill.OperationStatus;
 import kd.bos.dataentity.entity.DynamicObject;
-import kd.bos.entity.report.ReportList;
+import kd.bos.report.ReportList;
 import kd.bos.form.ShowType;
 import kd.bos.form.control.EntryGrid;
 import kd.bos.form.events.HyperLinkClickEvent;
@@ -43,6 +43,7 @@ public class HyperlinkJumpSample {
 
         @Override
         public void registerListener(EventObject e) {
+            super.registerListener(e);
             this.addHyperClickListeners(ENTRY_KEY);
         }
 
@@ -85,6 +86,7 @@ public class HyperlinkJumpSample {
 
         @Override
         public void registerListener(EventObject e) {
+            super.registerListener(e);
             ReportList reportList = this.getView().getControl(REPORT_LIST_KEY);
             if (reportList != null) {
                 reportList.addHyperClickListener(this);

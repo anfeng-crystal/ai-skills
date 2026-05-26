@@ -10,6 +10,13 @@ Review a web app or page for visual design quality. This is not a UX audit (usab
 
 The goal: would a design-conscious person look at this and think "this is well made" or "this looks like a developer designed it"?
 
+## Outcome Contract
+
+- Outcome: a read-only visual review grounded in a real rendered page, screenshot, or generated HTML artifact evidence.
+- Done when: findings name the visual defect, evidence path or viewport, severity, fix direction, and any remaining verification gap.
+- Evidence: live URL, local URL, file path, desktop/mobile screenshots, HTML quality gate output, user-provided screenshots, or explicit limited-review scope.
+- Output: prioritized findings, screenshot evidence, top fixes, and clear handoff to `frontend-design` when implementation is needed.
+
 ## When to Use
 
 - Before showing something to a client or team
@@ -37,13 +44,23 @@ Use this mode for `file://` or local `output/html/<skill>/<timestamp>/index.html
 6. Output the review path and screenshot evidence; do not paste the full HTML into chat.
 7. Interaction review checks hover/focus affordance, keyboard reachability, visible state feedback, and at least one useful action: search, filter, sort, expand/collapse, section jump, or copy summary.
 
+## Screenshot Complaint Mode
+
+Use this mode when the user provides a screenshot or image and says it is ugly, weird, unclear, inconsistent, unbalanced, "looks off", or similar.
+
+1. Treat the screenshot as the review evidence. State the specific visual defect in one sentence: spacing, alignment, density, typography, colour, hierarchy, contrast, responsive breakage, or component inconsistency.
+2. If the user provides a reference screenshot or older "good" version, compare current vs reference and list the exact visual deltas before giving fixes.
+3. Keep the review read-only. Recommend the smallest material, spacing, type, colour, hierarchy, or layout fix; route implementation to `frontend-design` unless the user explicitly asks to edit.
+4. If a screenshot exposes rendering, timing, data, or regression behavior rather than taste, route to `fix-bug` and preserve the visual evidence.
+5. For High and Medium findings, bind each issue to a visible region or screenshot evidence. If only one screenshot is available, mark viewport and interaction state as limited.
+
 ## Browser Tool Detection
 
-Same as ux-audit — Chrome MCP, Playwright MCP, or playwright-cli.
+Use the available browser evidence path in this order: explicit live URL, localhost URL, `file://` or local HTML artifact, user-provided screenshot, source-only limited review. For local HTML artifacts, prefer the shared `check-html.mjs` gate before visual judgment.
 
 ## URL Resolution
 
-Same as ux-audit — prefer deployed/live over localhost.
+Prefer the URL or file path the user provided. If multiple targets exist, prefer deployed/live for shipped pages, localhost for active development, and `file://` for generated HTML artifacts. Check desktop and 375px mobile screenshots when the surface is responsive. If rendering is impossible, output `limited review` with the missing evidence.
 
 ## What to Check
 
@@ -140,6 +157,11 @@ Write findings to `.jez/artifacts/design-review.md`, or for HTML artifacts to th
 **URL**: [url]
 **HTML Quality Gate**: pass/warn/fail
 **Screenshots**: desktop.png, mobile.png
+
+## Evidence
+| Viewport | Screenshot / Source | Component | Issue | Fix Direction |
+|---|---|---|---|---|
+| desktop/mobile/limited | path or user screenshot | component/region | visual defect | smallest fix |
 
 ## Overall Impression
 [1-2 sentences — professional / unpolished / inconsistent / clean]

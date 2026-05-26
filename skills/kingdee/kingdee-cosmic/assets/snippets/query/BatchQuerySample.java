@@ -2,7 +2,7 @@
  * 批量查询样本。
  * <p>
  * 适用插件：表单插件、操作插件、服务层
- * 优先封装：DynamicObjectUtils、QueryUtils、AlgoUtils
+ * 优先封装：DynamicObjectUtils、AlgoUtils
  * 原生兜底：BusinessDataServiceHelper.load(...)、QueryServiceHelper.query(...)、QFilter、DataSet
  * 相关 lint 规则：STYLE-015、STYLE-017、STYLE-010
  * <p>
@@ -10,7 +10,7 @@
  * 1. 先按关联键分组，再一次性批量查询；
  * 2. 查询结果先转本地 Map，再做校验、反写或恢复；
  * 3. 表单插件、操作插件、服务层都可以直接复用这里的查询分组思路。
- * 4. 注意：QueryServiceHelper.query(...) / QueryUtils.queryDataSet(...) 查出来的数据默认用于读取、分组、聚合，不要直接当成可更新实体回写保存。
+ * 4. 注意：QueryServiceHelper.query(...) / QueryServiceHelper.queryDataSet(...) 查出来的数据默认用于读取、分组、聚合，不要直接当成可更新实体回写保存。
  */
 package kd.cd.common.snippets.query;
 
@@ -23,7 +23,8 @@ import kd.bos.servicehelper.BusinessDataServiceHelper;
 import kd.bos.servicehelper.QueryServiceHelper;
 import kd.cd.common.util.AlgoUtils;
 import kd.cd.common.util.DynamicObjectUtils;
-import kd.cd.common.util.QueryUtils;
+import kd.cd.common.entity.EntityUtils;
+import kd.cd.common.util.SelectFieldBuilder;
 import kd.cd.core.util.BigDecimalUtils;
 import kd.cd.core.util.CharSequenceUtils;
 import kd.cd.core.util.CollectionUtils;
@@ -156,7 +157,7 @@ public final class BatchQuerySample {
         Map<String, DynamicObject> currentRowMap = new HashMap<>(currentRows.size());
         for (DynamicObject row : currentRows) {
             Object dimensionId = row.get(FIELD_DIMENSION + ".id");
-            if (dimensionId != null) {
+            if (EntityUtils.isNotEmptyPk(dimensionId)) {
                 currentRowMap.put(keyOf(dimensionId), row);
             }
         }
@@ -225,7 +226,11 @@ public final class BatchQuerySample {
         // QueryServiceHelper.query(...) 返回的是扁平结果集，适合做“批量查 + 分组映射”，不适合直接回写更新。
         DynamicObjectCollection rows = QueryServiceHelper.query(
                 SOURCE_FORM_ID,
-                "entryentity." + FIELD_DIMENSION + ".id dimensionId," + FIELD_BILL_NO + ",entryentity." + FIELD_VALUE + " value",
+                new SelectFieldBuilder()
+                        .append("entryentity." + FIELD_DIMENSION + ".id", "dimensionId")
+                        .append("entryentity." + FIELD_VALUE, "value")
+                        .appendAll(FIELD_BILL_NO)
+                        .toString(),
                 new QFilter("billstatus", QCP.equals, "C")
                         .and("entryentity." + FIELD_DIMENSION + ".id", QCP.in, dimensionIds)
                         .toArray(),
@@ -309,13 +314,17 @@ public final class BatchQuerySample {
      * 关键点：不要在维度循环里 query(..., top 1)，先一次性查出候选记录，再利用排序结果取每组第一条。
      */
     private static Map<String, LatestValue> queryLatestValueMap(Set<Object> dimensionIds) {
-        try (DataSet ds = QueryUtils.queryDataSet(
-                SOURCE_FORM_ID,
-                "entryentity." + FIELD_DIMENSION + ".id dimensionId," + FIELD_BILL_NO + ",entryentity." + FIELD_VALUE + " value",
-                "auditdate desc," + FIELD_BILL_NO + " desc",
+        try (DataSet ds = QueryServiceHelper.queryDataSet(
+                SOURCE_FORM_ID, SOURCE_FORM_ID,
+                new SelectFieldBuilder()
+                        .append("entryentity." + FIELD_DIMENSION + ".id", "dimensionId")
+                        .appendAll(FIELD_BILL_NO)
+                        .append("entryentity." + FIELD_VALUE, "value")
+                        .toString(),
                 new QFilter("billstatus", QCP.equals, "C")
                         .and("entryentity." + FIELD_DIMENSION + ".id", QCP.in, dimensionIds)
-                        .toArray()
+                        .toArray(),
+                "auditdate desc," + FIELD_BILL_NO + " desc"
         )) {
             return AlgoUtils.stream(ds).collect(Collectors.toMap(
                     row -> keyOf(row.get("dimensionId")),

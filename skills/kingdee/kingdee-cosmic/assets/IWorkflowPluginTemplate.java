@@ -38,7 +38,6 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
      */
     @Override
     public List<Long> calcUserIds(AgentExecution execution) {
-        super.calcUserIds(execution);
         List<Long> userIds = CollectionUtils.newArrayList();
         Object starter = execution.getVariable(VAR_START_USER);
         if (starter instanceof Number) {
@@ -54,7 +53,6 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
      */
     @Override
     public boolean hasTrueCondition(AgentExecution execution) {
-        super.hasTrueCondition(execution);
         Object amount = execution.getVariable(VAR_AMOUNT);
         return amount instanceof Number && ((Number) amount).doubleValue() > 100000D;
     }
@@ -66,7 +64,6 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
      */
     @Override
     public void notify(AgentExecution execution) {
-        super.notify(execution);
         if (execution.getCurrentFlowElement() != null) {
             execution.setVariable(VAR_LAST_NODE, execution.getCurrentFlowElement().getName());
         }
@@ -79,7 +76,6 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
      */
     @Override
     public void notifyByWithdraw(AgentExecution execution) {
-        super.notifyByWithdraw(execution);
         execution.setVariable(VAR_LAST_NODE, "withdraw");
     }
 
@@ -90,7 +86,6 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
      */
     @Override
     public IApprovalRecordItem formatFlowRecord(IApprovalRecordItem item) {
-        super.formatFlowRecord(item);
         return item;
     }
 }

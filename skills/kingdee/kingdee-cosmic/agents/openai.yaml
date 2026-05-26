@@ -1,8 +1,8 @@
 interface:
   display_name: "Kingdee Cosmic"
-  short_description: "金蝶云苍穹 Java 二开、插件、报表、工作流和故障诊断"
+  short_description: "金蝶云苍穹 Java 二开、插件、报表、BOTP、OpenAPI 和故障诊断"
   default_prompt: |
-    使用 $kingdee-cosmic 处理金蝶云苍穹 Java 二开任务。先确认任务类型和平台依据，再按需读取 references、assets 或 scripts；skill 边界用于选择证据入口，不用于回避用户目标。字段/API/事件不确定时必须查证，能用本地证据保守推进的先推进并标明边界，只有影响正确性的关键事实仍无法确认时才停问。写代码前先查当前项目源码、模板、snippet、标准服务和已有 helper，避免再造第二套封装。生成或修改 Java 代码时，类、公共方法、复杂私有方法、关键平台调用和事务/回写/DataSet/工作流边界必须写功能性注释；署名不用 AI，需署名统一用 anfeng。
+    使用 $kingdee-cosmic 处理金蝶云苍穹 Java 二开任务。先执行配置预检，按 rules/intent-routing.md 和 rules/decision-matrix.md 判断插件、配置、脚本或诊断路径；字段、实体、表单、插件挂载和上下游关系优先用 kingdee-metadata-analyzer 取证，SDK/API 签名优先用 kingdee-sdk-helper。生成或修改 Java 前读取最接近的 references 与 assets 模板，优先复用项目 helper 和 kd-cd-cosmic-commons 封装；代码后执行 Gradle 验证或 cosmic-post-check.py，并按依据、改动、验证、风险收口。
 
 policy:
   allow_implicit_invocation: true

@@ -28,11 +28,15 @@ FORM_L_TABLE = "t_meta_formdesign_l"
 
 FORM_AP_NAMES = {
     "BillFormAp": "单据编辑页面",
+    "BasedataFormAp": "基础资料页面",
     "FormAp": "列表页面",
     "TreeFormAp": "树形页面",
     "ReportFormAp": "报表页面",
     "MobBillFormAp": "移动单据页面",
     "MobFormAp": "移动列表页面",
+    "MobileBillFormAp": "移动单据页面",
+    "MobileListFormAp": "移动列表页面",
+    "CardEntryViewAp": "卡片入口页面",
 }
 
 BUILTIN_EDIT_ORDER = ["save(暂存)", "submit(提交)", "audit(审核)", "unaudit(反审核)"]
@@ -319,6 +323,23 @@ def is_real_plugin(class_name: str) -> bool:
     return bool(class_name) and "." in class_name and not class_name[0].isdigit()
 
 
+def operation_label(op: ET.Element, edit_index: int) -> str:
+    """Return a truthful operation label without guessing unnamed edit semantics."""
+    key = op.findtext("Key", "").strip()
+    name = op.findtext("Name", "").strip()
+    action = op.get("action", "").strip()
+    oid = op.get("oid", "").strip()
+
+    if key:
+        return f"{key}({name})" if name else key
+    if action == "remove":
+        return "delete(删除)"
+    if action == "edit":
+        suffix = f"[{oid}]" if oid else ""
+        return f"edit#{edit_index}{suffix}"
+    return action or "unknown"
+
+
 def extract_op_plugins(root: Optional[ET.Element]) -> List[Dict[str, Any]]:
     """Extract operation plugin bindings from entity metadata XML."""
     results: List[Dict[str, Any]] = []
@@ -328,17 +349,10 @@ def extract_op_plugins(root: Optional[ET.Element]) -> List[Dict[str, Any]]:
     edit_counter = 0
     for op in root.iter("Operation"):
         key = op.findtext("Key", "").strip()
-        name = op.findtext("Name", "").strip()
         action = op.get("action", "").strip()
-        if key:
-            op_label = f"{key}({name})" if name else key
-        elif action == "edit":
-            op_label = BUILTIN_EDIT_ORDER[edit_counter] if edit_counter < len(BUILTIN_EDIT_ORDER) else f"标准操作#{edit_counter}"
+        if action == "edit" and not key:
             edit_counter += 1
-        elif action == "remove":
-            op_label = "delete(删除)"
-        else:
-            op_label = action or "unknown"
+        op_label = operation_label(op, edit_counter)
 
         plugins_node = op.find("Plugins")
         if plugins_node is None:
@@ -374,7 +388,7 @@ def extract_form_plugins(root: Optional[ET.Element], form_number: str = "", form
             element_desc += f"({parent_action})"
 
         for plugin in plugins_node.findall("Plugin"):
-            class_name = plugin.findtext("ClassName", "").strip()
+            class_name = plugin.findtext("ClassName", "").strip() or plugin.get("oid", "").strip()
             if is_real_plugin(class_name):
                 results.append({
                     "type": "页面插件",

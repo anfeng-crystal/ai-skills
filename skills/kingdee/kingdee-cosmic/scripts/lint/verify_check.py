@@ -17,9 +17,9 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
 
     for i, line in enumerate(lines):
         if OVERRIDE_PATTERN.search(line):
-            # 检查上方 3 行内是否有验证来源注释
+            # 检查上方 15 行内是否有验证来源注释（兼容被 JavaDoc 隔开的场景）
             has_verify = False
-            for j in range(max(0, i - 3), i):
+            for j in range(max(0, i - 15), i):
                 if VERIFY_PATTERN.search(lines[j]):
                     has_verify = True
                     break

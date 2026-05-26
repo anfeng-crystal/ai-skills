@@ -9,6 +9,8 @@ metadata:
 ---
 
 # Multi-Agent Collaboration
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
+
 ## 原则
 
 主 agent 是调度器和最终责任人：先判断是否拆分，再定分工、控边界、同步上下文、验收结果、做最终集成。子 agent 默认彼此不知道对方做了什么，所有协作事实都必须通过主 agent 的 handoff/context relay 传递。
