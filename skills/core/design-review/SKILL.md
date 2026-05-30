@@ -1,197 +1,67 @@
 ---
 name: design-review
-description: "Visual design review: layout, typography, spacing, color, hierarchy, consistency, responsive. Use frontend-design to build new UI."
+description: "需要审查已渲染 UI、截图、本地 HTML 产物、布局、字体、间距、颜色、层级、一致性或响应式质量时使用。"
 compatibility: claude-code-only
 ---
 
 # Design Review
 
-Review a web app or page for visual design quality. This is not a UX audit (usability, workflow, friction) — this checks whether the design is **professional, consistent, and polished**.
+> Cross-platform Agent Skill: 只基于视觉证据做只读审查；需要实现时转 `frontend-design`，除非用户明确要求直接改。
 
-The goal: would a design-conscious person look at this and think "this is well made" or "this looks like a developer designed it"?
+## 触发
+- 用户说“丑、怪、看着不对、不统一、不够精致”，或要求视觉审查、截图评审、本地 HTML 报告验收、响应式检查时使用。
+- 不做完整 UX 流程审计，除非视觉问题是重点。
+- 如果问题本质是运行时报错、数据错误或渲染失败，转 `fix-bug`。
 
-## Outcome Contract
+## 契约
+- 输出按严重程度排序的视觉问题，必须绑定渲染证据。
+- High/Medium 问题必须包含区域、严重级别、缺陷、证据路径/视口、最小修复方向。
+- 没有渲染证据时只能做 `limited review`，并说明缺口。
 
-- Outcome: a read-only visual review grounded in a real rendered page, screenshot, or generated HTML artifact evidence.
-- Done when: findings name the visual defect, evidence path or viewport, severity, fix direction, and any remaining verification gap.
-- Evidence: live URL, local URL, file path, desktop/mobile screenshots, HTML quality gate output, user-provided screenshots, or explicit limited-review scope.
-- Output: prioritized findings, screenshot evidence, top fixes, and clear handoff to `frontend-design` when implementation is needed.
-
-## When to Use
-
-- Before showing something to a client or team
-- When something "looks off" but you can't pinpoint why
-- After building a feature, before calling it done
-- Periodic quality check on a shipped product
-- After a UX audit — this is the visual companion
-- When a local HTML report, dashboard, result card, or visual artifact needs quality gating before handoff
-
-## HTML Artifact Review Mode
-
-Use this mode for `file://` or local `output/html/<skill>/<timestamp>/index.html` artifacts produced by other skills.
-
-1. Run or read the shared gate first when available:
+## 证据路径
+1. 优先使用用户给的 URL、文件路径或截图。
+2. 目标优先级：显式 live URL -> localhost -> `file://` / 本地 HTML -> 用户截图 -> source-only limited review。
+3. 本地 HTML 产物优先跑共享门禁：
    ```bash
    node skills/meta/html-output-quality/scripts/check-html.mjs \
      --html <path-to-index.html> \
      --source <optional-json-or-tsv> \
      --out <artifact-dir>
    ```
-2. Inspect the generated desktop and mobile screenshots before judging layout quality.
-3. Review the artifact as a handoff document, not as a full app workflow: hierarchy, scanability, evidence placement, long text wrapping, table overflow, screenshot visibility, responsive readability, and task-relevant local interaction matter most.
-4. High severity means the HTML should not be approved for handoff: blank or broken rendering, unreadable text, missing evidence area, severe overflow, external resources, or sensitive data exposure.
-5. Medium severity means the artifact is usable but should be improved before becoming a reusable template, including controls that exist but do not make review faster.
-6. Output the review path and screenshot evidence; do not paste the full HTML into chat.
-7. Interaction review checks hover/focus affordance, keyboard reachability, visible state feedback, and at least one useful action: search, filter, sort, expand/collapse, section jump, or copy summary.
+4. 响应式页面至少检查桌面和 375px 移动视口。
+5. 截图投诉直接以截图为证据；若用户给参考图或旧版好图，先列当前与参考的视觉差异。
+6. 无法渲染时，不推断不可见状态。
 
-## Screenshot Complaint Mode
+## 检查项
+- 布局：对齐、网格、间距尺度、垂直节奏、密度。
+- 字体：层级、行宽、行高、字重、截断和换行。
+- 颜色：对比度、语义一致性、深浅模式、状态色。
+- 层级：主行动、分组、扫描顺序、留白、渐进呈现。
+- 组件：按钮、卡片、输入、图标、圆角、阴影、重复项一致性。
+- 交互：hover、focus、active、disabled、loading、状态反馈。
+- 响应式：移动导航、触控目标、图片、表格、平板宽度、溢出。
+- HTML 产物：证据区、长文本换行、表格溢出、搜索/过滤/排序是否真的提升审阅效率、外链资源和敏感数据暴露。
+- 截图投诉：一句话定位缺陷类型，再给最小材质、间距、字体、颜色、层级或布局修复方向。
 
-Use this mode when the user provides a screenshot or image and says it is ugly, weird, unclear, inconsistent, unbalanced, "looks off", or similar.
+## 严重级别
+- High：空白/破碎、不可读、严重溢出、文字不可见、敏感信息暴露、第一眼不专业。
+- Medium：可用但明显粗糙，如间距/字体/图标不一致、层级弱、响应式别扭、换行差。
+- Low：局部 polish，影响有限。
 
-1. Treat the screenshot as the review evidence. State the specific visual defect in one sentence: spacing, alignment, density, typography, colour, hierarchy, contrast, responsive breakage, or component inconsistency.
-2. If the user provides a reference screenshot or older "good" version, compare current vs reference and list the exact visual deltas before giving fixes.
-3. Keep the review read-only. Recommend the smallest material, spacing, type, colour, hierarchy, or layout fix; route implementation to `frontend-design` unless the user explicitly asks to edit.
-4. If a screenshot exposes rendering, timing, data, or regression behavior rather than taste, route to `fix-bug` and preserve the visual evidence.
-5. For High and Medium findings, bind each issue to a visible region or screenshot evidence. If only one screenshot is available, mark viewport and interaction state as limited.
+## 门禁
+- 本 skill 不改 UI。
+- 有 High 问题的 HTML 产物不能判定为可交付。
+- HTML 产物缺 evidence 区、截图不可见、外链资源或敏感数据暴露，一律 High。
+- 交互审查至少看 hover/focus、键盘可达、可见反馈，以及搜索/过滤/排序/展开/复制/跳转中是否有一个真有用。
+- 不凭审美泛泛评价；每条问题绑定可见区域。
+- 只有单截图/单视口时，明确覆盖范围有限。
 
-## Browser Tool Detection
-
-Use the available browser evidence path in this order: explicit live URL, localhost URL, `file://` or local HTML artifact, user-provided screenshot, source-only limited review. For local HTML artifacts, prefer the shared `check-html.mjs` gate before visual judgment.
-
-## URL Resolution
-
-Prefer the URL or file path the user provided. If multiple targets exist, prefer deployed/live for shipped pages, localhost for active development, and `file://` for generated HTML artifacts. Check desktop and 375px mobile screenshots when the surface is responsive. If rendering is impossible, output `limited review` with the missing evidence.
-
-## What to Check
-
-### 1. Layout and Spacing
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Consistent spacing** | Same gap between all cards in a grid, same padding in all sections | Some cards have 16px gap, others 24px. Header padding differs from body |
-| **Alignment** | Left edges of content align vertically across sections | Heading starts at one indent, body text at another, cards at a third |
-| **Breathing room** | Generous whitespace around content, elements don't feel cramped | Text touching container edges, buttons crowded against inputs |
-| **Grid discipline** | Content follows a clear column grid | Elements placed freely, no underlying structure |
-| **Responsive proportions** | Sidebar/content ratio looks intentional at every width | Sidebar takes 50% on tablet, content is squeezed |
-| **Vertical rhythm** | Consistent vertical spacing pattern (e.g. 8px/16px/24px/32px scale) | Random spacing: 13px here, 27px there, 8px somewhere else |
-
-### 2. Typography
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Hierarchy** | Clear visual difference between h1 → h2 → h3 → body | Headings and body text look the same size/weight |
-| **Line length** | Body text 50-75 characters per line | Full-width text running 150+ characters — hard to read |
-| **Line height** | Body text 1.5-1.7, headings 1.1-1.3 | Cramped text or excessive line height |
-| **Font sizes** | Consistent scale (e.g. 14/16/20/24/32) | Random sizes: 15px, 17px, 22px with no relationship |
-| **Weight usage** | Regular for body, medium for labels, semibold for headings, bold sparingly | Everything bold, or everything regular with no hierarchy |
-| **Truncation** | Long text truncates with ellipsis, title attribute shows full text | Text overflows container, wraps awkwardly, or is cut off without ellipsis |
-
-### 3. Colour and Contrast
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Semantic colour** | Using design tokens (bg-primary, text-muted-foreground) | Raw Tailwind colours (bg-blue-500, text-gray-300) |
-| **Contrast ratio** | Text meets WCAG AA (4.5:1 for body, 3:1 for large text) | Light grey text on white, or dark text on dark backgrounds |
-| **Colour consistency** | Same blue means the same thing everywhere (primary = action) | Blue means "clickable" in one place and "informational" in another |
-| **Dark mode** | All elements visible, borders defined, no invisible text | Elements disappear, text becomes unreadable, images look wrong |
-| **Status colours** | Green=success, yellow=warning, red=error consistently | Green used for both success and "active" with different meanings |
-| **Colour overuse** | 2-3 colours + neutrals | Rainbow of colours with no clear hierarchy |
-
-### 4. Visual Hierarchy
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Primary action** | One clear CTA per page, visually dominant | Three equally styled buttons competing for attention |
-| **Squint test** | Squinting at the page, the most important element stands out | Everything is the same visual weight — nothing draws the eye |
-| **Progressive disclosure** | Most important info visible, details available on interaction | Everything shown at once — overwhelming |
-| **Grouping** | Related items are visually grouped (proximity, borders, backgrounds) | Related items scattered, unrelated items touching |
-| **Negative space** | Intentional empty space that frames content | Empty space that looks accidental (uneven, trapped white space) |
-
-### 5. Component Consistency
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Button styles** | One primary style, one secondary, one destructive — used consistently | 5 different button styles across the app |
-| **Card styles** | All cards have the same border-radius, shadow, padding | Some cards rounded, some sharp, some with shadows, some without |
-| **Form inputs** | All inputs same height, same border style, same focus ring | Mix of heights, border styles, focus behaviours |
-| **Icon style** | One icon family (Lucide, Heroicons), consistent size and stroke | Mixed icon families, different sizes, some filled some outlined |
-| **Border radius** | Consistent radius scale (e.g. 4px inputs, 8px cards, 12px modals) | Random radius values: 3px, 7px, 10px, 16px |
-| **Shadow** | One or two shadow levels used consistently | Every component has a different shadow depth |
-
-### 6. Interaction Design
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Hover states** | Buttons, links, and clickable cards change on hover | No hover feedback — user unsure what's clickable |
-| **Focus states** | Keyboard focus visible on all interactive elements | Focus ring missing or invisible against background |
-| **Active states** | Nav items, tabs, sidebar links show current selection | Active item looks the same as inactive |
-| **Transitions** | Subtle transitions on hover/focus (150-200ms ease) | No transitions (jarring) or slow transitions (laggy) |
-| **Loading indicators** | Skeleton screens or spinners during async operations | Content pops in without warning, layout shifts |
-| **Disabled states** | Disabled elements are visually muted, cursor changes | Disabled buttons look clickable, no cursor change |
-
-### 7. Responsive Quality
-
-| Check | Good | Bad |
-|-------|------|-----|
-| **Mobile nav** | Clean hamburger/sheet menu, easy to tap | Desktop nav squished into mobile, tiny tap targets |
-| **Image scaling** | Images fill containers proportionally | Images stretched, cropped badly, or overflowing |
-| **Table responsiveness** | Horizontal scroll on mobile, or stack to cards | Table wider than screen with no way to see columns |
-| **Touch targets** | At least 44x44px on mobile | Tiny links, close buttons, checkboxes |
-| **Tablet** | Layout works at 768px (not just desktop and phone) | Layout breaks at tablet widths, awkward gaps |
-
-## Severity Guide
-
-| Level | Meaning | Example |
-|-------|---------|---------|
-| **High** | Looks broken or unprofessional | Invisible text in dark mode, buttons different heights inline |
-| **Medium** | Looks unpolished | Inconsistent spacing, mixed icon styles, truncation without ellipsis |
-| **Low** | Nitpick | 1-2px alignment, slightly different border-radius, shadow too strong |
-
-## Output
-
-Write findings to `.jez/artifacts/design-review.md`, or for HTML artifacts to the checked artifact directory as `design-review.md`:
-
-```markdown
-# Design Review: [App Name]
-**Date**: YYYY-MM-DD
-**URL**: [url]
-**HTML Quality Gate**: pass/warn/fail
-**Screenshots**: desktop.png, mobile.png
-
-## Evidence
-| Viewport | Screenshot / Source | Component | Issue | Fix Direction |
-|---|---|---|---|---|
-| desktop/mobile/limited | path or user screenshot | component/region | visual defect | smallest fix |
-
-## Overall Impression
-[1-2 sentences — professional / unpolished / inconsistent / clean]
-
-## Findings
-
-### High
-- **[issue]** at [page/component] — [what's wrong] → [fix]
-
-### Medium
-- **[issue]** at [page/component] — [what's wrong] → [fix]
-
-### Low
-- **[issue]** — [description]
-
-## What Looks Good
-[Patterns that are well-executed and should be preserved]
-
-## Top 3 Fixes
-1. [highest visual impact change]
-2. [second]
-3. [third]
-```
-
-Take screenshots of findings where the issue is visual (most of them).
-
-## Tips
-
-- Check dark mode AND light mode — most issues appear in one but not the other
-- The squint test is the fastest way to find hierarchy problems
-- Component inconsistency is the most common issue in dev-built UIs
-- "Looks off" usually means spacing — check margins and padding first
-- If you can't identify the issue, compare to a well-designed app in the same category
+## 输出
+简体中文：
+- 优先写到 `.jez/artifacts/design-review.md`；HTML 产物写到门禁输出目录的 `design-review.md`。
+- 结论：通过 / 有问题可通过 / 阻塞。
+- Evidence：URL/路径/截图/视口。
+- High、Medium、Low：区域 -> 缺陷 -> 影响 -> 修复方向。
+- What looks good：只保留应继续沿用的视觉模式。
+- Top fixes：最多 3 条。
+- Handoff：需要实现时转 `frontend-design` 或 `fix-bug`。

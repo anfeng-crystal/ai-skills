@@ -21,7 +21,7 @@
 | `jarLibPaths` | 苍穹服务端 JAR 搜索目录 |
 | `decompiler.enabled` | 是否允许 CFR 反编译 |
 | `decompiler.cfrJarPath` | CFR JAR 路径 |
-| `output.reportDir` | 分析产物输出目录 |
+| `output.reportDir` | 可选分析产物输出目录；为空或相对路径时，新产物默认写入本机缓存目录 |
 
 ## 凭据解析顺序
 脚本按以下顺序解析数据库密码，命中后停止，并且任何输出都只能写来源类型，不能写密码值：
@@ -37,4 +37,7 @@
 - 不在 skill、报告、模板或聊天输出中写数据库密码值。
 - 新建配置优先用 `.env`；既有配置含 `password` 字段时只兼容读取，不主动扩散。
 - `enabled=false` 时只能做配置检查，不连接数据库。
-- 相对输出目录按项目根目录解析。
+- 分析产物默认写入 `KINGDEE_METADATA_ANALYZER_OUTPUT_DIR` 或系统临时目录下的本机缓存，不写入业务 Git 仓库。
+- 旧配置中的相对 `output.reportDir` 仅用于历史产物定位参考，新运行会重定向到本机缓存目录。
+- 如果 `--output`、绝对 `output.reportDir` 或环境变量指向 Git 工作树，脚本会重定向到缓存目录；只有显式传入 `--allow-git-output` 或设置 `KINGDEE_METADATA_ANALYZER_ALLOW_GIT_OUTPUT=1` 才允许写入仓库。
+- 读取分析结果时以脚本打印的 `__INVENTORY_PATH__` 和 `__OUTPUT_DIR__` 为准，不假设路径在项目 `build/` 下。

@@ -7,10 +7,11 @@
 用法：
   python analyze_plugins.py <entityNumber>              # 分析指定实体的所有插件
   python analyze_plugins.py <entityNumber> --output DIR  # 指定报告输出目录
+  python analyze_plugins.py <entityNumber> --allow-git-output  # 显式允许写入 Git 工作树
 
 输出：
   - 控制台摘要
-  - Markdown 报告文件（含插件列表 + 源码）
+  - inventory.json + sources/*，默认位于本机缓存目录
 
 依赖：pip install psycopg2-binary
 """
@@ -18,6 +19,8 @@
 import os
 import sys
 import json
+import hashlib
+import re
 import subprocess
 import tempfile
 import zipfile
@@ -29,6 +32,8 @@ from datetime import datetime
 SCRIPT_DIR = Path(__file__).parent
 SKILL_DIR = SCRIPT_DIR.parent
 CONFIG_FILE = SKILL_DIR / "config.json"
+OUTPUT_DIR_ENV = "KINGDEE_METADATA_ANALYZER_OUTPUT_DIR"
+ALLOW_GIT_OUTPUT_ENV = "KINGDEE_METADATA_ANALYZER_ALLOW_GIT_OUTPUT"
 
 ZH_LOCALE = "zh_CN"
 ENTITY_TABLE = "t_meta_entitydesign"
@@ -55,6 +60,83 @@ def load_config():
         sys.exit(1)
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _truthy_env(name):
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _safe_path_segment(value, fallback):
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", str(value).strip()).strip("._-")
+    return cleaned[:80] if cleaned else fallback
+
+
+def _path_from(base_dir, raw_path):
+    expanded = Path(os.path.expanduser(str(raw_path)))
+    if expanded.is_absolute():
+        return expanded.resolve()
+    return (base_dir / expanded).resolve()
+
+
+def _containing_git_root(path):
+    resolved = path.expanduser().resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def _project_cache_label(cfg):
+    workspace_root = str(cfg.get("workspace", {}).get("projectRoot", "")).strip()
+    if workspace_root:
+        root_path = Path(os.path.expanduser(workspace_root))
+        label = root_path.name
+        digest_source = str(root_path)
+    else:
+        label = SKILL_DIR.name
+        digest_source = str(SKILL_DIR)
+    digest = hashlib.sha1(digest_source.encode("utf-8")).hexdigest()[:8]
+    return f"{_safe_path_segment(label, 'project')}-{digest}"
+
+
+def _default_output_root(cfg, honor_env=True):
+    configured_root = os.getenv(OUTPUT_DIR_ENV, "").strip() if honor_env else ""
+    base_root = Path(os.path.expanduser(configured_root)) if configured_root else Path(tempfile.gettempdir()) / "kingdee-metadata-analyzer"
+    if not base_root.is_absolute():
+        base_root = Path.cwd() / base_root
+    return (base_root / _project_cache_label(cfg) / "legacy-config").resolve()
+
+
+def _resolve_output_dir(cfg, output_override, allow_git_output):
+    configured_report_dir = str(cfg.get("output", {}).get("reportDir", "")).strip()
+    warnings = []
+
+    if output_override:
+        candidate = _path_from(SKILL_DIR, output_override)
+        source_label = "--output"
+    elif os.getenv(OUTPUT_DIR_ENV, "").strip():
+        candidate = _default_output_root(cfg)
+        source_label = OUTPUT_DIR_ENV
+    elif configured_report_dir and Path(os.path.expanduser(configured_report_dir)).is_absolute():
+        candidate = _path_from(SKILL_DIR, configured_report_dir)
+        source_label = "output.reportDir"
+    elif configured_report_dir and allow_git_output:
+        candidate = _path_from(SKILL_DIR, configured_report_dir)
+        source_label = "output.reportDir"
+    else:
+        candidate = _default_output_root(cfg)
+        source_label = "local-cache"
+        if configured_report_dir:
+            warnings.append(f"output.reportDir 是相对路径 `{configured_report_dir}`，已改用本机缓存目录，避免写入 Git 工作树。")
+
+    git_root = _containing_git_root(candidate)
+    if git_root and not allow_git_output:
+        fallback = _default_output_root(cfg, honor_env=False)
+        warnings.append(
+            f"{source_label} 指向 Git 工作树 `{git_root}`，已重定向到 `{fallback}`；如确需写入仓库，请使用 --allow-git-output 或设置 {ALLOW_GIT_OUTPUT_ENV}=1。"
+        )
+        return str(fallback), warnings
+    return str(candidate), warnings
 
 
 def get_conn(cfg):
@@ -489,16 +571,21 @@ def main():
         print(__doc__)
         sys.exit(0)
 
+    allow_git_output = _truthy_env(ALLOW_GIT_OUTPUT_ENV)
+    if "--allow-git-output" in args:
+        allow_git_output = True
+        args = [arg for arg in args if arg != "--allow-git-output"]
+
     entity_number = args[0]
 
-    # 输出目录
-    output_dir = cfg.get("output", {}).get("reportDir", "reports")
-    if not Path(output_dir).is_absolute():
-        output_dir = str(SKILL_DIR / output_dir)
+    output_override = None
     if "--output" in args:
         idx = args.index("--output")
         if idx + 1 < len(args):
-            output_dir = args[idx + 1]
+            output_override = args[idx + 1]
+    output_dir, output_warnings = _resolve_output_dir(cfg, output_override, allow_git_output)
+    for warning in output_warnings:
+        print(f"[WARNING] {warning}")
 
     workspace_root = cfg.get("workspace", {}).get("projectRoot", "")
     jar_paths = cfg.get("jarLibPaths", {}).get("paths", [])

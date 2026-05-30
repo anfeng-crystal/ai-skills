@@ -33,5 +33,12 @@
     "expected": "quick-query --all/--plugins 应输出完整字段，并同时列出操作插件和 ztjg_jyjg_dswpp 表单页面插件；页面插件要保留 formPage/pageElement，且不能漏掉 oid 形式的插件类。",
     "eval_focus": "快查是否避免字段截断、实体插件与页面插件是否都能识别、输出是否能和全景分析的插件清单对齐。",
     "baseline_risk": "可能只解析实体设计里的操作插件，漏掉 t_meta_formdesign 中的 CodeRulePlugin、模板插件或自定义页面插件。"
+  },
+  {
+    "id": "decompiled-output-outside-git-worktree",
+    "prompt": "对 ztjg_jyjg_dswpp 做全景分析，但项目 ok-cosmic 配置里的 output.reportDir 是 build/reports/cosmic-metadata-analyzer/prod。",
+    "expected": "应该运行 cosmic-metadata-analyzer.py 后读取脚本打印的 __INVENTORY_PATH__ 和 __OUTPUT_DIR__；相对 reportDir 不能让反编译源码或 inventory 写入业务 Git 工作树，除非用户明确允许 --allow-git-output。",
+    "eval_focus": "是否避免把 analyzer 产物写进业务仓库或 skill 仓库；是否仍保留 inventory.json、sources/* 和历史 build/reports 产物的降级读取能力。",
+    "baseline_risk": "可能按相对 reportDir 把反编译源码写到项目 build/ 下，导致 Git 仓库膨胀、CodeGraph/grep 扫描浪费 token。"
   }
 ]
