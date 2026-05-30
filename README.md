@@ -75,6 +75,10 @@ Copy `.env.example` to a local `.env`, or export the variables in your shell pro
 2. 运行 `node install.mjs` 安装全部技能并检查依赖。
 3. 以后更新时，运行 `node scripts/sync-and-install.mjs`。
 
+If another machine's AI is doing the setup, give it `docs/TARGET_MACHINE_AI_PLAN.md` and require it to follow that plan. The plan also migrates Codex, Claude Code, and Antigravity global rules from `docs/global-rules/`.
+
+如果由其它机器上的 AI 执行安装，请把 `docs/TARGET_MACHINE_AI_PLAN.md` 交给它，并要求它严格按计划执行。该计划也会从 `docs/global-rules/` 迁移 Codex、Claude Code 和 Antigravity 的全局规则。
+
 `scripts/sync-and-install.mjs` is the routine update entrypoint for other machines. It runs `git pull --ff-only`, installs the active skills into the target host home, and then runs `scripts/doctor.mjs`.
 
 `scripts/sync-and-install.mjs` 是其它机器的常规更新入口。它会依次执行 `git pull --ff-only`、把活跃技能安装到目标宿主 home，然后运行 `scripts/doctor.mjs`。
