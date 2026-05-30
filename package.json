@@ -5,7 +5,9 @@
   "scripts": {
     "deps:install": "node scripts/npm-deps.mjs install",
     "deps:check": "node scripts/npm-deps.mjs check",
-    "doctor": "node scripts/doctor.mjs --json"
+    "doctor": "node scripts/doctor.mjs --json",
+    "sync": "node scripts/sync-and-install.mjs",
+    "test": "node --test scripts/sync-and-install.test.mjs"
   },
   "dependencies": {
     "@playwright/cli": "0.1.13"
