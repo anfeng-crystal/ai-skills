@@ -9,8 +9,10 @@ project JSON password field for legacy compatibility.
 """
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -40,6 +42,8 @@ FORM_AP_NAMES = {
 }
 
 BUILTIN_EDIT_ORDER = ["save(暂存)", "submit(提交)", "audit(审核)", "unaudit(反审核)"]
+OUTPUT_DIR_ENV = "KINGDEE_METADATA_ANALYZER_OUTPUT_DIR"
+ALLOW_GIT_OUTPUT_ENV = "KINGDEE_METADATA_ANALYZER_ALLOW_GIT_OUTPUT"
 
 
 Issue = Dict[str, str]
@@ -75,6 +79,106 @@ def resolve_path(base_dir: Path, raw_path: str) -> Path:
     if expanded.is_absolute():
         return expanded.resolve()
     return (base_dir / expanded).resolve()
+
+
+def truthy_env(name: str) -> bool:
+    """Return true when an environment variable explicitly enables a flag."""
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def safe_path_segment(value: str, fallback: str) -> str:
+    """Create a short filesystem-safe path segment."""
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip()).strip("._-")
+    return cleaned[:80] if cleaned else fallback
+
+
+def config_environment_label(config_path: Path) -> str:
+    """Infer a stable environment/cache label from the ok-cosmic config name."""
+    stem = config_path.stem
+    if stem.startswith("ok-cosmic."):
+        return safe_path_segment(stem.split(".", 1)[1], "default")
+    if stem == "ok-cosmic":
+        return "default"
+    return safe_path_segment(stem, "default")
+
+
+def project_cache_label(config: Dict[str, Any], config_path: Path) -> str:
+    """Return a stable project label for cache output paths."""
+    root_dir = project_root(config, config_path)
+    project = config.get("project") if isinstance(config.get("project"), dict) else {}
+    for key in ("code", "number", "id", "name"):
+        raw_value = str(project.get(key, "")).strip()
+        if raw_value:
+            return safe_path_segment(raw_value, root_dir.name or "project")
+    digest = hashlib.sha1(str(root_dir).encode("utf-8")).hexdigest()[:8]
+    return f"{safe_path_segment(root_dir.name, 'project')}-{digest}"
+
+
+def default_output_root(config: Dict[str, Any], config_path: Path, honor_env: bool = True) -> Path:
+    """Build the host-local default analyzer output root."""
+    configured_root = os.getenv(OUTPUT_DIR_ENV, "").strip() if honor_env else ""
+    base_root = Path(os.path.expanduser(configured_root)) if configured_root else Path(tempfile.gettempdir()) / "kingdee-metadata-analyzer"
+    if not base_root.is_absolute():
+        base_root = Path.cwd() / base_root
+    return (base_root / project_cache_label(config, config_path) / config_environment_label(config_path)).resolve()
+
+
+def containing_git_root(path: Path) -> Optional[Path]:
+    """Return the nearest Git worktree root containing path, if one is visible."""
+    resolved = path.expanduser().resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def is_relative_config_path(raw_path: str) -> bool:
+    """Return true when a non-empty configured path is relative."""
+    return bool(raw_path.strip()) and not Path(os.path.expanduser(raw_path)).is_absolute()
+
+
+def resolve_analyzer_output_root(
+    config: Dict[str, Any],
+    config_path: Path,
+    output_override: Optional[str],
+    allow_git_output: bool,
+) -> Tuple[Path, List[str]]:
+    """Resolve the effective analyzer output root without defaulting into Git."""
+    root_dir = project_root(config, config_path)
+    metadata = analyzer_config(config)
+    output = metadata.get("output") if isinstance(metadata.get("output"), dict) else {}
+    configured_report_dir = str(output.get("reportDir", "")).strip()
+    warnings: List[str] = []
+
+    if output_override:
+        candidate = resolve_path(root_dir, output_override)
+        source_label = "--output"
+    elif os.getenv(OUTPUT_DIR_ENV, "").strip():
+        candidate = default_output_root(config, config_path)
+        source_label = OUTPUT_DIR_ENV
+    elif configured_report_dir and not is_relative_config_path(configured_report_dir):
+        candidate = resolve_path(root_dir, configured_report_dir)
+        source_label = "metadataAnalyzer.output.reportDir"
+    elif configured_report_dir and allow_git_output:
+        candidate = resolve_path(root_dir, configured_report_dir)
+        source_label = "metadataAnalyzer.output.reportDir"
+    else:
+        candidate = default_output_root(config, config_path)
+        source_label = "local-cache"
+        if configured_report_dir:
+            warnings.append(
+                f"metadataAnalyzer.output.reportDir 是相对路径 `{configured_report_dir}`，已改用本机缓存目录，避免写入 Git 工作树。"
+            )
+
+    git_root = containing_git_root(candidate)
+    if git_root and not allow_git_output:
+        fallback = default_output_root(config, config_path, honor_env=False)
+        warnings.append(
+            f"{source_label} 指向 Git 工作树 `{git_root}`，已重定向到 `{fallback}`；如确需写入仓库，请使用 --allow-git-output 或设置 {ALLOW_GIT_OUTPUT_ENV}=1。"
+        )
+        return fallback, warnings
+
+    return candidate, warnings
 
 
 def project_root(config: Dict[str, Any], config_path: Path) -> Path:
@@ -276,7 +380,9 @@ def validate_config(config_path: Path, require_enabled: bool = False) -> Tuple[D
     output = metadata.get("output") if isinstance(metadata.get("output"), dict) else {}
     report_dir = str(output.get("reportDir", "")).strip()
     if not report_dir:
-        add_issue(issues, "ERROR", "metadataAnalyzer.output.reportDir", "缺少输出目录 `reportDir`。")
+        add_issue(issues, "WARNING", "metadataAnalyzer.output.reportDir", f"未配置输出目录；分析产物会写入 {OUTPUT_DIR_ENV} 或本机临时缓存目录。")
+    elif is_relative_config_path(report_dir):
+        add_issue(issues, "WARNING", "metadataAnalyzer.output.reportDir", "相对输出目录不会作为新产物默认写入位置；分析时会改用本机缓存目录。")
 
     decompiler = metadata.get("decompiler") if isinstance(metadata.get("decompiler"), dict) else {}
     if bool(decompiler.get("enabled", False)):
@@ -610,12 +716,11 @@ def resolved_metadata_paths(config: Dict[str, Any], config_path: Path) -> Tuple[
     root_dir = project_root(config, config_path)
     metadata = analyzer_config(config)
     workspace = metadata.get("workspace") if isinstance(metadata.get("workspace"), dict) else {}
-    output = metadata.get("output") if isinstance(metadata.get("output"), dict) else {}
     decompiler = metadata.get("decompiler") if isinstance(metadata.get("decompiler"), dict) else {}
 
     workspace_root = resolve_path(root_dir, str(workspace.get("projectRoot", "")).strip() or str(root_dir))
     jar_paths = [resolve_path(root_dir, str(path)) for path in metadata.get("jarLibPaths", [])]
-    output_dir = resolve_path(root_dir, str(output.get("reportDir", "build/reports/cosmic-metadata-analyzer")))
+    output_dir, _warnings = resolve_analyzer_output_root(config, config_path, None, truthy_env(ALLOW_GIT_OUTPUT_ENV))
     decompiler_enabled = bool(decompiler.get("enabled", False))
     cfr_path = resolve_path(root_dir, str(decompiler.get("cfrJarPath", ""))) if decompiler.get("cfrJarPath") else None
     return workspace_root, jar_paths, output_dir, decompiler_enabled, cfr_path
@@ -727,9 +832,15 @@ def command_analyze(args: argparse.Namespace) -> int:
         print_issues(issues)
         return 1
 
-    workspace_root, jar_paths, output_dir, decompiler_enabled, cfr_path = resolved_metadata_paths(config, config_path)
-    if args.output:
-        output_dir = resolve_path(project_root(config, config_path), args.output)
+    workspace_root, jar_paths, _output_dir, decompiler_enabled, cfr_path = resolved_metadata_paths(config, config_path)
+    output_dir, output_warnings = resolve_analyzer_output_root(
+        config,
+        config_path,
+        args.output,
+        args.allow_git_output or truthy_env(ALLOW_GIT_OUTPUT_ENV),
+    )
+    for warning in output_warnings:
+        print(f"[WARNING] {warning}")
 
     try:
         conn = connect_metadata_db(config, config_path)
@@ -781,6 +892,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("entityNumber", help="苍穹实体标识")
     analyze.add_argument("--config", required=True, help="项目 ok-cosmic.json 路径")
     analyze.add_argument("--output", help="覆盖 metadataAnalyzer.output.reportDir")
+    analyze.add_argument("--allow-git-output", action="store_true", help="允许把 analyzer 产物写入 Git 工作树")
     analyze.set_defaults(func=command_analyze)
     return parser
 

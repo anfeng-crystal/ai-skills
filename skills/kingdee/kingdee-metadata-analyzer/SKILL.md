@@ -31,7 +31,9 @@ metadata:
 **命令口径**：
 - `METADATA_SKILL_ROOT` 是当前加载的 `kingdee-metadata-analyzer` skill 根目录；从本文件路径向上取一级即可，不要从业务仓库相对路径推断。
 - `scripts/` 指本 skill 目录下的脚本，不是当前业务仓库的 `scripts/`；在项目目录执行时使用 `$METADATA_SKILL_ROOT/scripts/...` 的绝对路径。
-- 优先使用当前项目根目录的显式配置；未指定环境时优先选择 dev 配置，用户明确要求生产时使用 prod 配置。
+- 先解析用户要求的环境口径，再选择配置；未指定环境时默认 dev，用户指定 prod/test/dev 时该环境是目标环境，不把其它可连环境当成等价替代。
+- 配置选择从当前目录向上查找项目根，优先使用目标环境的显式配置（如 `ok-cosmic.<env>.json`），再看同级通用配置；不要只在当前子模块找一个默认文件后就停止。
+- 一个配置或环境不可用时，必须继续做“失败分类 + 候选切换 + 证据降级”：区分配置不存在、`metadataAnalyzer.enabled=false`、缺凭据、网络/数据库不可达、实体不存在、脚本依赖失败；再尝试同项目其它候选配置、已有 analyzer 产物、quick-query 缓存、源码/JAR 证据或设计 XML。只有目标结论必须依赖目标环境在线元数据且所有替代证据都不足时，才停住询问用户。
 - 缺少 Python 依赖时先主动运行 `$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py` 创建/复用本地 venv 并安装依赖；只有安装失败才说明降级原因。
 - bootstrap 安装依赖时先尊重 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` / `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URL`，未配置时自动尝试默认源和内置镜像。
 - macOS/Linux 用 `python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- ...`；Windows PowerShell 用 `py -3 "$env:METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- ...`。
@@ -41,22 +43,22 @@ metadata:
 METADATA_SKILL_ROOT=<当前 kingdee-metadata-analyzer skill 根目录>
 
 # 查询字段列表
-python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config ok-cosmic.dev.json --fields
+python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config <resolved-ok-cosmic.json> --fields
 
 # 查询操作列表
-python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config ok-cosmic.dev.json --ops
+python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config <resolved-ok-cosmic.json> --ops
 
 # 查询已绑定插件
-python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config ok-cosmic.dev.json --plugins
+python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config <resolved-ok-cosmic.json> --plugins
 
 # 查询枚举字段
-python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config ok-cosmic.dev.json --enums
+python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config <resolved-ok-cosmic.json> --enums
 
 # 查询所有信息（概览）
-python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config ok-cosmic.dev.json --all
+python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" <entityNumber> --config <resolved-ok-cosmic.json> --all
 
 # 模糊搜索实体
-python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" --search "关键词" --config ok-cosmic.dev.json
+python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/quick-query.py" --search "关键词" --config <resolved-ok-cosmic.json>
 ```
 
 **特点**：
@@ -81,6 +83,7 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 **特点**：
 - 数据库 + JAR 反编译 + 源码分析
 - 生成结构化产物（`inventory.json` + `sources/*`）
+- 新产物默认写入本机缓存目录；读取结果必须以脚本打印的 `__INVENTORY_PATH__` / `__OUTPUT_DIR__` 为准，不假设在业务仓库 `build/` 下
 - 识别可复用途径
 - 分析时间较长（分钟级）
 
@@ -94,19 +97,22 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
    - 如果是 SDK 用法、代码实现、错误排查或业务逻辑问题，提示用户："该问题应使用 `kingdee-sdk-helper` 或 `kingdee-cosmic`，不需要元数据分析。"
    - 如果当前目标只需要一个字段清单、一个插件清单或一个枚举值，且 quick query 结果完整无警告，不升级到全景分析。
    - 只有明确需要全景分析时才继续。
-2. 确认项目编码、实体标识、分析目标、环境口径和输出用途；未指定环境时默认使用 dev。
-3. 先在当前项目根目录选择显式配置：默认优先使用 `ok-cosmic.dev.json`，用户明确要求生产时使用 `ok-cosmic.prod.json`；只有当前项目没有可用配置时，才回退读取 `${AI_KNOWLEDGE_ROOT}/kingdee/cosmic/projects/config-table.md`。未配置 `AI_KNOWLEDGE_ROOT` 只作为降级信息，不直接报环境缺失。
+2. 确认项目编码、实体标识、分析目标、环境口径和输出用途；未指定环境时默认使用 dev；用户指定环境时不要用其它环境结果冒充目标环境事实。
+3. 从当前目录向上定位项目根并枚举候选配置：目标环境显式配置 → 同项目通用配置 → 其它环境显式配置（仅作对照/降级证据） → `${AI_KNOWLEDGE_ROOT}/kingdee/cosmic/projects/config-table.md`。未配置 `AI_KNOWLEDGE_ROOT` 只作为降级信息，不直接报环境缺失。
 4. 运行 `python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/cosmic-metadata-analyzer.py" check-config --config <ok-cosmic.*.json>`；Windows PowerShell 使用 `py -3 "$env:METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- ...`。缺少依赖时由 bootstrap 主动创建本地 venv 并安装；安装源可用 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` 覆盖。
 5. `check-config` 通过后，按脚本内置顺序解析凭据：当前进程环境变量 `passwordEnv` → 项目配置的 `envFiles` / 同名 `.env` / 项目 `.env` → 既有 `ok-cosmic.json` 的 `database.password` 兼容字段。不要要求用户把每个项目密码都长期保存到全局环境变量。
-6. 缺凭据、缺网络或缺产物路径时，先区分失败类型；若已有 `inventory.json`、`sources/*`、项目源码或 JAR 证据能支撑当前目标，继续给出带边界的结论；只有当前目标必须在线扫库且没有任何可用证据时，才询问用户补充凭据、切换环境、允许重试或指定历史产物。
-7. 运行 `python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/cosmic-metadata-analyzer.py" <entityNumber> --config <ok-cosmic.*.json>`；若因依赖安装、数据库拒绝连接或网络中断失败，区分环境安装、配置、凭据、连通性和实体不存在，不把运行前提失败表述成”没有元数据”或”没有能力”。
-8. 读取输出目录中的 `inventory.json` 和 `sources/*`。
+6. 目标配置失败时不要卡死在单一路径：记录失败类型和配置路径，按候选顺序尝试下一个可用证据源；若切到其它环境，只能输出“对照环境事实/推断”，并明确目标环境未确认。
+7. 缺凭据、缺网络或缺产物路径时，先区分失败类型；若已有 `inventory.json`、`sources/*`、quick-query 缓存、项目源码、JAR 或可直接解析的 `fdata` 证据能支撑当前目标，继续给出带边界的结论；只有当前目标必须在线扫库且没有任何可用证据时，才询问用户补充凭据、切换环境、允许重试或指定历史产物。
+8. 运行 `python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKILL_ROOT/scripts/cosmic-metadata-analyzer.py" <entityNumber> --config <ok-cosmic.*.json>`；若因依赖安装、数据库拒绝连接或网络中断失败，区分环境安装、配置、凭据、连通性和实体不存在，不把运行前提失败表述成”没有元数据”或”没有能力”。
+   - 反编译源码、`javap` 文本和 `inventory.json` 是本地证据缓存，默认写入 `KINGDEE_METADATA_ANALYZER_OUTPUT_DIR` 或系统临时目录；不要把新产物写进业务仓库或 skill 仓库。
+   - 只有用户明确要求把产物落到仓库且接受 Git/CodeGraph 扫描成本时，才使用 `--allow-git-output` 或 `KINGDEE_METADATA_ANALYZER_ALLOW_GIT_OUTPUT=1`。
+9. 按脚本打印的 `__INVENTORY_PATH__` 和 `__OUTPUT_DIR__` 读取 `inventory.json` 和 `sources/*`；旧 `build/reports/cosmic-metadata-analyzer/...` 只能作为历史产物降级读取，不作为新运行的默认位置。
    - 输出字段证据时要分层标注：`fieldKey`、中文名、字段类型、物理列名、PC/移动布局位置分别来自哪里；缺少任一层证据时写“未确认”，不要把其它层证据外推。
    - 涉及单据字段时必须标注字段在单据头还是具体分录/子单据体；只证明“实体里有这个 fieldKey”不等于证明“目标代码可按单据头读取”。
    - 输出插件挂载证据时至少同时核对 `className`、`pageElement`、`formPage` 三层；同一个类在业务实体、移动表单、移动列表上可重复出现，不能因为类名相同就默认是同一个执行入口。
-9. 需要给其它 Kingdee skill 消费时，运行 `scripts/metadata_contract.py --inventory <inventory.json> --environment <dev|prod|test|unknown>` 生成 machine-readable 摘要；如果只有 quick query 缓存，可用 `--quick-cache scripts/.metadata_cache/<entity>.json` 补字段摘要。
-10. **用户确认检查点**：展示关键发现摘要（插件数量、高风险关系、可复用资源），询问用户：”是否需要深入分析某个插件或关系？”等待用户确认后再生成完整报告。
-11. 按 references 生成分析报告；如果已经存在可复用的插件源码、模板、helper、服务调用链或标准平台能力，也在报告中点明，避免后续重复实现。
+10. 需要给其它 Kingdee skill 消费时，运行 `scripts/metadata_contract.py --inventory <inventory.json> --environment <dev|prod|test|unknown>` 生成 machine-readable 摘要；如果只有 quick query 缓存，可用 `--quick-cache scripts/.metadata_cache/<entity>.json` 补字段摘要。
+11. **用户确认检查点**：展示关键发现摘要（插件数量、高风险关系、可复用资源），询问用户：”是否需要深入分析某个插件或关系？”等待用户确认后再生成完整报告。
+12. 按 references 生成分析报告；如果已经存在可复用的插件源码、模板、helper、服务调用链或标准平台能力，也在报告中点明，避免后续重复实现。
 
 ## References
 - 分析口径：`references/analysis-rubric.md`
@@ -119,7 +125,10 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 
 ## Guardrails
 - 不读取原始市场包的 `config.json`。
-- 优先使用当前项目根目录的 `ok-cosmic.dev.json` / `ok-cosmic.prod.json`；不要默认拿泛化 `ok-cosmic.json` 触发缺密码提示。
+- 优先使用向上定位到的项目根显式环境配置；不要默认拿某个子目录或泛化 `ok-cosmic.json` 触发缺密码提示，也不要因为第一个配置失败就放弃元数据 skill。
+- 一个环境不可用时，输出必须包含“目标环境状态、已尝试候选、可用替代证据、仍未确认项”；跨环境结果只能作为对照或推断，不得包装成目标环境已确认事实。
+- 新的 analyzer 产物默认不落入 Git 工作树；相对 `metadataAnalyzer.output.reportDir` 不再表示项目内输出位置，读取结果时必须信任脚本打印路径。
+- 检测到输出目标在 Git 工作树内时，默认使用本机缓存目录；除非用户明确要求保留仓库内产物，否则不要启用 `--allow-git-output`。
 - 元数据查询缺少 Python 依赖时，先用 `$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py` 主动创建/复用本地 venv 并安装依赖；不要只提示用户手工安装，也不要把解释器 fallback 当成最终方案。
 - 依赖安装失败要报告具体失败类型和 pip 源；允许用户配置 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` 后重试。
 - 不在 skill、报告、聊天输出或新增模板中写数据库明文密码；既有项目 JSON 含 `database.password` 时只作为兼容读取来源，不主动复制、展示或要求新增。

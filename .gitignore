@@ -15,6 +15,7 @@ doctor-report*.json
 .metadata_cache/
 responses/
 downloads/
+.playwright-cli/
 
 # Binary assets and sensitive config
 *.jar

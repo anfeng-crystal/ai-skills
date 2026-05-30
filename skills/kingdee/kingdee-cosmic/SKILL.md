@@ -18,7 +18,7 @@ metadata:
 ## Routing
 
 1. 先判断这是否是金蝶云苍穹 Java 二开、配置、诊断或改造任务；KingScript 用 `kingdee-kingscript`，ISCB 用 `kingdee-iscb-script`，SDK 签名查询用 `kingdee-sdk-helper`。
-2. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先用 `kingdee-metadata-analyzer` 取证；在线不可用时，可复用已有 analyzer 产物、项目源码、JAR 和本 skill references，但要标明证据边界。
+2. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先交给 `kingdee-metadata-analyzer` 做环境选择、配置候选、在线查询和降级取证；不要在本 skill 内用单个默认配置代替元数据 skill。在线不可用时，可复用 analyzer 产物、quick-query 缓存、项目源码、JAR 和本 skill references，但要标明目标环境未确认的边界。
 3. 涉及宿主工程模板、登录态、配置检查或 KSQL/数据脚本时，优先转给对应专用 skill：`kingdee-cosmic-devtools`、`kingdee-cosmic-login`、`kingdee-sql-and-data`。
 4. 报表任务先读 `references/report-development.md`，再按本 skill 的字段/API/验证门禁执行。
 
@@ -31,7 +31,7 @@ metadata:
 
 ## Workflow
 
-1. 明确任务类型、目标对象、插件类型、事件点、事务边界和验证方式。
+1. 明确任务类型、目标对象、插件类型、事件点、事务边界、环境口径和验证方式；如果问题依赖目标环境元数据，把元数据取证拆给 `kingdee-metadata-analyzer`，本 skill 并行查源码、同类实现和运行时堆栈。
 2. 读取最小资料集：
    - 插件/配置选择：`rules/decision-matrix.md`
    - API 速查：`rules/cheat-sheet.md`
@@ -41,7 +41,7 @@ metadata:
    - 生命周期：`references/event-lifecycle.md`
    - 故障诊断：`references/diagnostics/issue-analysis.md`
    - 代码质量：`references/quality/cosmic-java-scan.md`
-3. 先查当前项目源码、同类实现、模板和 snippet；能复用现有 helper 时不新增公共能力。
+3. 先查当前项目源码、同类实现、模板和 snippet；能复用现有 helper 时不新增公共能力。若元数据在线查询失败，继续做源码/JAR/已有产物分析，但输出必须区分“源码推断”和“目标环境元数据已确认/未确认”。
 4. 编码后执行模块级 Gradle 编译/测试；无法定位模块时执行 `python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <file_or_dir> --fix-hint`。
 5. 收口时按 `rules/post-check.md` 给出依据、改动、验证和风险。
 
