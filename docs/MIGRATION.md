@@ -4,6 +4,8 @@
 
 Move the active skills set to another Windows, macOS, or Linux machine without copying any existing host skill directories from the source machine.
 
+If an AI agent on the target machine performs the migration, use `docs/TARGET_MACHINE_AI_PLAN.md` as the authoritative execution plan. It covers skill installation, validation, and migration of Codex, Claude Code, and Antigravity global rules.
+
 ## Pre-migration checklist
 
 1. Clone this repository to the target machine.
