@@ -11,7 +11,7 @@ For each task, write the concrete pass condition before implementation:
 - documentation change: target files exist, scope is correct, excluded sources are listed
 - script change: syntax checks pass and help/dry-run paths work
 - migration change: source, absorbed content, and skipped content are recorded
-- cleanup change: no source directory or active skill is deleted unless separately approved
+- cleanup change: no source directory or shared skill is deleted unless separately approved
 
 ## Default Checks
 

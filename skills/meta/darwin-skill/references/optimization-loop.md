@@ -4,7 +4,7 @@
 
 ```
 1. 确认优化范围：
-   - 全部skills → 扫描当前宿主实际启用的 skills 目录（如 active skills、.agents/skills、.codex/skills）
+   - 全部 skills → 扫描当前 source skills 与宿主实际启用目录（如 .agents/skills、.codex/skills）
    - 指定skills → 用户指定列表
 2. 创建 git 分支：auto-optimize/YYYYMMDD-HHMM
 3. 初始化 results.tsv（如不存在）

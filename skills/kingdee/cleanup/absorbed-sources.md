@@ -22,4 +22,4 @@ This file records what Worker F absorbed into shared guardrail and platform docu
 
 ## Migration Status
 
-No source directory was deleted. No existing active skill was removed. The migration output is limited to guardrail, platform, and cleanup documentation.
+No source directory was deleted. No existing shared skill was removed. The migration output is limited to guardrail, platform, and cleanup documentation.

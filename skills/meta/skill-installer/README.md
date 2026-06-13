@@ -22,7 +22,7 @@ skill-installer --help
 Run commands from your skills source root, set `AI_SKILLS_HOME`, or create a config file.
 
 ```bash
-cd ~/AI/skills
+cd "$AI_SKILLS_HOME"
 
 # Preview all link changes.
 npx @anfeng1314/skill-installer --json
@@ -105,7 +105,7 @@ Hermes should discover skills through `skills.external_dirs`. On macOS/Linux thi
 ```yaml
 skills:
   external_dirs:
-    - /Users/you/AI/skills
+    - /absolute/path/to/skills
 ```
 
 Skill Linker checks Hermes `external_dirs` and reports local shadow conflicts. It does not create new directory-level symlinks for Hermes. In the default all-tool audit, an unconfigured Hermes host is treated as an optional skipped host. When `--tool hermes` is specified explicitly, missing `external_dirs` is reported as a configuration issue.
@@ -137,12 +137,12 @@ Example config:
 
 ```json
 {
-  "sourceRoot": "/Users/you/AI/skills",
-  "home": "/Users/you",
+  "sourceRoot": "/absolute/path/to/skills",
+  "home": "<host-home>",
   "targetDirs": {
-    "codex": "/Users/you/.codex/skills"
+    "codex": "<host-home>/.codex/skills"
   },
-  "hermesConfigPath": "/Users/you/.hermes/config.yaml"
+  "hermesConfigPath": "<host-home>/.hermes/config.yaml"
 }
 ```
 
@@ -182,7 +182,7 @@ Key options:
 
 | Option | Description |
 | --- | --- |
-| `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME`, config, current tree, or `~/AI/skills`. |
+| `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME`, config, current tree, or the host user's default skills root. |
 | `--home <path>` | Host home. Defaults to `AI_HOST_HOME` or `$HOME`. |
 | `--skill <name>` | Skill name or relative path. Repeat or use comma-separated values. |
 | `--tool <name>` | `codex`, `claude`, `claude-code`, `junie`, `agents`, `hermes`, `qoder`, `qoderwork`, `workbuddy`, `trae`, `openclaw`, `opencode`, `antigravity`, `antigravity-cli`, or `antigravity-desktop`. |

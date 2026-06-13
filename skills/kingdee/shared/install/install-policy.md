@@ -1,7 +1,7 @@
 # Kingdee Host Install Policy
 
 ## Scope
-- Source root is the active skills repository root passed with `--root`.
+- Source root is the skills repository root passed with `--root`.
 - Source skills are directories under `skills/kingdee/*` that contain `SKILL.md`.
 - This Kingdee-local installer is read-only. Host installation and distribution must go through `skills/meta/skill-installer`.
 - `sync-hosts.py` is kept for compatibility checks only and refuses non-dry-run writes.

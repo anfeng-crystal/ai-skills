@@ -7,7 +7,7 @@
 - Config file: `~/.hermes/config.yaml`
 
 ## Behavior
-- Hermes should discover this active skills root through `skills.external_dirs`.
+- Hermes should discover the skills source root through `skills.external_dirs`.
 - The installer does not create new per-skill symlinks under `~/.hermes/skills`.
-- Default all-host dry runs skip Hermes when the config is missing, unreadable, or does not list the active root.
+- Default all-host dry runs skip Hermes when the config is missing, unreadable, or does not list the source root.
 - Explicit `--host hermes` treats missing `skills.external_dirs` configuration as a hard error.

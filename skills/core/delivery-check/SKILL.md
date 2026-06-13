@@ -30,8 +30,9 @@ metadata:
 5. Decide in order: blockers first, then risks, then verified evidence.
 6. Follow through with stage, commit, push, tag, release, publish, install, or apply only after explicit user request and only if the decision allows it.
 
-## Active Skills Hints
-- In `/Users/anfeng/AI/skills/active`, useful validators are `git diff --check -- <target-files>`, `node scripts/doctor.mjs --json`, `node scripts/validate-cross-platform.mjs`, and `node skills/meta/skill-installer/bin/skill-installer.mjs --json`.
+## Skills Source Hints
+- In a skills source root, useful validators are `git diff --check -- <target-files>`, `node scripts/doctor.mjs --json`, `node scripts/validate-cross-platform.mjs`, and `node meta/skill-installer/bin/skill-installer.mjs --json` when those files exist.
+- Resolve the source root from cwd, `AI_SKILLS_HOME`, or project config; never hard-code a user home path.
 - Outside that repo, use the local project rules and verification commands instead of hard-coding these.
 
 ## Hard Gates

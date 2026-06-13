@@ -21,7 +21,7 @@ Shared Kingdee skills use these path categories:
 - Hard-code a specific user's agent home directory into shared logic.
 - Depend on one IDE's private skill directory from a shared skill.
 - Track files whose names contain backslash separators from a downloaded archive.
-- Rewrite existing active skill locations during a guardrail or cleanup pass.
+- Rewrite existing shared skill locations during a guardrail or cleanup pass.
 - Delete downloaded source material as part of migration documentation.
 
 ## Review Checklist

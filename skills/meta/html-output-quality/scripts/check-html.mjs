@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ACTIVE_ROOT = path.resolve(__dirname, '../../../..');
+const SKILLS_ROOT = path.resolve(__dirname, '../../../..');
 
 function parseArgs(argv) {
   const args = { html: null, source: null, out: null };
@@ -188,7 +188,7 @@ function checkStaticInteractivity(html, findings) {
 }
 
 async function runVisualChecks(args, findings) {
-  const playwrightEntry = path.join(ACTIVE_ROOT, 'node_modules', 'playwright', 'index.js');
+  const playwrightEntry = path.join(SKILLS_ROOT, 'node_modules', 'playwright', 'index.js');
   if (!fs.existsSync(playwrightEntry)) {
     addFinding(findings, 'Warning', 'playwright_unavailable', '当前环境缺少 Playwright，已跳过截图和响应式检查');
     return {};

@@ -15,8 +15,8 @@ from collections import defaultdict
 
 # 脚本所在目录
 SCRIPT_DIR = Path(__file__).parent.resolve()
-# active skills 根目录
-ACTIVE_ROOT = SCRIPT_DIR.parents[4]
+# skills source root
+SKILLS_ROOT = SCRIPT_DIR.parents[4]
 # 结果目录
 RESULT_DIR = SCRIPT_DIR.parent / "result"
 
@@ -404,7 +404,7 @@ def parse_args():
 def default_html_output_path():
     """按共享 HTML 产物约定生成默认输出路径。"""
     timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    return ACTIVE_ROOT / "output" / "html" / "kingdee-cosmic" / timestamp / "index.html"
+    return SKILLS_ROOT / "output" / "html" / "kingdee-cosmic" / timestamp / "index.html"
 
 
 def main():

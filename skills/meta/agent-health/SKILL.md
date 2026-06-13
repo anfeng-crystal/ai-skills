@@ -23,7 +23,7 @@ metadata:
 - Output: Critical -> Structural -> Incremental -> Passing -> Residual risk.
 
 ## Workflow
-1. Confirm scope: active skills source, one project, or global host config. Do not assume the shell cwd is the target.
+1. Confirm scope: unified skills source, one project, or global host config. Do not assume the shell cwd is the target.
 2. Use summary budget first; go deep only when requested or when summary evidence exposes critical drift.
 3. Collect read-only evidence. Start with `git status --short --branch -uall`, then inspect AGENTS/CLAUDE, settings, hooks/MCP, skill links, doctor, verifier, and distribution dry-runs as available.
 4. Attribute each issue to one layer. Treat missing optional hosts or `(unavailable)` data as insufficient/optional unless project rules make them required.

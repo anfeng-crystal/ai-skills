@@ -27,7 +27,7 @@ Error: TIKHUB_TOKEN not found
 
 1. **检查 .env 文件是否存在**
    ```bash
-   cd C:\Users\zijie\.claude\skills\union-search-skill
+   cd %USERPROFILE%\.claude\skills\union-search-skill
    ls -la .env
    ```
 

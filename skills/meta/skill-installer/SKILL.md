@@ -23,7 +23,7 @@ metadata:
 - 所有 apply 必须来自用户明确要求或已批准方案，并二次验证。
 
 ## 源和目标
-- 源目录默认 `~/AI/skills`；只用 `--source-root`、`AI_SKILLS_HOME` 或 config 覆盖。
+- 源目录优先来自 `--source-root`、`AI_SKILLS_HOME`、config 或当前 source tree；不要在 skill 规则里写死某台机器的 home 路径。
 - 目标工具白名单：`codex`、`claude`、`claude-code`、`junie`、`agents`、`hermes`、`qoder`、`qoderwork`、`workbuddy`、`trae`、`openclaw`、`opencode`、`antigravity`、`antigravity-cli`、`antigravity-desktop`。
 - macOS/Linux 使用 symlink；Windows 需要时使用 junction。
 - Hermes 优先 `skills.external_dirs`；目录级 symlink 只作兼容。

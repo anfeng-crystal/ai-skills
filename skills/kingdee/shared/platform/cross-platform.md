@@ -9,7 +9,7 @@ Kingdee shared skills must work from macOS, Linux, and Windows checkouts without
 - Use repository-relative POSIX-style paths in tracked documentation and manifests.
 - In scripts, build paths with language-native path APIs instead of string concatenation.
 - Do not create tracked file names that contain a backslash character.
-- Do not copy downloaded artifacts whose names encode Windows separators into the active skill tree.
+- Do not copy downloaded artifacts whose names encode Windows separators into the shared skill tree.
 - Keep host-specific installation details in adapter or install documentation, not in shared skill logic.
 
 ## Command Rules
@@ -20,7 +20,7 @@ Kingdee shared skills must work from macOS, Linux, and Windows checkouts without
 
 ## Verification
 
-From the active skills root:
+From the skills source root:
 
 ```bash
 git ls-files | rg '\\' || true
