@@ -29,6 +29,7 @@ metadata:
 4. Attribute each issue to one layer. Treat missing optional hosts or `(unavailable)` data as insufficient/optional unless project rules make them required.
 5. Route fixes instead of doing them: third-party risk -> `skill-vetter`; SKILL.md quality -> `darwin-skill`; docs/memory drift -> `neat-freak`; link apply -> `skill-installer`; cleanup -> `cleanup-guard`.
 6. Report blockers first. Missing scripts or inaccessible surfaces are evidence gaps, not proof of damage.
+7. For memory-docs, only report drift or gaps. Concrete memory/doc sync content belongs to `neat-freak`.
 
 ## Common Commands
 ```bash
@@ -39,9 +40,19 @@ node skills/meta/skill-installer/bin/skill-installer.mjs --json
 ```
 
 Use project-local equivalents when these files do not exist.
+If a command, host, or script is missing, record an evidence gap; do not install dependencies, create scripts, or repair config in this skill.
 
 ## Hard Gates
 - No `--apply`, install, symlink edits, memory writes, config edits, cleanup, or destructive git actions.
 - Never print secrets, tokens, cookies, sessions, base URLs with credentials, or sensitive internal URLs.
+- When reading config, quote only key names, state, and redacted values; reduce sensitive URLs to host category or `<redacted>`.
 - Codex memory stays to the current task-relevant index; do not enumerate global memory or write memory unless the user explicitly asks and the host allows it.
 - Do not treat dry-run output as applied state.
+
+## Output Detail
+Each finding should include:
+- `severity`: Critical / Structural / Incremental / Passing / Residual risk
+- `layer`: config / instructions / runtime / distribution / verifiers / memory-docs
+- `evidence`: file, command, status, or redacted config fact
+- `impact`: what breaks or stays uncertain
+- `next_action`: target skill or manual check

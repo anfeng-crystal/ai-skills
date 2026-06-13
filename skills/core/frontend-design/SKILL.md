@@ -5,55 +5,41 @@ license: Complete terms in LICENSE.txt
 ---
 
 ## Trigger Boundary
-- Use this skill when building new frontend UI (components, pages, apps).
-- Use design-review when reviewing an existing page for visual quality.
-- Use frontend-design-principles (not a slash command) for deep design process guidance.
+- Use this skill when building or materially changing frontend UI: components, pages, apps, interactions, or visual systems.
+- Use `design-review` when the task is read-only visual QA of an existing rendered page, screenshot, or HTML artifact.
+- Use `frontend-design-principles` for complex UI direction work where multiple visual directions, app/marketing routing, or strong differentiation matters.
 
 # Frontend Design
 
-This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
+用于实现有明确审美判断的生产级前端。目标不是堆装饰，而是让界面与领域、用户任务、已有设计系统和技术约束一致，并避免模板化 AI 观感。
 
-The user provides frontend requirements: a component, page, application, or interface to build. They may include context about the purpose, audience, or technical constraints.
+## 工作流
 
-## Design Thinking
+1. 先确认上下文：目标用户、核心任务、产品语气、技术栈、可用设计系统、现有组件和必须兼容的响应式范围。
+2. 优先沿用现有设计系统、组件库、字体、spacing、token 和交互模式；从零设计时才建立新的视觉语言。
+3. 选择一个清晰方向：安静高密度、编辑感、工业工具、柔和消费级、终端感、数据控制台等。方向必须服务领域，不为了显眼而显眼。
+4. 实现真实可用代码，不交付静态假壳；按钮、表单、导航、状态、空态、加载、错误和响应式都按目标流程补齐。
+5. 复杂 UI 先加载 `frontend-design-principles`，完成领域词、颜色世界、签名元素和默认项拒绝，再进入实现。
 
-Before coding, understand the context and commit to a BOLD aesthetic direction:
-- **Purpose**: What problem does this interface solve? Who uses it?
-- **Tone**: Pick an extreme: brutally minimal, maximalist chaos, retro-futuristic, organic/natural, luxury/refined, playful/toy-like, editorial/magazine, brutalist/raw, art deco/geometric, soft/pastel, industrial/utilitarian, etc. There are so many flavors to choose from. Use these for inspiration but design one that is true to the aesthetic direction.
-- **Constraints**: Technical requirements (framework, performance, accessibility).
-- **Differentiation**: What makes this UNFORGETTABLE? What's the one thing someone will remember?
+## 设计门禁
 
-**CRITICAL**: Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work - the key is intentionality, not intensity.
+- 字体、颜色、密度、布局和动效都要能解释“为什么适合这个产品/页面”。
+- 避免默认模板：紫蓝渐变、通用卡片堆、无领域感图标、过强阴影、装饰性漂浮元素、单一色系、没有实际工作流的 hero。
+- 工具类、后台、CRM、SaaS 优先信息密度、可扫描性、稳定导航和重复操作效率；不要做营销页式大 hero。
+- 营销页和品牌页必须让产品/人物/地点/对象在首屏可见，并在移动和桌面都露出下一段内容的线索。
+- 不把 UI 卡片套进卡片，不用说明文字教用户“如何使用本界面”，不用可见文案描述实现技巧。
+- 文本必须在按钮、卡片、表格和移动视口中不溢出；固定格式元素要有稳定尺寸或响应式约束。
 
-Then implement working code (HTML/CSS/JS, React, Vue, etc.) that is:
-- Production-grade and functional
-- Visually striking and memorable
-- Cohesive with a clear aesthetic point-of-view
-- Meticulously refined in every detail
+## 验证
 
-## Frontend Aesthetics Guidelines
+能跑本地服务时必须启动，并给用户 URL。实现后尽量用 Browser/Playwright 验证：
+- 桌面和移动视口至少各一次。
+- 关键交互可点击、可聚焦、状态可见。
+- 图片、canvas、图标、字体和外链资源实际渲染。
+- 控制台无致命错误。
+- 文本不遮挡、不溢出，主要内容不空白。
 
-Focus on:
-- **Typography**: Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics; unexpected, characterful font choices. Pair a distinctive display font with a refined body font.
-- **Color & Theme**: Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes.
-- **Motion**: Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Use Motion library for React when available. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions. Use scroll-triggering and hover states that surprise.
-- **Spatial Composition**: Unexpected layouts. Asymmetry. Overlap. Diagonal flow. Grid-breaking elements. Generous negative space OR controlled density.
-- **Backgrounds & Visual Details**: Create atmosphere and depth rather than defaulting to solid colors. Add contextual effects and textures that match the overall aesthetic. Apply creative forms like gradient meshes, noise textures, geometric patterns, layered transparencies, dramatic shadows, decorative borders, custom cursors, and grain overlays.
+无法运行时说明原因，并至少做源码层面的响应式、资源路径和交互状态检查；不能声称已视觉验证。
 
-NEVER use generic AI-generated aesthetics like overused font families (Inter, Roboto, Arial, system fonts), cliched color schemes (particularly purple gradients on white backgrounds), predictable layouts and component patterns, and cookie-cutter design that lacks context-specific character.
-
-Interpret creatively and make unexpected choices that feel genuinely designed for the context. No design should be the same. Vary between light and dark themes, different fonts, different aesthetics. NEVER converge on common choices (Space Grotesk, for example) across generations.
-
-**IMPORTANT**: Match implementation complexity to the aesthetic vision. Maximalist designs need elaborate code with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
-
-Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.
-
-## Advanced Design Mode
-
-For complex UI (dashboards, marketing sites, apps with multiple views), load the full design process from `skills/core/frontend-design-principles/SKILL.md`. This adds:
-- Intent questions and domain exploration
-- Four required outputs before coding
-- Pre-show self-review checklist
-- Principles on defaults, sameness, and systemic intent
-
-Simple requests (single component, quick page, proof of concept) use the fast path above. Complex requests (multi-page apps, client-facing products, anything requiring craft differentiation) load the principles.
+## 输出
+交付时简要说明：实现范围、运行 URL 或无法运行原因、验证过的视口/交互、未覆盖风险。需要只读审查时转 `design-review`。

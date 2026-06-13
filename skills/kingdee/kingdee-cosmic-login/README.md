@@ -72,19 +72,21 @@ python --version
 pip show requests pycryptodome
 ```
 
-### 一键安装依赖
+### 安装依赖
 
 ```bash
 pip install requests pycryptodome
 ```
 
-> 如果内网无法访问 pypi，可改装 `pip install requests rsa`，脚本会自动降级到 `rsa` 库后端。
+> 优先在项目虚拟环境或当前任务隔离环境中安装依赖；不要为了登录工具全局安装依赖，除非你明确接受该影响。如果内网无法访问 pypi，可改装 `pip install requests rsa`，脚本会自动降级到 `rsa` 库后端。
 
 ---
 
 ## 2. 安装
 
 `kingdee-cosmic-login` 是一个完全自包含的目录，把整个目录 `cp` 到任意位置即可使用。
+
+> 本节命令会复制文件或创建链接，只供人工按需执行；agent 不应根据 README 自动安装、覆盖、复制或软链接目录，除非用户明确要求并确认目标路径。
 
 ### 2.1 直接拷贝到工程
 
@@ -144,13 +146,13 @@ cmd /c mklink /J "D:\your\project-a\tools\kingdee-cosmic-login" "$env:USERPROFIL
 
 **kingdee-cosmic-login 没有强制配置文件**，所有参数通过命令行传入即可。但如果你不想每次都打长串 URL，可以借鉴下面两种约定。
 
-### 3.1 环境变量（推荐）
+### 3.1 环境变量（仅在你明确需要持久化时）
 
-在 shell profile 或项目 `.env` 里写：
+默认建议命令行临时传参，避免持久化账号、密码、Cookie 或 Token。只有在你明确接受本地保存风险时，才在受控的 shell profile 或项目 `.env` 里写入占位符配置：
 
 ```bash
 export COSMIC_BASE_URL="http://127.0.0.1:8080/ierp"
-export COSMIC_USERNAME="admin"
+export COSMIC_USERNAME="<username>"
 export COSMIC_PASSWORD="<password>"
 export COSMIC_DATACENTER_ID="1565321489509515264"
 ```
@@ -161,20 +163,20 @@ export COSMIC_DATACENTER_ID="1565321489509515264"
 python /path/to/cosmic_login.py "$COSMIC_BASE_URL" "$COSMIC_USERNAME" "$COSMIC_PASSWORD" "$COSMIC_DATACENTER_ID"
 ```
 
-### 3.2 项目侧 `cosmic.json`（与下游工具共享）
+### 3.2 项目侧 `cosmic.json`（不推荐保存真实凭据）
 
-如果项目里同时使用 `cosmic-replay` / `cosmic-env` 等下游工具，建议在项目根放：
+如果项目里同时使用下游工具，建议只放占位符或非敏感环境标识。真实密码、Cookie、CSRF、access token 不应默认写入项目文件；确需保存时先确认路径、权限和清理策略。
 
 ```json
 {
   "baseUrl": "http://127.0.0.1:8080/ierp",
-  "username": "admin",
+  "username": "<username>",
   "password": "<password>",
   "datacenterId": "1565321489509515264"
 }
 ```
 
-让下游工具共享同一份凭据，避免到处散落。
+让下游工具共享同一份受控配置，避免到处散落；不要把真实凭据提交进 Git。
 
 ---
 
@@ -235,8 +237,7 @@ fi
 test:
   script:
     - pip install requests pycryptodome
-    - python tools/cosmic_login.py "$COSMIC_BASE_URL" "$COSMIC_USERNAME" "$COSMIC_PASSWORD" > .login.out
-    - export COSMIC_COOKIE=$(grep '^COOKIE=' .login.out | cut -d= -f2-)
+    - export COSMIC_COOKIE="$(python tools/cosmic_login.py "$COSMIC_BASE_URL" "$COSMIC_USERNAME" "$COSMIC_PASSWORD" | awk -F= '/^COOKIE=/{print substr($0, index($0,$2))}')"
     - python tools/run_smoke_test.py
 ```
 
@@ -275,11 +276,11 @@ LOGIN_FAILED: 用户名或密码错误
 
 ## 6. 登录成功后
 
-拿到 Cookie 后，按目标项目约定写入即可，三种常见做法：
+拿到 Cookie 后，默认只在当前命令或当前任务内存中使用。不要默认写入项目文件、CI artifact、shell profile 或日志。三种常见做法按安全优先级排序：
 
-1. **写入配置文件** — 更新 `config.py` / `.env` / `settings.json` 里的 cookie 字段
-2. **导出环境变量** — `export COSMIC_COOKIE="<cookie>"`，下游脚本用 `os.environ` 读
-3. **直接传参** — 在后续 API 调用中 `headers={"Cookie": cookie, "kd-csrf-token": csrf_token}`
+1. **直接传参** — 在后续 API 调用中 `headers={"Cookie": cookie, "kd-csrf-token": csrf_token}`
+2. **临时环境变量** — 只在当前 shell/session 中 `export COSMIC_COOKIE="<cookie>"`
+3. **写入配置文件** — 仅当用户明确要求并指定路径、权限和清理策略时，才更新 `config.py` / `.env` / `settings.json` 里的 cookie 字段
 
 典型用法：
 

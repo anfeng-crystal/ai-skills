@@ -13,8 +13,9 @@ metadata:
 > Cross-platform Agent Skill: ground recommendations in current evidence, avoid host-specific assumptions, and do not write files during planning.
 
 ## When To Use
-- Use for方案、架构、取舍、价值判断、执行计划、handoff, or "我来审核" requests.
+- Use when the user needs a decision, option comparison, execution plan before review, "是否值得做", "采用哪个方案", handoff, or "我来审核".
 - Route bugs and failing tests to `fix-bug`, code review to `review-code`, direct implementation to `implement-feature`, and delivery readiness to `delivery-check`.
+- Do not take over pure code explanation, review findings, visual QA, or already-approved implementation work.
 
 ## Contract
 - Goal: output one reviewable, executable recommendation or verdict.
@@ -29,7 +30,7 @@ metadata:
 4. Give one recommendation. Add at most one alternative when the tradeoff is genuinely close.
 5. Attack the recommendation for dependency failure, scale, rollback cost, permissions, data migration, and external state.
 6. Produce handoff: files/modules, behavior change, validation commands, acceptance criteria, rollback, and next skill.
-7. If the user later says to execute an approved plan, route to `implement-feature`; it should only do drift check before editing.
+7. If the user later says to execute an approved plan, route by task type: implementation -> `implement-feature`, bug -> `fix-bug`, release/push -> `delivery-check`, visual build -> `frontend-design`. The executor should only do drift check before editing.
 
 ## Hard Rules
 - Evaluation questions start with `Keep`, `Kill`, or `Pivot`.
@@ -38,6 +39,12 @@ metadata:
 - If an approved plan drifted from current facts, name the drift and narrow or stop.
 - Do not store project-private paths, release commands, or local context as generic skill rules.
 - Preserve user worktree changes and do not run destructive git commands.
+
+## Failure Conditions
+- Evidence is insufficient and cannot be gathered read-only.
+- External facts, permissions, or environment state are required but unavailable.
+- Goal and constraints conflict in a way the agent cannot resolve conservatively.
+- A phase cannot be verified independently and the risk is too high for assumptions.
 
 ## Output
 结论 -> 依据 -> 推荐方案 -> 被拒绝方案 -> 验证/验收 -> 风险/脆弱假设 -> handoff。

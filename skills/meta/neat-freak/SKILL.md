@@ -10,7 +10,7 @@ metadata:
 
 # Neat Freak
 
-> Cross-platform Agent Skill: 只沉淀能减少未来歧义的稳定事实；没有用户明确要求且宿主允许时，不写 memory。
+> Cross-platform Agent Skill: 只沉淀能减少未来歧义的稳定事实；没有用户明确要求，或宿主不允许时，不写 memory。
 
 ## 触发
 - 实现、排障、发布、工具配置、架构决策后，项目持久知识可能过期时使用。
@@ -24,7 +24,7 @@ metadata:
 
 ## 工作流
 1. 识别本轮涉及的项目；不要把 shell cwd 当唯一项目。
-2. 每个项目先枚举文档，再判断：
+2. 每个项目先枚举文档，再判断；Windows 或无 `find` 时使用宿主文件搜索工具或 `rg --files -g "*.md"`：
    ```bash
    ls
    ls docs 2>/dev/null || true
@@ -35,7 +35,7 @@ metadata:
    - 项目指令：长期 agent 规则、路由、红线、环境假设。
    - README/docs：面向使用者的安装、API、架构、runbook、handoff。
    - memory：跨会话偏好或非显而易见的项目事实；只在明确要求时写。
-5. 优先修改旧条目；明确过期或重复时删除旧事实。
+5. 只有在用户要求同步或已授权编辑文档时，才优先修改旧条目、删除过期或重复事实；否则只输出建议，不落盘。
 6. 时间相关事实用绝对日期，不写“今天、最近、yesterday、recently”。
 7. 复查文档里的命令、路径、环境变量和链接是否存在。
 
@@ -70,9 +70,6 @@ metadata:
 简体中文：
 - 结论：已同步 / 无需改 / 阻塞。
 - 变更：file -> 修改的稳定事实。
+- 已检查无需改：file -> 理由。
 - Memory：已写 / 建议写 / 跳过及原因。
 - 未处理：冲突、缺失文档或验证缺口。
-
-## 参考资料
-- 宿主路径：`references/agent-paths.md`
-- 文档映射：`references/sync-matrix.md`

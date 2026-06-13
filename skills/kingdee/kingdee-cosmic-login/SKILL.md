@@ -9,7 +9,7 @@ metadata:
   platforms:
     claude-code:
       argument-hint: "<base_url> [username] [password] [datacenter_id]"
-      allowed-tools: "Bash Read Edit"
+      allowed-tools: "Bash Read"
 ---
 
 # Cosmic Login Skill
@@ -22,10 +22,11 @@ This is a tool subprocess for authentication only. After login, datacenter selec
 ## Safety Rules
 
 1. Treat username, password, Cookie, CSRF token, and datacenter ids as sensitive session material.
-2. Do not persist credentials, Cookies, or tokens into project files unless the user explicitly asks for that destination.
+2. Do not persist credentials, Cookies, or tokens into `.env`, shell profiles, `cosmic.json`, CI artifacts, logs, project config, or other files unless the user explicitly names the destination and purpose.
 3. Do not print raw passwords in final answers. Redact Cookies and CSRF tokens in chat summaries unless the user explicitly requested the raw value.
 4. Prefer using the existing project Python environment. Do not install Python packages globally without user approval.
-5. Do not use production credentials or production URLs unless the user explicitly says the current task is production-safe.
+5. Do not use production credentials or production URLs unless the user explicitly says the current task is production-safe login/session validation and no business write will be performed.
+6. Even if an editing tool is available in the host, this skill must not edit project files to save credentials or sessions.
 
 ## Inputs
 
@@ -71,11 +72,12 @@ Required and optional inputs:
    - `CSRF_TOKEN=...` is the `kd-csrf-token` header value when available.
    - `ACCOUNT_ID=...` is the datacenter/account id used for the login.
    - `SESSION_VALID=True` means an existing Cookie passed the lightweight check.
-6. Use the login state only for the requested downstream task. When passing it to a follow-up API call, include:
+6. Use the login state only for the requested downstream task and current task context. When passing it to a follow-up API call, include:
    ```text
    Cookie: <COOKIE>
    kd-csrf-token: <CSRF_TOKEN>
    ```
+   Do not write raw Cookie/CSRF to final answers, logs, env files, CI outputs, or project config unless the user explicitly asks for raw values and a destination.
 7. In the final response, report the outcome and next action. Redact session material by default:
    ```text
    登录成功：account_id=156..., cookie 已获取，csrf token 已获取。

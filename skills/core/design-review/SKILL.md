@@ -1,7 +1,6 @@
 ---
 name: design-review
 description: "需要审查已渲染 UI、截图、本地 HTML 产物、布局、字体、间距、颜色、层级、一致性或响应式质量时使用。"
-compatibility: claude-code-only
 ---
 
 # Design Review
@@ -23,11 +22,12 @@ compatibility: claude-code-only
 2. 目标优先级：显式 live URL -> localhost -> `file://` / 本地 HTML -> 用户截图 -> source-only limited review。
 3. 本地 HTML 产物优先跑共享门禁：
    ```bash
-   node skills/meta/html-output-quality/scripts/check-html.mjs \
+   node <repo-root>/skills/meta/html-output-quality/scripts/check-html.mjs \
      --html <path-to-index.html> \
      --source <optional-json-or-tsv> \
      --out <artifact-dir>
    ```
+   找不到脚本或当前仓库不是 skills repo 时，降级为手工视觉审查并说明缺口。
 4. 响应式页面至少检查桌面和 375px 移动视口。
 5. 截图投诉直接以截图为证据；若用户给参考图或旧版好图，先列当前与参考的视觉差异。
 6. 无法渲染时，不推断不可见状态。
@@ -55,13 +55,14 @@ compatibility: claude-code-only
 - 交互审查至少看 hover/focus、键盘可达、可见反馈，以及搜索/过滤/排序/展开/复制/跳转中是否有一个真有用。
 - 不凭审美泛泛评价；每条问题绑定可见区域。
 - 只有单截图/单视口时，明确覆盖范围有限。
+- Source-only 只能指出潜在风险；不得断言不可见视觉状态。
 
 ## 输出
 简体中文：
-- 优先写到 `.jez/artifacts/design-review.md`；HTML 产物写到门禁输出目录的 `design-review.md`。
+- 默认在聊天中输出；只有用户要求、HTML 门禁或主流程需要归档时才写文件。
 - 结论：通过 / 有问题可通过 / 阻塞。
-- Evidence：URL/路径/截图/视口。
+- 证据：URL/路径/截图/视口。
 - High、Medium、Low：区域 -> 缺陷 -> 影响 -> 修复方向。
-- What looks good：只保留应继续沿用的视觉模式。
-- Top fixes：最多 3 条。
-- Handoff：需要实现时转 `frontend-design` 或 `fix-bug`。
+- 可沿用模式：只保留应继续沿用的视觉模式。
+- 前三修复：最多 3 条。
+- 交接：需要实现时转 `frontend-design` 或 `fix-bug`。

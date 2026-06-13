@@ -34,10 +34,11 @@ Read `references/modes.md` when the user asks for verification, active testing, 
 
 1. For `audit`, stay local and read-only unless the user explicitly asks for report output.
 2. For `verify` or `redteam-lite`, run `scripts/scope_check.py` first with mode, target URL, and declared scope.
-3. Default-deny production and unknown targets for active POC. Continue only when the user explicitly authorizes prod/unknown scope and the command records that authorization.
+3. Default-deny production and unknown targets for active POC. Continue only when the user explicitly authorizes prod/unknown scope and the command records target URL, scope, time window, allowed payload types, and forbidden actions.
 4. Use `scripts/poc_runner.py` in dry-run mode first. Add `--execute` only after scope is allowed and the request spec is reviewed.
 5. Use `scripts/network_probe.py` only for bounded reachability checks; default is dry-run.
 6. Redact credentials, cookies, tokens, tenant ids, and session identifiers in chat summaries and reports unless the user explicitly requests raw values.
+7. Do not read browser state, shell history, env, or project config for Cookie/token/account material unless the user explicitly names that source and purpose.
 
 ## Workflow
 
@@ -46,7 +47,7 @@ Read `references/modes.md` when the user asks for verification, active testing, 
 3. For vulnerability classes and static checks, read `references/security-controls.md`; cite sink, taint source, sanitizer, kill switch, and missing control.
 4. For verification and payload handling, read `references/poc-policy.md` and `references/target-scope.md`.
 5. For page, operation, OpenAPI, or plugin-entry scope, read `references/metadata-security-scope.md` and prefer a `kingdee-metadata-analyzer` metadata contract before active verification.
-6. Write findings with `scripts/report_writer.py` when a structured report is requested.
+6. Write findings with `scripts/report_writer.py` when a structured report is requested. Reports default to redacted targets, tenants, sessions, and raw evidence; raw evidence requires an explicit destination and user approval.
 
 ## Script Commands
 
