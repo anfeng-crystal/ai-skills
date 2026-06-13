@@ -80,6 +80,7 @@ function parseArgs(argv) {
     json: false,
     strictResults: false,
     includeIncoming: false,
+    requireEvalAssets: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -96,6 +97,9 @@ function parseArgs(argv) {
         break;
       case "--include-incoming":
         parsed.includeIncoming = true;
+        break;
+      case "--require-eval-assets":
+        parsed.requireEvalAssets = true;
         break;
       case "--help":
       case "-h":
@@ -118,6 +122,7 @@ Options:
   --json                 Emit JSON.
   --strict-results       Treat legacy results.tsv headers as errors.
   --include-incoming     Include incoming/ skills in the scan.
+  --require-eval-assets  Require every skill to have local test-prompts.json and results.tsv.
   --help                 Show this help.
 `);
 }
@@ -135,8 +140,7 @@ function buildReport(options) {
   }
 
   for (const skill of skills) {
-    checkPromptAsset(skill, errors);
-    checkResultAsset(skill, options.strictResults, errors, warnings);
+    checkEvalAssets(skill, options, errors, warnings);
   }
 
   checkPortableText(options.sourceRoot, errors);
@@ -145,6 +149,7 @@ function buildReport(options) {
     ok: errors.length === 0,
     sourceRoot: options.sourceRoot,
     strictResults: options.strictResults,
+    requireEvalAssets: options.requireEvalAssets,
     summary: {
       skills: skills.length,
       errors: errors.length,
@@ -177,10 +182,24 @@ function findSkills(sourceRoot, includeIncoming) {
   return skills;
 }
 
-function checkPromptAsset(skill, errors) {
-  const file = path.join(skill.dir, "test-prompts.json");
-  if (!fs.existsSync(file)) {
-    errors.push(issue(skill, "missing_test_prompts", "Missing test-prompts.json"));
+function checkEvalAssets(skill, options, errors, warnings) {
+  const promptPath = path.join(skill.dir, "test-prompts.json");
+  const resultPath = path.join(skill.dir, "results.tsv");
+  const hasPrompt = fs.existsSync(promptPath);
+  const hasResult = fs.existsSync(resultPath);
+
+  if (!options.requireEvalAssets && !hasPrompt && !hasResult) {
+    return;
+  }
+
+  checkPromptAsset(skill, promptPath, hasPrompt, options.requireEvalAssets, errors, warnings);
+  checkResultAsset(skill, resultPath, hasResult, options, errors, warnings);
+}
+
+function checkPromptAsset(skill, file, exists, required, errors, warnings) {
+  if (!exists) {
+    const target = required ? errors : warnings;
+    target.push(issue(skill, "missing_test_prompts", "Missing local test-prompts.json"));
     return;
   }
 
@@ -219,10 +238,10 @@ function checkPromptAsset(skill, errors) {
   });
 }
 
-function checkResultAsset(skill, strictResults, errors, warnings) {
-  const file = path.join(skill.dir, "results.tsv");
-  if (!fs.existsSync(file)) {
-    errors.push(issue(skill, "missing_results", "Missing results.tsv"));
+function checkResultAsset(skill, file, exists, options, errors, warnings) {
+  if (!exists) {
+    const target = options.requireEvalAssets ? errors : warnings;
+    target.push(issue(skill, "missing_results", "Missing local results.tsv"));
     return;
   }
 
@@ -240,7 +259,7 @@ function checkResultAsset(skill, strictResults, errors, warnings) {
   }
 
   if (resultMode !== "canonical") {
-    const target = strictResults ? errors : warnings;
+    const target = options.strictResults ? errors : warnings;
     target.push(issue(skill, "legacy_results_header", `Non-canonical results.tsv header: ${resultMode}`));
   }
 

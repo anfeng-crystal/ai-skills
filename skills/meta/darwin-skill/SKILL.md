@@ -35,15 +35,16 @@ metadata:
 - 行为增量：with-skill 在典型 prompt 上应优于 no-skill。
 
 ## 产物记录
-- `test-prompts.json`：记录 `id`、`prompt`、`expected`、`eval_focus`、`baseline_risk`。
-- `results.tsv`：至少记录 `skill`、`prompt_id`、`baseline_score`、`old_score`、`new_score`、`avg_skill_delta`、`eval_mode`、`model_set`、`status`、`notes`。
+- 评测资产默认是本地临时证据，不提交、不分发、不长期保留；提交仓库前必须确认没有 `test-prompts.json`、`results.tsv` 进入 Git 跟踪。
+- 需要本轮复核时，可临时生成 `test-prompts.json`：记录 `id`、`prompt`、`expected`、`eval_focus`、`baseline_risk`。
+- 需要本轮复核时，可临时生成 `results.tsv`：至少记录 `skill`、`prompt_id`、`baseline_score`、`old_score`、`new_score`、`avg_skill_delta`、`eval_mode`、`model_set`、`status`、`notes`。
 - `eval_mode` 只能是 `full_test` 或 `dry_run`；不能跑子 agent 时也要写明 dry-run 依据。
 - 需要报告时输出 Markdown 主报告；HTML/PNG 成果卡片只作为增强产物。
 
 ## 工作流
 1. 锁定范围：列出可编辑本地 skill 路径，把只读 bundled/cache skill 分开。
 2. 需要隔离时按当前宿主/git 规则创建优化分支；不要破坏用户已有脏改。
-3. 为每个目标准备 1-3 个典型 prompt；要复用时写入 `test-prompts.json`。
+3. 为每个目标准备 1-3 个典型 prompt；只在本轮需要复核时写入本地临时或未跟踪的 `test-prompts.json`。
 4. 建 baseline：记录不用 skill 时最可能漏掉、越界或路由错误的点。
 5. 跑 with-skill 与 no-skill 对比；可用多模型/子 agent 时至少覆盖默认模型和一个轻量/不同能力模型。
 6. 读当前 `SKILL.md`，先提取能力清单，再找人类说明书噪音。能力清单至少覆盖：
@@ -70,6 +71,7 @@ metadata:
    node <repo-root>/scripts/validate-cross-platform.mjs
    node <skills-root>/meta/darwin-skill/scripts/validate-skill-assets.mjs
    ```
+   如果本轮明确保留了本地评测资产，再额外运行 `node <skills-root>/meta/darwin-skill/scripts/validate-skill-assets.mjs --require-eval-assets`。
    skill 自带脚本或测试时跑对应验证。
 11. 做能力覆盖复核：逐项确认能力清单仍有落点；格式校验通过但能力丢失时视为失败。
 12. 重新评分并写入 `results.tsv`；只有 `new_score > old_score` 且相对 baseline 增量变大才保留。
@@ -83,7 +85,7 @@ metadata:
 - 改动不能改变 skill 核心用途；只能优化表达、边界、流程和验证。
 - 本地 skills 的语言选择以语义完整和用户语境为准：中文为主；命令、字段名、状态码、工具标识和能明显省 token 的短标签可用英文；不能整篇套英文模板或因英文压缩丢失语义。
 - 更短不是成功标准；能力等价和行为增量优先于 token 压缩。
-- 清理临时测试输出时只删本 skill 生成的 `*-test-output-*`、`*-with-skill-*`、`*-no-skill-*`，保留 `test-prompts.json` 和 `results.tsv`。
+- 收尾时删除本轮临时评测文件；只有用户明确要求留档时，才保留在私有未跟踪位置。
 
 ## 输出
 简体中文：

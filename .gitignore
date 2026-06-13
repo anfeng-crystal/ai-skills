@@ -18,6 +18,11 @@ responses/
 downloads/
 .playwright-cli/
 
+# Local skill evaluation assets
+skills/**/test-prompts.json
+skills/**/results.tsv
+skills/**/results.tsv.backup
+
 # Binary assets and sensitive config
 *.jar
 *.db
@@ -25,9 +30,6 @@ config.ini
 !templates/config.example.ini
 
 # darwin-skill eval/test artifacts
-skills/meta/darwin-skill/test-prompts.json
-skills/meta/darwin-skill/results.tsv
-skills/meta/darwin-skill/results.tsv.backup
 skills/meta/darwin-skill/*-evaluation.md
 skills/meta/darwin-skill/optimization-report-*.md
 skills/meta/darwin-skill/result-cards-*.md
