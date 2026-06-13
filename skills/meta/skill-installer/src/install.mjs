@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { CATEGORY_NAMES, loadCategoryNames } from "./config.mjs";
+import { loadCategoryNames } from "./config.mjs";
 import { buildPlan, applyPlan, listSourceSkills } from "./sync-links.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -30,7 +30,7 @@ export async function buildInstallPlan(options) {
 
     const skillName = kebabCase(options.name || frontmatter.name || path.basename(sourceSkillDir));
     const category = await resolveCategory(options.category, frontmatter, options.sourceRoot);
-    const targetRelativePath = path.posix.join("skills", category, skillName);
+    const targetRelativePath = path.posix.join(category, skillName);
     const targetPath = path.join(options.sourceRoot, ...targetRelativePath.split("/"));
     const targetExists = await pathExists(targetPath);
     const collidingSkills = await findCollidingSkills(options.sourceRoot, skillName, targetRelativePath);

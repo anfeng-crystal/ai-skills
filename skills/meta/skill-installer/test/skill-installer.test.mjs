@@ -8,7 +8,7 @@ import { buildPlan, linkTypeForPlatform, resolveTools } from "../src/sync-links.
 
 test("install dry-run plans classified target without writing files", async () => {
   const fixture = await makeSkill("Demo Skill", "tags: [meta]");
-  const active = await makeActiveRoot();
+  const active = await makeSourceRoot();
 
   const plan = await buildInstallPlan({
     installSource: fixture,
@@ -22,13 +22,13 @@ test("install dry-run plans classified target without writing files", async () =
 
   assert.equal(plan.status, "planned");
   assert.equal(plan.category, "meta");
-  assert.equal(plan.targetRelativePath, "skills/meta/demo-skill");
+  assert.equal(plan.targetRelativePath, "meta/demo-skill");
   await assert.rejects(fs.stat(plan.targetPath));
 });
 
 test("install apply copies into category and keeps incoming out of sync", async () => {
   const fixture = await makeSkill("Unknown Skill", "");
-  const active = await makeActiveRoot();
+  const active = await makeSourceRoot();
 
   const plan = await buildInstallPlan({
     installSource: fixture,
@@ -45,7 +45,7 @@ test("install apply copies into category and keeps incoming out of sync", async 
   assert.equal(result.status, "installed");
   assert.equal(result.category, "incoming");
   assert.equal(result.willSync, false);
-  assert.equal(await exists(path.join(active, "skills", "incoming", "unknown-skill", "SKILL.md")), true);
+  assert.equal(await exists(path.join(active, "incoming", "unknown-skill", "SKILL.md")), true);
 
   const syncPlan = await buildPlan({
     sourceRoot: active,
@@ -59,8 +59,8 @@ test("install apply copies into category and keeps incoming out of sync", async 
 
 test("existing install target is rejected", async () => {
   const fixture = await makeSkill("Demo Skill", "");
-  const active = await makeActiveRoot();
-  await fs.mkdir(path.join(active, "skills", "core", "demo-skill"), { recursive: true });
+  const active = await makeSourceRoot();
+  await fs.mkdir(path.join(active, "core", "demo-skill"), { recursive: true });
 
   const plan = await buildInstallPlan({
     installSource: fixture,
@@ -78,8 +78,8 @@ test("existing install target is rejected", async () => {
 
 test("install rejects same target name in another category", async () => {
   const fixture = await makeSkill("Dup", "");
-  const active = await makeActiveRoot();
-  await makeSkillAt(path.join(active, "skills", "meta", "dup"), "dup", "");
+  const active = await makeSourceRoot();
+  await makeSkillAt(path.join(active, "meta", "dup"), "dup", "");
 
   const plan = await buildInstallPlan({
     installSource: fixture,
@@ -93,13 +93,13 @@ test("install rejects same target name in another category", async () => {
 
   assert.equal(plan.ok, false);
   assert.equal(plan.status, "source_name_collision");
-  assert.deepEqual(plan.collidingSkills, ["skills/meta/dup"]);
+  assert.deepEqual(plan.collidingSkills, ["meta/dup"]);
 });
 
 test("source name collisions are reported", async () => {
-  const active = await makeActiveRoot();
-  await makeSkillAt(path.join(active, "skills", "core", "dup"), "dup", "");
-  await makeSkillAt(path.join(active, "skills", "meta", "dup"), "dup", "");
+  const active = await makeSourceRoot();
+  await makeSkillAt(path.join(active, "core", "dup"), "dup", "");
+  await makeSkillAt(path.join(active, "meta", "dup"), "dup", "");
 
   const plan = await buildPlan({
     sourceRoot: active,
@@ -110,6 +110,53 @@ test("source name collisions are reported", async () => {
   });
 
   assert.equal(plan.records[0].status, "source_name_collision");
+});
+
+test("legacy active-root links are planned for replacement", async () => {
+  const active = await makeSourceRoot();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-home-"));
+  const targetRoot = path.join(home, ".codex", "skills");
+  await makeSkillAt(path.join(active, "core", "demo-skill"), "demo-skill", "");
+  await fs.mkdir(targetRoot, { recursive: true });
+  await fs.symlink(
+    path.join(active, "active", "skills", "core", "demo-skill"),
+    path.join(targetRoot, "demo-skill"),
+    "dir",
+  );
+
+  const plan = await buildPlan({
+    sourceRoot: active,
+    home,
+    tools: ["codex"],
+    skills: ["demo-skill"],
+    config: {},
+  });
+
+  assert.equal(plan.records.length, 1);
+  assert.equal(plan.records[0].status, "planned");
+  assert.equal(plan.records[0].action, "replace_link");
+  assert.equal(plan.records[0].reason, "legacy_active_root_link");
+  assert.equal(plan.records[0].wouldChange, true);
+});
+
+test("real target directories remain blocking conflicts", async () => {
+  const active = await makeSourceRoot();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-home-"));
+  const targetPath = path.join(home, ".codex", "skills", "demo-skill");
+  await makeSkillAt(path.join(active, "core", "demo-skill"), "demo-skill", "");
+  await fs.mkdir(targetPath, { recursive: true });
+
+  const plan = await buildPlan({
+    sourceRoot: active,
+    home,
+    tools: ["codex"],
+    skills: ["demo-skill"],
+    config: {},
+  });
+
+  assert.equal(plan.records.length, 1);
+  assert.equal(plan.records[0].status, "real_path_conflict");
+  assert.equal(plan.records[0].wouldChange, false);
 });
 
 test("windows uses junction while posix uses directory symlink", () => {
@@ -139,10 +186,10 @@ test("optional host aliases resolve under host home", () => {
   assert.equal(tools[9].name, "antigravity-cli");
 });
 
-async function makeActiveRoot() {
+async function makeSourceRoot() {
   const active = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-active-"));
   for (const category of ["automation", "core", "kingdee", "meta"]) {
-    await fs.mkdir(path.join(active, "skills", category), { recursive: true });
+    await fs.mkdir(path.join(active, category), { recursive: true });
   }
   return active;
 }

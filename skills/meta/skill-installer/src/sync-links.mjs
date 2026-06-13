@@ -29,7 +29,7 @@ const TOOL_ALIASES = {
   "trae-ide": "trae",
 };
 
-const DEFAULT_EXCLUDED_SOURCE_PREFIXES = ["skills/incoming/"];
+const DEFAULT_EXCLUDED_SOURCE_PREFIXES = ["incoming/", "skills/incoming/"];
 
 /**
  * 只把带 SKILL.md 的可见目录视为可分发 skill。
@@ -368,6 +368,22 @@ async function inspectTarget(tool, skill, sourceMeta) {
         });
       }
 
+      if (isLegacyActiveRootLink(targetLinkResolved, sourceMeta.sourcePath, skill)) {
+        return buildRecord(tool.name, skill, sourceMeta, {
+          targetRoot,
+          targetPath,
+          targetExists: true,
+          targetType: "symlink",
+          targetIsSymlink: true,
+          targetLinkRaw,
+          targetLinkResolved,
+          action: "replace_link",
+          status: "planned",
+          reason: "legacy_active_root_link",
+          wouldChange: true,
+        });
+      }
+
       return buildRecord(tool.name, skill, sourceMeta, {
         targetRoot,
         targetPath,
@@ -413,8 +429,23 @@ async function inspectTarget(tool, skill, sourceMeta) {
   }
 }
 
+function isLegacyActiveRootLink(targetLinkResolved, sourcePath, skill) {
+  const skillParts = skill.split("/").filter(Boolean);
+  const sourceRoot = ancestorDir(sourcePath, skillParts.length);
+  const legacyPath = path.join(sourceRoot, "active", "skills", ...skillParts);
+  return path.resolve(targetLinkResolved) === path.resolve(legacyPath);
+}
+
+function ancestorDir(dir, levels) {
+  let current = dir;
+  for (let i = 0; i < levels; i += 1) {
+    current = path.dirname(current);
+  }
+  return current;
+}
+
 /**
- * Hermes 通过 config.yaml 里的 skills.external_dirs 原生发现 active skills。
+ * Hermes 通过 config.yaml 里的 skills.external_dirs 原生发现统一源目录。
  * 保留旧软链接仅作兼容；新流程不再为 Hermes 创建目录级软链接。
  */
 async function inspectHermesTarget(tool, skill, sourceMeta) {
@@ -498,7 +529,7 @@ async function inspectHermesTarget(tool, skill, sourceMeta) {
 
 /**
  * 沿 sourcePath 向上查找，找到第一个在 hermes config.yaml external_dirs 中配置的祖先目录。
- * 用于支持新目录结构（如 skills/core/xxx）下 Hermes external_dirs 指向 skills/active 的情况。
+ * 用于支持分类目录结构（如 core/xxx）下 Hermes external_dirs 指向统一源根的情况。
  */
 async function findAncestorInExternalDirs(sourcePath, hermesConfigPath) {
   if (!hermesConfigPath) return null;
@@ -659,13 +690,15 @@ function summarize(records) {
  */
 export async function applyPlan(records) {
   for (const record of records) {
-    if (record.status !== "planned" || record.action !== "create_link") {
+    if (record.status !== "planned" || !["create_link", "replace_link"].includes(record.action)) {
       continue;
     }
 
-    await replaceWithSymlink(record.sourcePath, record.targetPath);
+    await replaceWithSymlink(record.sourcePath, record.targetPath, {
+      replaceExisting: record.action === "replace_link",
+    });
     record.status = "applied";
-    record.reason = "created_symlink";
+    record.reason = record.action === "replace_link" ? "replaced_legacy_active_root_link" : "created_symlink";
     record.wouldChange = false;
     record.targetExists = true;
     record.targetType = "symlink";
@@ -678,9 +711,12 @@ export async function applyPlan(records) {
 /**
  * 通过临时路径原子落链接，避免在 apply 期间暴露半成品。
  */
-async function replaceWithSymlink(sourcePath, targetPath) {
+async function replaceWithSymlink(sourcePath, targetPath, options = {}) {
   const tempPath = `${targetPath}.tmp-${process.pid}`;
   await fs.symlink(sourcePath, tempPath, linkTypeForPlatform());
+  if (options.replaceExisting) {
+    await fs.unlink(targetPath);
+  }
   await fs.rename(tempPath, targetPath);
 }
 

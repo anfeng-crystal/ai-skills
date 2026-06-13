@@ -19,10 +19,10 @@ skill-installer --help
 
 ## Quick Start
 
-Run commands from your active skills root, set `AI_SKILLS_HOME`, or create a config file.
+Run commands from your skills source root, set `AI_SKILLS_HOME`, or create a config file.
 
 ```bash
-cd ~/AI/skills/active
+cd ~/AI/skills
 
 # Preview all link changes.
 npx @anfeng1314/skill-installer --json
@@ -58,7 +58,7 @@ If a host uses a different skills directory on the target machine, set `targetDi
 
 ## Install Skills
 
-Install skills into the active source tree first, then let Skill Linker distribute them. Do not install directly into host tool directories such as `~/.codex/skills` or `%USERPROFILE%\.codex\skills`.
+Install skills into the source tree first, then let Skill Linker distribute them. Do not install directly into host tool directories such as `~/.codex/skills` or `%USERPROFILE%\.codex\skills`.
 
 ```bash
 # Dry-run
@@ -74,7 +74,7 @@ Auto-classify a skill:
 npx @anfeng1314/skill-installer install ./my-skill --category auto --json
 ```
 
-If auto classification is uncertain, the skill goes to `skills/incoming/<name>` and is not distributed by default.
+If auto classification is uncertain, the skill goes to `incoming/<name>` and is not distributed by default.
 
 ## Remove and Restore
 
@@ -105,7 +105,7 @@ Hermes should discover skills through `skills.external_dirs`. On macOS/Linux thi
 ```yaml
 skills:
   external_dirs:
-    - /Users/you/AI/skills/active
+    - /Users/you/AI/skills
 ```
 
 Skill Linker checks Hermes `external_dirs` and reports local shadow conflicts. It does not create new directory-level symlinks for Hermes. In the default all-tool audit, an unconfigured Hermes host is treated as an optional skipped host. When `--tool hermes` is specified explicitly, missing `external_dirs` is reported as a configuration issue.
@@ -137,7 +137,7 @@ Example config:
 
 ```json
 {
-  "sourceRoot": "/Users/you/AI/skills/active",
+  "sourceRoot": "/Users/you/AI/skills",
   "home": "/Users/you",
   "targetDirs": {
     "codex": "/Users/you/.codex/skills"
@@ -149,7 +149,7 @@ Example config:
 PowerShell example:
 
 ```powershell
-$env:AI_SKILLS_HOME = "$env:USERPROFILE\AI\skills\active"
+$env:AI_SKILLS_HOME = "$env:USERPROFILE\AI\skills"
 npx @anfeng1314/skill-installer install .\my-skill --category meta --json
 ```
 
@@ -160,12 +160,12 @@ This package is published as `@anfeng1314/skill-installer`.
 Release flow:
 
 ```bash
-cd <repo>/skills/active/skills/meta/skill-installer
+cd <repo>/skills/meta/skill-installer
 npm version patch
 git push origin main --tags
 ```
 
-Tags matching `skill-installer-v*` are published by GitHub Actions from `skills/active/skills/meta/skill-installer`. Configure npm Trusted Publishing once for repository `anfeng-crystal/ai-workspace` and workflow `publish-skill-installer.yml`.
+Tags matching `skill-installer-v*` are published by GitHub Actions from `skills/meta/skill-installer`. Configure npm Trusted Publishing once for repository `anfeng-crystal/ai-workspace` and workflow `publish-skill-installer.yml`.
 
 ## Commands
 
@@ -182,7 +182,7 @@ Key options:
 
 | Option | Description |
 | --- | --- |
-| `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME` or the current active tree. |
+| `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME`, config, current tree, or `~/AI/skills`. |
 | `--home <path>` | Host home. Defaults to `AI_HOST_HOME` or `$HOME`. |
 | `--skill <name>` | Skill name or relative path. Repeat or use comma-separated values. |
 | `--tool <name>` | `codex`, `claude`, `claude-code`, `junie`, `agents`, `hermes`, `qoder`, `qoderwork`, `workbuddy`, `trae`, `openclaw`, `opencode`, `antigravity`, `antigravity-cli`, or `antigravity-desktop`. |

@@ -243,7 +243,7 @@ async function handleMigrate(options) {
   const sourceRoot = options.sourceRoot;
   const migrations = [];
 
-  // 扫描 sourceRoot 一级子目录，找出含 SKILL.md 但不在 skills/ 下的目录
+  // 扫描 sourceRoot 一级子目录，找出未分类的根级 skill。
   const entries = await fs.readdir(sourceRoot, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name === "skills" || entry.name.startsWith(".")) continue;
@@ -259,7 +259,7 @@ async function handleMigrate(options) {
     const frontmatter = parseFrontmatter(content);
     const category = await resolveCategory("auto", frontmatter, sourceRoot);
     const skillName = entry.name;
-    const targetRelativePath = path.posix.join("skills", category, skillName);
+    const targetRelativePath = path.posix.join(category, skillName);
     const targetPath = path.join(sourceRoot, ...targetRelativePath.split("/"));
 
     let targetExists = false;
@@ -529,7 +529,7 @@ Usage:
   skill-installer history [options]
 
 Options:
-  --source-root <path>   Source skills root. Defaults to AI_SKILLS_HOME or the current active tree.
+  --source-root <path>   Source skills root. Defaults to AI_SKILLS_HOME, config, current tree, or ~/AI/skills.
   --home <path>          Host home. Defaults to AI_HOST_HOME or $HOME.
   --skill <name>         Skill name or relative path. Can be repeated or comma-separated.
   --tool <name>          codex, claude, claude-code, junie, agents, hermes, qoder, qoderwork, workbuddy, trae, openclaw, opencode, or antigravity.

@@ -9,17 +9,26 @@ export const CATEGORY_NAMES = new Set(["incoming"]);
 
 export async function loadCategoryNames(sourceRoot) {
   const fixed = new Set(["incoming"]);
+  await addCategoryNamesFromDir(fixed, sourceRoot);
+  await addCategoryNamesFromDir(fixed, path.join(sourceRoot, "skills"));
+  return fixed;
+}
+
+async function addCategoryNamesFromDir(categories, root) {
   try {
-    const entries = await fs.promises.readdir(path.join(sourceRoot, "skills"), { withFileTypes: true });
+    const entries = await fs.promises.readdir(root, { withFileTypes: true });
     for (const e of entries) {
-      if (e.isDirectory() && !e.name.startsWith(".")) {
-        fixed.add(e.name);
+      if (e.isDirectory() && isCategoryDirectory(e.name)) {
+        categories.add(e.name);
       }
     }
   } catch {
-    // skills/ 目录不存在时只返回 incoming
+    // 缺失的布局目录忽略；调用方会保留 incoming 兜底。
   }
-  return fixed;
+}
+
+function isCategoryDirectory(name) {
+  return !name.startsWith(".") && !["node_modules", "scripts", "test", "tmp", "temp"].includes(name);
 }
 
 export function loadConfig() {
@@ -60,7 +69,7 @@ function readConfigFile() {
 }
 
 function defaultSourceRoot(home) {
-  return path.join(home, "AI", "skills", "active");
+  return path.join(home, "AI", "skills");
 }
 
 function inferSourceRoot() {
