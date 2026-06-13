@@ -1,0 +1,13 @@
+[
+  {"query": "怎么调用苍穹 OpenAPI 提交一张报销单", "should_trigger": true},
+  {"query": "星瀚 getToken 怎么获取和刷新 access_token", "should_trigger": true},
+  {"query": "用 queryOpenApi 查一下有哪些可用接口", "should_trigger": true},
+  {"query": "这个预置接口没有参数定义,怎么探测必填字段", "should_trigger": true},
+  {"query": "生成一段 Java 调用苍穹 OpenAPI 的代码", "should_trigger": true},
+  {"query": "给我一个 Python 调苍穹接口的示例带 token 刷新", "should_trigger": true},
+  {"query": "帮我在苍穹里开发一个自定义 OpenAPI 接口插件", "should_trigger": false},
+  {"query": "审计一下这个 OpenAPI 端点有没有越权", "should_trigger": false},
+  {"query": "登录苍穹测试环境拿 Cookie", "should_trigger": false},
+  {"query": "查一下这个实体有哪些字段", "should_trigger": false},
+  {"query": "帮我写一个苍穹报表取数插件", "should_trigger": false}
+]

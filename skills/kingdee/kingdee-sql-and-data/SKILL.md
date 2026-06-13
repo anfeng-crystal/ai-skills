@@ -3,7 +3,7 @@ name: kingdee-sql-and-data
 description: Use when validating Kingdee Cosmic KSQL, generating preset-data DELETE plus INSERT scripts, resolving project ksql config.ini, or doing read-only database data checks for Kingdee projects.
 metadata:
   author: anfeng
-  version: "0.1.0"
+  version: "1.0.0"
   license: MIT
   tags: [kingdee, cosmic, ksql, data, database]
 ---

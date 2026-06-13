@@ -1,0 +1,14 @@
+[
+  {"query": "苍穹单据前端页面脚本怎么写字段联动", "should_trigger": true},
+  {"query": "页面脚本 didMount 里怎么绑定按钮点击事件", "should_trigger": true},
+  {"query": "苍穹表格自定义单元格渲染怎么做", "should_trigger": true},
+  {"query": "苍穹扩展 JS index_m.js 移动端入口怎么写", "should_trigger": true},
+  {"query": "前端页面脚本怎么用 fetchData 调服务端", "should_trigger": true},
+  {"query": "给苍穹这个字段加个自定义 CSS 背景色", "should_trigger": true},
+  {"query": "苍穹树控件节点点击事件怎么监听", "should_trigger": true},
+  {"query": "帮我写一个苍穹 Java 表单插件", "should_trigger": false},
+  {"query": "帮我写一个 KingScript 服务端脚本插件", "should_trigger": false},
+  {"query": "帮我写一个苍穹报表取数插件", "should_trigger": false},
+  {"query": "查一下这个实体的字段标识", "should_trigger": false},
+  {"query": "苍穹 BOTP 转换规则怎么配", "should_trigger": false}
+]

@@ -2,11 +2,11 @@
 
 ## Host
 - Host id: `codex`
-- Default: enabled
-- Install mode: symlink
+- Distribution owner: `skills/meta/skill-installer`
+- Install mode: managed symlink or host-specific method selected by `skill-installer`
 - Target directory: `~/.codex/skills`
 
 ## Behavior
-- Kingdee skills under `skills/kingdee/*/SKILL.md` are exposed as directory symlinks in the Codex skills directory.
+- Do not create Codex links directly from Kingdee-local scripts.
+- Preview distribution with `skill-installer` before applying.
 - Existing files, real directories, or symlinks pointing to another source are left untouched and reported as conflicts.
-- Dry-run mode is read-only and is the default validation path for review.

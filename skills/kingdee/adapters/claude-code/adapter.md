@@ -3,11 +3,11 @@
 ## Host
 - Host id: `claude-code`
 - Alias: `claude`
-- Default: enabled
-- Install mode: symlink
+- Distribution owner: `skills/meta/skill-installer`
+- Install mode: managed symlink or host-specific method selected by `skill-installer`
 - Target directory: `~/.claude/skills`
 
 ## Behavior
-- Kingdee skills under `skills/kingdee/*/SKILL.md` are exposed as directory symlinks in the Claude Code skills directory.
+- Do not create Claude Code links directly from Kingdee-local scripts.
+- Preview distribution with `skill-installer` before applying.
 - Existing host-owned content is not replaced by the installer.
-- Dry-run mode reports planned links and conflicts without writing to the host directory.

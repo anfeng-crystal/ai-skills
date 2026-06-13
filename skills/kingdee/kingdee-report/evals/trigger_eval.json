@@ -1,0 +1,14 @@
+[
+  {"query": "帮我写一个苍穹报表取数插件", "should_trigger": true},
+  {"query": "这个报表怎么用 DataSet 做多表关联", "should_trigger": true},
+  {"query": "AbstractReportListDataPlugin 的 query 方法怎么写", "should_trigger": true},
+  {"query": "报表里 groupBy 之后怎么 sum 聚合", "should_trigger": true},
+  {"query": "Algo 的 leftJoin 精确签名是什么", "should_trigger": true},
+  {"query": "报表过滤条件 FilterInfo 怎么取基础资料多选", "should_trigger": true},
+  {"query": "这个成本报表用 AlgoX 怎么搭", "should_trigger": true},
+  {"query": "帮我写一个苍穹单据保存前校验插件", "should_trigger": false},
+  {"query": "查一下这个实体有哪些字段", "should_trigger": false},
+  {"query": "QueryServiceHelper 这个类在哪个包", "should_trigger": false},
+  {"query": "帮我写一个 KingScript 报表脚本", "should_trigger": false},
+  {"query": "给这个报表插件写单元测试", "should_trigger": false}
+]

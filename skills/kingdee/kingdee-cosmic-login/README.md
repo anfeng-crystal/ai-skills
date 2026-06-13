@@ -151,7 +151,7 @@ cmd /c mklink /J "D:\your\project-a\tools\kingdee-cosmic-login" "$env:USERPROFIL
 ```bash
 export COSMIC_BASE_URL="http://127.0.0.1:8080/ierp"
 export COSMIC_USERNAME="admin"
-export COSMIC_PASSWORD="KDadm123"
+export COSMIC_PASSWORD="<password>"
 export COSMIC_DATACENTER_ID="1565321489509515264"
 ```
 
@@ -169,7 +169,7 @@ python /path/to/cosmic_login.py "$COSMIC_BASE_URL" "$COSMIC_USERNAME" "$COSMIC_P
 {
   "baseUrl": "http://127.0.0.1:8080/ierp",
   "username": "admin",
-  "password": "KDadm123",
+  "password": "<password>",
   "datacenterId": "1565321489509515264"
 }
 ```
@@ -187,10 +187,10 @@ python /path/to/cosmic_login.py "$COSMIC_BASE_URL" "$COSMIC_USERNAME" "$COSMIC_P
 python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp
 
 # 2. 自动登录（单数据中心环境，自动选择）
-python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin KDadm123
+python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin <password>
 
 # 3. 指定数据中心登录（多数据中心环境必须显式指定）
-python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin KDadm123 1565321489509515264
+python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin <password> 1565321489509515264
 
 # 4. 检查已有 Cookie 是否还有效
 python /path/to/cosmic_login.py --check http://127.0.0.1:8080/ierp "KERPSESSIONID=xxx; other=yyy"
@@ -202,7 +202,7 @@ python /path/to/cosmic_login.py --check http://127.0.0.1:8080/ierp "KERPSESSIONI
 from cosmic_login import auto_login, check_session, list_datacenters
 
 # 一步登录
-result = auto_login("http://127.0.0.1:8080/ierp", "admin", "KDadm123")
+result = auto_login("http://127.0.0.1:8080/ierp", "admin", "<password>")
 if result["success"]:
     cookie = result["cookie"]
     csrf_token = result["csrf_token"]
@@ -211,14 +211,14 @@ if result["success"]:
 
 # 复用前先探活
 if not check_session("http://127.0.0.1:8080/ierp", old_cookie):
-    result = auto_login("http://127.0.0.1:8080/ierp", "admin", "KDadm123")
+    result = auto_login("http://127.0.0.1:8080/ierp", "admin", "<password>")
 ```
 
 ### 4.3 Shell 脚本中解析输出
 
 ```bash
 #!/bin/bash
-OUTPUT=$(python cosmic_login.py http://127.0.0.1:8080/ierp admin KDadm123)
+OUTPUT=$(python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>)
 
 if echo "$OUTPUT" | grep -q "LOGIN_SUCCESS"; then
     COOKIE=$(echo "$OUTPUT" | grep "^COOKIE=" | cut -d= -f2-)
@@ -329,7 +329,7 @@ curl -v "${COSMIC_BASE_URL}/auth/getAllDatacenters.do"
 python cosmic_login.py http://127.0.0.1:8080/ierp
 
 # 取需要的 id 作为第 4 个参数
-python cosmic_login.py http://127.0.0.1:8080/ierp admin KDadm123 100002
+python cosmic_login.py http://127.0.0.1:8080/ierp admin <password> 100002
 ```
 
 ### Q4: `登录失败：用户名或密码错误`

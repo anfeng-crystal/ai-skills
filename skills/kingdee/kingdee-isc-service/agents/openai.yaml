@@ -1,0 +1,8 @@
+interface:
+  display_name: "Kingdee ISC Service"
+  short_description: "苍穹集成服务云(ISC)报错离线诊断:值转换/事件触发/字段映射/数据库/EAS/连接/OpenAPI/性能"
+  default_prompt: |
+    使用 $kingdee-isc-service 排查金蝶苍穹集成服务云(ISC)报错。纯离线只读诊断:不联网、不执行命令、不改配置或数据,只做根因分析与解决方向建议。需要用户提供 DC 错误日志(时间戳/错误码/堆栈)或报错关键词;先按执行阶段(取数/转换/写数)定位,再用关键词路由表命中错误大类(值转换/事件触发/执行启动/字段映射/数据库/EAS集成/连接网络/OpenAPI/高级场景/监控),进入对应 dc_err 或 dc_stage 条目深挖。涉及生产改动只给步骤与风险,执行交用户在授权环境完成。ISCB DSL 脚本编写交 ISCB 脚本 skill,Java 二开交 kingdee-cosmic。
+
+policy:
+  allow_implicit_invocation: true

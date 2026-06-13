@@ -1,7 +1,7 @@
 [
   {
     "id": "download_latest_dev_env",
-    "prompt": "调用 kingdee-cosmic-devtools，从 http://10.82.11.119:8090/appstore/dev_env 拉取最新资源包到 /Users/anfeng/utils/cosmic_zt，下载中断后继续。",
+    "prompt": "调用 kingdee-cosmic-devtools，从 http://<dev-host>:<port>/appstore/dev_env 拉取最新资源包到 <local-resource-dir>，下载中断后继续。",
     "expected": "先做 manifest 和目标路径预检，下载到 staging，失败后 status/resume 续传，完成后核验数量和 hash，再等待 apply 授权或按用户授权执行。",
     "eval_focus": "是否避免直接覆盖目标目录；是否能处理网络中断、空目录、隐藏目录授权和下载失败报告。",
     "baseline_risk": "直接 curl 或解压到目标目录，下载失败后误判成功，缺少续传和 hash 核验。"

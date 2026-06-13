@@ -42,6 +42,7 @@ metadata:
 
 ## References
 - 总入口：`references/index.md`
+- 插件基类×事件 / SDK 导入速查：`references/plugin-event-cheatsheet.md`(入口速查;签名仍以 sdk/ 卡片为准)
 - SDK 查询：`references/sdk/index.md`、`references/sdk/strategy.md`
 - SDK 索引：`references/sdk/indexes/class-index.md`、`references/sdk/indexes/method-index.md`、`references/sdk/indexes/methods-by-name.md`、`references/sdk/indexes/methods-lifecycle.md`、`references/sdk/indexes/plugin-index.md`、`references/sdk/indexes/scenario-index.md`、`references/sdk/indexes/keyword-index.md`
 - SDK 清单：`references/sdk/manifests/index.md`

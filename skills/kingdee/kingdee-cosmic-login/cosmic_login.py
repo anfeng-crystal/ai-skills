@@ -420,7 +420,7 @@ def main():
         print()
         print("示例:")
         print("  python cosmic_login.py http://127.0.0.1:8080/ierp")
-        print("  python cosmic_login.py http://127.0.0.1:8080/ierp admin KDadm123")
+        print("  python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>")
         sys.exit(1)
 
     # --check 模式

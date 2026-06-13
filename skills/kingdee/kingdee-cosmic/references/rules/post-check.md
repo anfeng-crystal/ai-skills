@@ -12,7 +12,7 @@
 ## 默认执行命令
 
 ```bash
-export KINGDEE_COSMIC_SKILL_ROOT=/Users/anfeng/AI/skills/active/skills/kingdee/kingdee-cosmic
+export KINGDEE_COSMIC_SKILL_ROOT=<active-root>/skills/kingdee/kingdee-cosmic
 python3 "$KINGDEE_COSMIC_SKILL_ROOT/scripts/cosmic-post-check.py" <生成的文件或目录> --fix-hint
 ```
 
@@ -26,7 +26,7 @@ python3 "$KINGDEE_COSMIC_SKILL_ROOT/scripts/cosmic-post-check.py" <生成的文�
 当用户明确要求"严格校验""模板升级治理""补事实来源留痕"时，再追加严格模式：
 
 ```bash
-export KINGDEE_COSMIC_SKILL_ROOT=/Users/anfeng/AI/skills/active/skills/kingdee/kingdee-cosmic
+export KINGDEE_COSMIC_SKILL_ROOT=<active-root>/skills/kingdee/kingdee-cosmic
 python3 "$KINGDEE_COSMIC_SKILL_ROOT/scripts/cosmic-post-check.py" <生成的文件或目录> --fix-hint --strict
 ```
 

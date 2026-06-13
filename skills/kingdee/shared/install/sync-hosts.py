@@ -37,6 +37,19 @@ def main() -> int:
     root = args.root.resolve()
     load_dotenv(root / ".env")
 
+    if not args.dry_run:
+        report = {
+            "ok": False,
+            "error": "direct host sync is disabled; use skills/meta/skill-installer for installation and distribution",
+            "code": "direct_sync_disabled",
+            "sourceRoot": str(root),
+        }
+        if args.json:
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+        else:
+            print(f"error: {report['error']}", file=sys.stderr)
+        return 2
+
     try:
         registry = load_registry()
         hosts = resolve_hosts(registry, args.host, root)

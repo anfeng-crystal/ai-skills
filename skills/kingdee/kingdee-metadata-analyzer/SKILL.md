@@ -12,7 +12,7 @@ metadata:
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 ## 触发边界
-- **适用场景**：按实体标识分析苍穹元数据、绑定插件、页面/操作挂载点、插件源码、字段读写、服务调用和上下游单据关系。
+- **适用场景**：按实体标识分析苍穹元数据、绑定插件、页面/操作挂载点、插件源码、字段读写、服务调用和上下游单据关系;跨环境/跨库元数据差异对比、基础资料引用检查、元数据导出(Excel/HTML)。
 - **不适用场景**（应交给其他 skills）：
   - SDK API 用法查询（如"如何使用 SaveServiceHelper"）→ 使用 `kingdee-sdk-helper`
   - 代码实现指导（如"如何写表单插件"）→ 使用 `kingdee-cosmic`
@@ -121,6 +121,7 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 - 页面挂载：`references/page-binding.md`
 - 字段证据：`references/field-evidence.md`
 - 输出契约：`references/output-contract.md`
+- 跨环境差异/引用检查/导出：`references/cross-env-diff.md`
 - SDK 查询协作：当需要查询插件中使用的 SDK API 详情时，使用 `kingdee-sdk-helper` skill
 
 ## Guardrails

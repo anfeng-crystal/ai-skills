@@ -10,5 +10,6 @@
   {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
-  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false}
+  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
+  {"query": "集成服务云值转换报错怎么排查", "should_trigger": false}
 ]
