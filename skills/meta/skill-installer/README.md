@@ -1,6 +1,6 @@
 # Skill Linker
 
-Distribute local AI skills to Codex, Claude Code, Junie, Agents, and Hermes.
+Distribute local AI skills to Codex, Claude Code, Junie, Agents, Hermes, qoder, WorkBuddy, Trae, and other supported hosts.
 
 Skill Linker audits the source skill tree first, then creates only safe symlinks for supported tools. It refuses real-path conflicts, external symlink conflicts, and duplicate source names that would map to the same target skill.
 
@@ -42,6 +42,19 @@ Sync to selected tools:
 ```bash
 npx @anfeng1314/skill-installer --skill web-access --tool codex --tool claude --apply
 ```
+
+Windows/qoder/WorkBuddy/Trae example:
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.qoder\skills" | Out-Null
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.workbuddy\skills" | Out-Null
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.trae\skills" | Out-Null
+
+node .\install.mjs --dry-run --home "$env:USERPROFILE" --tool qoder --tool workbuddy --tool trae --skip-doctor
+node .\install.mjs --home "$env:USERPROFILE" --tool qoder --tool workbuddy --tool trae --skip-doctor
+```
+
+If a host uses a different skills directory on the target machine, set `targetDirs` in `%APPDATA%\skill-installer\config.json` instead of editing the package.
 
 ## Install Skills
 
@@ -172,7 +185,7 @@ Key options:
 | `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME` or the current active tree. |
 | `--home <path>` | Host home. Defaults to `AI_HOST_HOME` or `$HOME`. |
 | `--skill <name>` | Skill name or relative path. Repeat or use comma-separated values. |
-| `--tool <name>` | `codex`, `claude`, `junie`, `agents`, or `hermes`. |
+| `--tool <name>` | `codex`, `claude`, `claude-code`, `junie`, `agents`, `hermes`, `qoder`, `qoderwork`, `workbuddy`, `trae`, `openclaw`, `opencode`, `antigravity`, `antigravity-cli`, or `antigravity-desktop`. |
 | `--category <name>` | `core`, `automation`, `kingdee`, `meta`, `incoming`, or `auto`. |
 | `--name <name>` | Override installed skill directory name. |
 | `--path <subdir>` | Use a subdirectory inside a Git source. |

@@ -87,7 +87,9 @@ Options:
   --apply            Install skills (default behavior)
   --dry-run          Preview changes without applying
   --tool <name>      Install for a specific host tool; repeatable
-                     (claude, codex, junie, agents, hermes, antigravity-cli, agy, antigravity-desktop)
+                     (claude, claude-code, codex, junie, agents, hermes,
+                      qoder, qoderwork, workbuddy, trae, openclaw, opencode,
+                      antigravity, antigravity-cli, agy, antigravity-desktop)
   --skill <name>     Install a specific skill; repeatable
   --list             List all available skills
   --skip-doctor      Skip dependency checks

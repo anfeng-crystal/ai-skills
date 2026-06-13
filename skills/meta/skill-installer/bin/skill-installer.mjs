@@ -532,7 +532,7 @@ Options:
   --source-root <path>   Source skills root. Defaults to AI_SKILLS_HOME or the current active tree.
   --home <path>          Host home. Defaults to AI_HOST_HOME or $HOME.
   --skill <name>         Skill name or relative path. Can be repeated or comma-separated.
-  --tool <name>          codex, claude, junie, agents, or hermes.
+  --tool <name>          codex, claude, claude-code, junie, agents, hermes, qoder, qoderwork, workbuddy, trae, openclaw, opencode, or antigravity.
   --category <name>      core, automation, kingdee, meta, incoming, or auto (default).
   --name <name>          Override installed skill directory name.
   --path <subdir>        Use a subdirectory inside a Git source.

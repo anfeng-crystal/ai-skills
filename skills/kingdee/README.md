@@ -34,8 +34,12 @@ node skills/meta/skill-installer/bin/skill-installer.mjs --tool claude-code --to
 
 - Claude Code 目标目录:`~/.claude/skills`
 - Codex 目标目录:`~/.codex/skills`
+- qoder 目标目录:`~/.qoder/skills`
+- qoderwork 目标目录:`~/.qoderwork/skills`
+- WorkBuddy 目标目录:`~/.workbuddy/skills`
+- Trae 默认目标目录:`~/.trae/skills`;如果目标机器实际目录不同,用 `targetDirs.trae` 覆盖
 
-也可手动把所需 skill 目录软链到对应宿主 skills 目录。详见 `adapters/claude-code/adapter.md`、`adapters/codex/adapter.md`。
+也可手动把所需 skill 目录软链到对应宿主 skills 目录。详见 `adapters/claude-code/adapter.md`、`adapters/codex/adapter.md`、`adapters/qoder/adapter.md`。
 
 ## 可移植性约定
 - 路径用仓库相对或占位符(`<active-root>`、`{api_host}` 等),不写用户主目录;详见 `shared/platform/path-policy.md`。

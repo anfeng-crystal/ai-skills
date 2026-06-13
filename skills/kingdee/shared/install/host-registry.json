@@ -60,6 +60,32 @@
       "installMode": "symlink",
       "targetDir": "~/.qoder/skills",
       "adapter": "../../adapters/qoder/adapter.md"
+    },
+    {
+      "id": "qoderwork",
+      "aliases": ["qoder-work"],
+      "label": "qoderwork",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.qoderwork/skills",
+      "adapter": "../../adapters/qoderwork/adapter.md"
+    },
+    {
+      "id": "workbuddy",
+      "label": "WorkBuddy",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.workbuddy/skills",
+      "adapter": "../../adapters/workbuddy/adapter.md"
+    },
+    {
+      "id": "trae",
+      "aliases": ["trae-ide"],
+      "label": "Trae",
+      "default": "optional",
+      "installMode": "symlink",
+      "targetDir": "~/.trae/skills",
+      "adapter": "../../adapters/trae/adapter.md"
     }
   ]
 }

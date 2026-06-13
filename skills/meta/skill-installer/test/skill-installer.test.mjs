@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { buildInstallPlan, applyInstallPlan } from "../src/install.mjs";
-import { buildPlan, linkTypeForPlatform } from "../src/sync-links.mjs";
+import { buildPlan, linkTypeForPlatform, resolveTools } from "../src/sync-links.mjs";
 
 test("install dry-run plans classified target without writing files", async () => {
   const fixture = await makeSkill("Demo Skill", "tags: [meta]");
@@ -116,6 +116,27 @@ test("windows uses junction while posix uses directory symlink", () => {
   assert.equal(linkTypeForPlatform("win32"), "junction");
   assert.equal(linkTypeForPlatform("linux"), "dir");
   assert.equal(linkTypeForPlatform("darwin"), "dir");
+});
+
+test("optional host aliases resolve under host home", () => {
+  const home = path.resolve("/tmp/example-home");
+  const tools = resolveTools(
+    ["qoder", "qoderwork", "workbuddy", "trae", "openclaw", "opencode", "qoder-work", "trae-ide", "claude-code", "antigravity"],
+    home,
+    {},
+  );
+  const roots = Object.fromEntries(tools.map((tool) => [tool.name, tool.root]));
+
+  assert.equal(roots.qoder, path.join(home, ".qoder/skills"));
+  assert.equal(roots.qoderwork, path.join(home, ".qoderwork/skills"));
+  assert.equal(roots.workbuddy, path.join(home, ".workbuddy/skills"));
+  assert.equal(roots.trae, path.join(home, ".trae/skills"));
+  assert.equal(roots.openclaw, path.join(home, ".openclaw/workspace/skills"));
+  assert.equal(roots.opencode, path.join(home, ".opencode/skills"));
+  assert.equal(tools[6].name, "qoderwork");
+  assert.equal(tools[7].name, "trae");
+  assert.equal(tools[8].name, "claude");
+  assert.equal(tools[9].name, "antigravity-cli");
 });
 
 async function makeActiveRoot() {

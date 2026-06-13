@@ -5,7 +5,7 @@
     "defaultRepo": "skills/active",
     "defaultInstallScope": "all root-level directories with SKILL.md",
     "excludedTrees": ["legacy", "incoming"],
-    "hosts": ["codex", "claude", "junie", "agents", "hermes", "workbuddy", "antigravity-cli", "antigravity-desktop"]
+    "hosts": ["codex", "claude", "junie", "agents", "hermes", "qoder", "qoderwork", "workbuddy", "trae", "openclaw", "opencode", "antigravity-cli", "antigravity-desktop"]
   },
   "skills": [
     {

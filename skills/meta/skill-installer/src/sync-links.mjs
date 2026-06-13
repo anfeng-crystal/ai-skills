@@ -11,12 +11,22 @@ const TARGET_DIR_SUFFIXES = {
   junie: ".junie/skills",
   agents: ".agents/skills",
   hermes: ".hermes/skills",
+  qoder: ".qoder/skills",
+  qoderwork: ".qoderwork/skills",
+  workbuddy: ".workbuddy/skills",
+  trae: ".trae/skills",
+  openclaw: ".openclaw/workspace/skills",
+  opencode: ".opencode/skills",
   "antigravity-cli": ".gemini/antigravity-cli/skills",
   "antigravity-desktop": ".gemini/config/plugins/anfeng-active-skills/skills",
 };
 
 const TOOL_ALIASES = {
   agy: "antigravity-cli",
+  "claude-code": "claude",
+  antigravity: "antigravity-cli",
+  "qoder-work": "qoderwork",
+  "trae-ide": "trae",
 };
 
 const DEFAULT_EXCLUDED_SOURCE_PREFIXES = ["skills/incoming/"];

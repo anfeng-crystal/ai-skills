@@ -56,8 +56,8 @@ Copy `.env.example` to a local `.env`, or export the variables in your shell pro
 
 可以把 `.env.example` 复制为本机 `.env`，也可以在 shell profile 中导出环境变量。
 
-- `AI_HOST_HOME`: target home used to derive `.codex/.claude/.junie/.agents/.hermes`
-- `AI_HOST_HOME`：目标宿主 home，用于推导 `.codex/.claude/.junie/.agents/.hermes`
+- `AI_HOST_HOME`: target home used to derive `.codex/.claude/.junie/.agents/.hermes/.qoder/.qoderwork/.workbuddy/.trae`
+- `AI_HOST_HOME`：目标宿主 home，用于推导 `.codex/.claude/.junie/.agents/.hermes/.qoder/.qoderwork/.workbuddy/.trae`
 - `AI_KNOWLEDGE_ROOT`: required by `kingdee-cosmic` and `kingdee-metadata-analyzer`
 - `AI_KNOWLEDGE_ROOT`：`kingdee-cosmic` 和 `kingdee-metadata-analyzer` 需要的知识库根目录
 - `DARWIN_PLAYWRIGHT_CANDIDATES`: optional fallback module/path list for `darwin-skill`
@@ -96,6 +96,20 @@ Windows PowerShell / Windows PowerShell：
 Set-Location "$env:USERPROFILE\AI\skills\active"
 node .\scripts\sync-and-install.mjs --home "$env:USERPROFILE"
 ```
+
+Windows selected tools / Windows 指定工具：
+
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.qoder\skills" | Out-Null
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.workbuddy\skills" | Out-Null
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.trae\skills" | Out-Null
+node .\install.mjs --dry-run --home "$env:USERPROFILE" --tool qoder --tool workbuddy --tool trae --skip-doctor
+node .\install.mjs --home "$env:USERPROFILE" --tool qoder --tool workbuddy --tool trae --skip-doctor
+```
+
+If a Windows tool uses another skills directory, set `targetDirs` in `%APPDATA%\skill-installer\config.json` and rerun the same install command.
+
+如果 Windows 目标工具实际使用其它 skills 目录，请在 `%APPDATA%\skill-installer\config.json` 配置 `targetDirs` 后重新运行同一安装命令。
 
 Windows and WSL are separate hosts. Use a separate WSL clone under `~/AI`; do not point WSL at the Windows checkout under `/mnt/c/Users/...`.
 

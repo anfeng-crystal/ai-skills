@@ -24,11 +24,11 @@ metadata:
 
 ## 源和目标
 - 源目录默认 active repo root；只用 `--source-root`、`AI_SKILLS_HOME` 或 config 覆盖。
-- 目标工具白名单：`codex`、`claude`、`junie`、`agents`、`hermes`。
+- 目标工具白名单：`codex`、`claude`、`claude-code`、`junie`、`agents`、`hermes`、`qoder`、`qoderwork`、`workbuddy`、`trae`、`openclaw`、`opencode`、`antigravity`、`antigravity-cli`、`antigravity-desktop`。
 - macOS/Linux 使用 symlink；Windows 需要时使用 junction。
 - Hermes 优先 `skills.external_dirs`；目录级 symlink 只作兼容。
 - 配置路径：macOS/Linux 用 `$XDG_CONFIG_HOME/skill-installer/config.json` 或 `~/.config/skill-installer/config.json`；Windows 用 `%APPDATA%\\skill-installer\\config.json`。
-- 宿主目录固定在 `AI_HOST_HOME`（默认 home）下：`.codex/skills`、`.claude/skills`、`.junie/skills`、`.agents/skills`、`.hermes/skills`。
+- 宿主目录固定在 `AI_HOST_HOME`（默认 home）下：`.codex/skills`、`.claude/skills`、`.junie/skills`、`.agents/skills`、`.hermes/skills`、`.qoder/skills`、`.qoderwork/skills`、`.workbuddy/skills`、`.trae/skills`、`.openclaw/workspace/skills`、`.opencode/skills`。
 
 ## 工作流
 安装外部本地 skill 到 active 源：
