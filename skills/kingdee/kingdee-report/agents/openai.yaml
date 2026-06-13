@@ -1,0 +1,8 @@
+interface:
+  display_name: "Kingdee Report"
+  short_description: "金蝶苍穹报表插件开发:Algo/DataSet 流水线、精确 API 签名、报表架构选型"
+  default_prompt: |
+    使用 $kingdee-report 处理金蝶苍穹报表插件开发(AbstractReportListDataPlugin 取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析、报表架构选型)。先明确报表标识、数据源实体、过滤项、输出列与计算口径;字段/实体未确认先交 kingdee-metadata-analyzer 取证,SDK 归属查询交 kingdee-sdk-helper。架构默认 Algo Pipeline,复杂逐行转换用 Map-Based Assembly,成本卷算用 AlgoX;Algo API 签名以 references/algo-api.md 为权威来源,不凭记忆写签名。报表纯只读,禁写库;无状态设计,财务计算用 BigDecimal。
+
+policy:
+  allow_implicit_invocation: true

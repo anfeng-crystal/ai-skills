@@ -20,7 +20,7 @@ Kingdee shared skills must work from macOS, Linux, and Windows checkouts without
 
 ## Verification
 
-From `/Users/anfeng/AI/skills/active`:
+From the active skills root:
 
 ```bash
 git ls-files | rg '\\' || true

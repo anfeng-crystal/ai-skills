@@ -3,7 +3,7 @@ name: kingdee-testing
 description: "Kingdee Cosmic testing: unit tests, Gradle test runs, local Java harness generation, dev runtime probes, and runtime evidence collection for Kingdee Cosmic Java plugins and services."
 metadata:
   author: anfeng
-  version: "0.1.0"
+  version: "1.0.0"
   license: MIT
   tags: [kingdee, cosmic, java, testing, gradle, runtime]
 ---
@@ -28,6 +28,7 @@ metadata:
 1. Classify the request: unit test generation, Gradle verification, runtime probe, evidence collection, regression guard, or testability refactor check.
 2. Load only the needed reference:
    - Test strategy: `references/test-strategy.md`
+   - Unit test generation spec (base class, lifecycle hooks, MockedStatic, traps, coverage gates): `references/unit-test-generation.md`
    - Runtime harness: `references/cosmic-runtime-harness.md`
    - Dev probe: `references/dev-runtime-verification.md`
    - Metadata-driven testing: `references/metadata-driven-testing.md`

@@ -18,7 +18,7 @@ For each task, write the concrete pass condition before implementation:
 Run the narrowest useful checks for the changed surface. For shared guardrails and cleanup files, use:
 
 ```bash
-cd /Users/anfeng/AI/skills/active
+cd <active-skills-root>
 git ls-files | rg '\\' || true
 find skills/kingdee -name '.DS_Store' -print
 rg -n "kdcodetrigger|ClaudeCodeKDSkills|~/.claude|~/.codex|\\.qoder" skills/kingdee

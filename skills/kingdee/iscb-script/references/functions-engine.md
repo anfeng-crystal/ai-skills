@@ -44,12 +44,12 @@ var sign = Hash.SHA256("data to sign");
 ```javascript
 // 正确用法
 var data = String.getBytes("hello", "UTF-8");
-var key = String.getBytes("<SECRET_KEY>", "UTF-8");
+var key = String.getBytes("secret", "UTF-8");
 var hmac = Hash.HmacMD5(data, key);
 var result = Base64Encode(hmac);
 
 // 错误用法（会抛出 IscBizException）
-// Hash.HmacMD5("hello", "<SECRET_KEY>")  // 参数类型错误！
+// Hash.HmacMD5("hello", "secret")  // 参数类型错误！
 ```
 
 ### Hash.HmacSHA1(data, key) -> byte[]
@@ -63,7 +63,7 @@ HMAC-SHA256 签名。最常用的 API 签名算法。**data 和 key 均必须为
 ```javascript
 var sig = Hash.HmacSHA256(
     String.getBytes("request body", "UTF-8"),
-    String.getBytes("<SECRET_KEY>", "UTF-8"));
+    String.getBytes("secret_key", "UTF-8"));
 var base64Sig = Base64Encode(sig);
 ```
 
@@ -856,89 +856,7 @@ var result = execute_call(cn, "{call proc_calc(?, ?, ?)}",
 
 ---
 
-## 14. HTTP 函数
-
-### HttpGet(url, data?, charset?, cookies?, headers?) -> Map
-基本 GET 请求。
-- `data`：可选，通常为 Map；会作为查询参数发送
-- `charset`：可选字符集
-- `cookies`：可选 Cookie Map
-- `headers`：可选请求头 Map
-- 返回 Map，常见字段有 `result`、`headers`、`cookies`
-- 按本地 runtime 实测，部分返回还可能包含 `responseCode`
-```javascript
-var result = HttpGet(
-    "https://api.example.com/data",
-    {id: "123"},
-    "UTF-8",
-    null,
-    {"Accept": "application/json"}
-);
-var data = String.ParseJson(result.result);
-```
-
-### HttpPost(url, data, charset?, cookies?, headers?) -> Map
-基本 POST 请求。
-- `data`：如果是 Map，通常按 `x-www-form-urlencoded` 发送；如果是字符串，则按原样发送
-- 发送 JSON 时，优先先用 `String.FormatJson()` 生成字符串，再配合 `Content-Type: application/json`
-- 返回 Map，常见字段有 `result`、`headers`、`cookies`
-```javascript
-var body = String.FormatJson({name: "test", value: 123});
-var result = HttpPost(
-    "https://api.example.com/save",
-    body,
-    "UTF-8",
-    null,
-    {"Content-Type": "application/json"}
-);
-var data = String.ParseJson(result.result);
-```
-
-### HttpInvoke(url, data, charset?, method?) -> String
-通用 HTTP 调用。
-```javascript
-var response = HttpInvoke("https://api.example.com/data", body, "UTF-8", "PUT");
-```
-
-### HttpAccess(url, method, data, charset?, cookies?, headers?, timeout?) -> Map
-通用 HTTP 访问。
-- `method`：如 `GET` / `POST` / `PUT` / `DELETE`
-- `data`：请求体或请求参数
-- `timeout`：可选超时时间，单位毫秒
-- 返回 Map，常见字段有 `result`、`headers`、`cookies`
-```javascript
-var result = HttpAccess(
-    "https://api.example.com/data",
-    "GET",
-    {id: "123"},
-    "UTF-8",
-    null,
-    {"Accept": "application/json"},
-    30000
-);
-var body = result.result;
-```
-
-### HttpAccess2(url, method, data, charset?, cookies?, headers?, timeout?) -> Map
-字节数组版 HTTP 访问。
-- `data`：请求体 byte[]
-- 返回 Map，常见字段有 `result`（byte[]）、`headers`、`cookies`
-```javascript
-var body = String.getBytes(
-    String.FormatJson({id: "123"}),
-    "UTF-8"
-);
-var result = HttpAccess2(
-    "https://api.example.com/data",
-    "POST",
-    body,
-    "UTF-8",
-    null,
-    {"Content-Type": "application/json"},
-    30000
-);
-var bytes = result.result;
-```
+## 14. WebService 函数
 
 ### CallWebService(url, method, data, cookies?, headers?, charset?) -> Map
 调用 WebService。
@@ -952,22 +870,4 @@ var result = CallWebService(
     {theCityName: "深圳"}
 );
 var rows = result.result.'soap:Body'.getWeatherbyCityNameResponse.getWeatherbyCityNameResult.string;
-```
-
-### HttpDownloadFile(url, headers?) -> byte[]
-下载文件，返回字节数组。文件大小受 `ISC_MAX_FILE_SIZE` 限制（默认 20MB）。
-- 返回 Map 含 `filename` 和 `data`（byte[]）
-```javascript
-var file = HttpDownloadFile("https://example.com/doc.xlsx");
-var data = readXLSX(file.data);
-```
-
-### HttpUploadFile(url, fileBytes, fileName, params?, headers?) -> String
-上传文件（multipart/form-data）。
-```javascript
-var response = HttpUploadFile(
-    "https://example.com/upload",
-    fileBytes, "data.xlsx",
-    {param1: 'value1'},
-    {Authorization: 'Bearer <ACCESS_TOKEN>'});
 ```

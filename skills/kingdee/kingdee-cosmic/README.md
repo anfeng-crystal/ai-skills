@@ -88,7 +88,7 @@ python scripts/cosmic-api-knowledge.py --config ok-cosmic.json detail kd.bos.ser
 #### 快速单文件校验
 ```bash
 # 单文件或目录快速校验
-export KINGDEE_COSMIC_SKILL_ROOT=/Users/anfeng/AI/skills/active/skills/kingdee/kingdee-cosmic
+export KINGDEE_COSMIC_SKILL_ROOT=<active-root>/skills/kingdee/kingdee-cosmic
 python3 "$KINGDEE_COSMIC_SKILL_ROOT/scripts/cosmic-post-check.py" ./src/main/java/MyPlugin.java --fix-hint
 ```
 

@@ -81,97 +81,9 @@ var affected = execute_batch(cn, sql, batch, [BIGINT, VARCHAR, VARCHAR]);
 
 ---
 
-## 2. HTTP 集成
+## 2. 数据转换
 
-### 2.1 基本 HTTP 调用
-```javascript
-// GET 请求
-var response = HttpGet(
-    "https://api.example.com/data",
-    {id: "123"},
-    "UTF-8",
-    null,
-    {"Accept": "application/json"}
-);
-var data = String.ParseJson(response.result);
-
-// POST 请求（JSON 格式）
-var body = String.FormatJson({name: 'test', value: 123});
-var response = HttpPost(
-    "https://api.example.com/save",
-    body,
-    "UTF-8",
-    null,
-    {"Content-Type": "application/json"}
-);
-var saved = String.ParseJson(response.result);
-```
-
-### 2.2 通用 HTTP 访问
-```javascript
-// 通用 HTTP 请求
-var result = HttpAccess(
-    "https://api.example.com/data",
-    "GET",
-    {id: "123"},
-    "UTF-8",
-    null,
-    {"Accept": "application/json"},
-    30000
-);
-// result 是 Map 类型，常见字段包含 result、headers、cookies
-
-// POST with headers
-var body = String.FormatJson({key: 'value'});
-var result = HttpAccess(
-    "https://api.example.com/save",
-    "POST",
-    body,
-    "UTF-8",
-    null,
-    {"Content-Type": "application/json"},
-    30000
-);
-```
-
-### 2.3 文件下载/上传
-```javascript
-// 下载文件
-var fileBytes = HttpDownloadFile("https://example.com/file.xlsx");
-
-// 上传文件
-var response = HttpUploadFile(
-    "https://example.com/upload",
-    fileBytes,
-    "data.xlsx",
-    {param1: 'value1'},
-    {Authorization: 'Bearer <ACCESS_TOKEN>'}
-);
-```
-
-### 2.4 Multipart 表单提交（平台层）
-```javascript
-var formData = {
-    file: fileBytes,
-    fileName: 'data.xlsx',
-    param1: 'value1'
-};
-var result = Http.sendMultipart($cn, "/upload", "POST", formData, "UTF-8", null, {});
-```
-
-### 2.5 PATCH 请求（平台层）
-```javascript
-var body = FastJsonFormat({status: 'updated'});
-var result = ApacheHttpPatch("https://api.example.com/resource/1", body, "UTF-8",
-    "Content-Type", "application/json",
-    "Authorization", "Bearer <ACCESS_TOKEN>");
-```
-
----
-
-## 3. 数据转换
-
-### 3.1 列表投影（提取部分属性）
+### 2.1 列表投影（提取部分属性）
 ```javascript
 var list = [{name: 'Sky', subject: 'math', score: 95},
             {name: 'Star', subject: 'art', score: 99}];
@@ -179,21 +91,21 @@ var names = list.each(name: name, score: score);
 // [{name: 'Sky', score: 95}, {name: 'Star', score: 99}]
 ```
 
-### 3.2 列表 → Map（建索引）
+### 2.2 列表 → Map（建索引）
 ```javascript
 var list = [{id: 1, name: 'A'}, {id: 2, name: 'B'}];
 var index = list.mapping(id, name);
 // {1: 'A', 2: 'B'}
 ```
 
-### 3.3 分组汇总
+### 2.3 分组汇总
 ```javascript
 var orders = [{dept: 'sales', amount: 100}, {dept: 'sales', amount: 200}, {dept: 'hr', amount: 50}];
 var summary = orders.group(dept).each(value.sum(amount));
 // {sales: 300, hr: 50}
 ```
 
-### 3.4 嵌套遍历（分录处理，仅明确是目标单上下文时使用）
+### 2.4 嵌套遍历（分录处理，仅明确是目标单上下文时使用）
 ```javascript
 // 遍历目标单分录并赋值
 tar.segEntry.each(
@@ -201,7 +113,7 @@ tar.segEntry.each(
 );
 ```
 
-### 3.5 序号生成
+### 2.5 序号生成
 ```javascript
 var list = ['Sky', 'Star', 'Denver'];
 var result = list.each(seq: ++_.index, name: $);
@@ -210,36 +122,36 @@ var result = list.each(seq: ++_.index, name: $);
 
 ---
 
-## 4. 加密与编码
+## 3. 加密与编码
 
-### 4.1 哈希
+### 3.1 哈希
 ```javascript
 var hash = Hash.SHA256("hello");
 var md5 = Hash.MD5("data");
 ```
 
-### 4.2 HMAC 签名
+### 3.2 HMAC 签名
 ```javascript
 var signature = Hash.HmacSHA256(
     String.getBytes("data", "UTF-8"),
-    String.getBytes("<SECRET_KEY>", "UTF-8"));
+    String.getBytes("secret_key", "UTF-8"));
 var base64Sig = Base64Encode(signature);
 ```
 
-### 4.3 AES 加解密
+### 3.3 AES 加解密
 ```javascript
 var data = String.getBytes("hello", "UTF-8");
 var encrypted = AES_ECB_PKCS5("0123456789abcdef", data);
 var decrypted = AES_ECB_PKCS5_Decrypt("0123456789abcdef", encrypted);
 ```
 
-### 4.4 RSA 加解密（平台层）
+### 3.4 RSA 加解密（平台层）
 ```javascript
 var encrypted = RSA_Encrypt("plaintext", publicKey);
 var decrypted = RSA_Decrypt(encrypted, privateKey);
 ```
 
-### 4.5 Base64
+### 3.5 Base64
 ```javascript
 var bytes = String.getBytes("hello", "UTF-8");
 var encoded = Base64Encode(bytes);     // "aGVsbG8="
@@ -248,12 +160,11 @@ var decoded = Base64Decode(encoded);    // byte[]
 
 ---
 
-## 5. 文件操作（平台层）
+## 4. 文件操作（平台层）
 
-### 5.1 读写 Excel
+### 4.1 读写 Excel
 ```javascript
-// 读取
-var bytes = HttpDownloadFile("https://example.com/data.xlsx");
+// 读取（bytes 可来自 FTP、附件服务、本地文件等）
 var data = readXLSX(bytes);            // List<Map>
 var sheet2 = readXLSX(bytes, 1);       // 第二个工作表
 
@@ -262,7 +173,7 @@ var data = [{name: 'A', value: 1}, {name: 'B', value: 2}];
 var xlsxBytes = writeXLSX(data);
 ```
 
-### 5.2 读写 CSV
+### 4.2 读写 CSV
 ```javascript
 // 假设 ftpCn 已绑定为 FTP/SFTP 连接别名
 
@@ -277,7 +188,7 @@ Ftp.putBytes(ftpCn, "/output", "result.csv", csvBytes, true);
 
 ---
 
-## 6. FTP 操作（平台层）
+## 5. FTP 操作（平台层）
 
 ```javascript
 // 假设 ftpCn 已绑定为 FTP/SFTP 连接别名
@@ -300,9 +211,9 @@ Ftp.rmdir(ftpCn, "/output/old_dir");
 
 ---
 
-## 7. JSON 处理
+## 6. JSON 处理
 
-### 7.1 解析与格式化
+### 6.1 解析与格式化
 ```javascript
 var jsonStr = '{"name":"test","value":123}';
 var obj = FastJsonParse(jsonStr);
@@ -311,14 +222,14 @@ println(obj.name);  // "test"
 var newJson = FastJsonFormat(obj);
 ```
 
-### 7.2 复杂对象转换
+### 6.2 复杂对象转换
 ```javascript
 var map = flatObjectToMapOrList(complexObject);
 ```
 
 ---
 
-## 8. 工作流操作（平台层）
+## 7. 工作流操作（平台层）
 
 ```javascript
 // 发起工作流
@@ -333,35 +244,7 @@ var states = getWorkflowState($cn, [id1, id2]);
 
 ---
 
-## 9. 错误处理模式
-
-```javascript
-try {
-    var result = HttpAccess(
-        "https://api.example.com/data",
-        "GET",
-        null,
-        "UTF-8",
-        null,
-        {"Accept": "application/json"},
-        30000
-    );
-    if(result == null) {
-        throw "API returned null";
-    }
-    var data = String.ParseJson(result.result);
-    return data;
-} catch(e) {
-    println("Error: " + e);
-    return null;
-} finally {
-    // 清理逻辑
-}
-```
-
----
-
-## 10. 综合示例：数据集成方案（仅明确是该上下文时使用）
+## 8. 综合示例：数据集成方案（仅明确是该上下文时使用）
 
 ```javascript
 // 1. 查询源系统数据

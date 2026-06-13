@@ -493,53 +493,14 @@ AttachField.removeByAttachUid("isc_demo_basedata_1", "t_isc_demo1_file",
 
 ---
 
-## 10. HTTP 扩展
-
-### Http.sendMultipart(cn, path, method, formData, charset, cookies?, headers?, timeout?) -> Map
-发送 multipart/form-data 请求（文件上传）。
-- `cn`：HTTP 连接器（HttpConnectionWrapper）
-- `path`：相对路径（自动拼接连接器的 website URL）
-- `method`：HTTP 方法（POST, PUT 等）
-- `formData`：表单数据 Map（值以 "@IERP:" 开头表示苍穹附件引用）
-- `charset`：编码（如 "utf-8"）
-- `cookies`：Cookie Map（可选，null 表示无 cookie）
-- `headers`：请求头 Map（可选）
-- `timeout`：超时毫秒数（可选，默认 300000ms，最大可扩展到系统默认的 3 倍）
-
-自动处理 Content-Type 和 boundary。返回含 `code`, `cookies`, `headers`, `body` 的 Map。
-
-```javascript
-var form = {
-    name: "John",
-    email: "john@example.com",
-    file: "@IERP:12345"  // 苍穹附件引用
-};
-var result = Http.sendMultipart($cn, "/api/upload", "POST", form, "utf-8",
-    null, {Authorization: "Bearer <ACCESS_TOKEN>"}, 60000);
-println("状态: " + result.code);
-println("响应: " + result.body);
-```
-
-### ApacheHttpPatch(url, data, charset, ...headers) -> Object
-HTTP PATCH 请求（使用 Apache HttpClient，支持 PATCH 方法）。
-- `url`：完整 URL
-- `data`：请求体
-- `charset`：编码
-- `headers`：请求头（变长参数，按 key, value 交替传入）
-
-```javascript
-var body = FastJsonFormat({status: 'updated'});
-var result = ApacheHttpPatch("https://api.example.com/resource/1", body, "UTF-8",
-    "Content-Type", "application/json",
-    "Authorization", "Bearer <ACCESS_TOKEN>");
-```
+## 10. URL 编码工具
 
 ### MapToURLEncodeString(map) -> String
 Map 转 URL 编码查询字符串。null 输入返回 null。
 ```javascript
-var params = {username: "john@example.com", password: "<PASSWORD>"};
+var params = {username: "john@example.com", password: "secret"};
 var encoded = MapToURLEncodeString(params);
-// "username=john%40example.com&password=%3CPASSWORD%3E"
+// "username=john%40example.com&password=secret"
 ```
 
 ### ConvertToUrlEncodeString(fieldName, values) -> String
@@ -657,38 +618,7 @@ Ftp.putBytes(ftpCn, "/reports/", "orders_" + Date.format(Date.now(), "yyyyMMdd")
     xlsxBytes, true);
 ```
 
-### 示例 2：HTTP API 调用 + 签名验证
-```javascript
-var timestamp = '' + Date.getTime();
-var body = FastJsonFormat({orderId: 12345, status: 'confirm'});
-
-// HMAC-SHA256 签名（注意：参数必须是 byte[]）
-var signContent = "POST\n/api/order/confirm\n" + timestamp + "\n" + body;
-var signature = Base64Encode(Hash.HmacSHA256(
-    String.getBytes(signContent, "UTF-8"),
-    String.getBytes("<SECRET_KEY>", "UTF-8")));
-
-// 发送请求
-var result = HttpAccess(
-    "https://api.example.com/api/order/confirm",
-    "POST",
-    body,
-    "UTF-8",
-    null,
-    {
-        "Content-Type": "application/json",
-        "X-Timestamp": timestamp,
-        "X-Signature": signature
-    },
-    30000
-);
-if(result.responseCode == 200) {
-    var response = String.ParseJson(result.result);
-    println("成功: " + response.message);
-}
-```
-
-### 示例 3：工作流发起 + 状态轮询
+### 示例 2：工作流发起 + 状态轮询
 ```javascript
 // 发起工作流
 var ids = query_column(cn, "SELECT fid FROM t_order WHERE fstatus = 'pending'");

@@ -1,0 +1,8 @@
+interface:
+  display_name: "Kingdee OpenAPI Client"
+  short_description: "调用金蝶苍穹/星瀚 OpenAPI:OAuth2 取 token、queryOpenApi 查接口、参数探测、Java/Python 调用代码"
+  default_prompt: |
+    使用 $kingdee-openapi-client 从外部客户端调用金蝶苍穹/星瀚 OpenAPI:getToken 鉴权与缓存刷新、queryOpenApi 查接口清单、参数探测、生成 Java/Python 调用代码。先确认环境地址与应用凭据来源(client_id/client_secret/username/accountId),凭据与地址一律用占位符;token 有效期 2h、提前 5min 刷新;提交类接口必须带 Idempotency-Key;金额用高精度类型。只做调用客户端与探测,不做服务端接口开发(kingdee-cosmic)、安全审计(kingdee-security-review)或 Web 登录态(kingdee-cosmic-login)。
+
+policy:
+  allow_implicit_invocation: true

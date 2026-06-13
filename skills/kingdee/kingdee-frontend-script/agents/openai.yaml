@@ -1,0 +1,8 @@
+interface:
+  display_name: "Kingdee Frontend Script"
+  short_description: "金蝶苍穹前端页面脚本/扩展 JS/自定义样式:事件、控件 API、前后端通信、PC+移动端"
+  default_prompt: |
+    使用 $kingdee-frontend-script 处理金蝶苍穹浏览器端开发:页面脚本(didMount/事件/字段联动)、扩展 JS(index.js/index_m.js,PC+移动端)、表格与树自定义渲染、前后端通信(fetchData/customEvent)、自定义控件通信、自定义 CSS 样式。控件标识与字段 key 不要猜,用设计器或 kingdee-metadata-analyzer 确认;表格/树操作前等待 onInit Promise;didMount 注册的监听在 willUnmount 配对清理;iframe 通信做 origin 白名单。自定义样式遵守 $ 选择器与无 at-rules 限制,元素定位用浏览器 F12。不处理 Java 二开(kingdee-cosmic)、报表(kingdee-report)或 KingScript 服务端脚本(kingdee-kingscript)。
+
+policy:
+  allow_implicit_invocation: true
