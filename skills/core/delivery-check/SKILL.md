@@ -12,35 +12,35 @@ metadata:
 
 > Cross-platform Agent Skill: evidence-based readiness only, preserve unrelated worktree changes, and avoid destructive git actions.
 
-## When To Use
-- Use before commit, push, merge, package, release, publish, skill sync, or when asked whether work can ship.
-- Do not review code quality, implement fixes, clean files, install/apply links, or publish unless the user explicitly asks for that follow-through.
+## 触发
+- commit、push、merge、package、release、publish、PR、skill sync 前，或用户问“能不能交付/能不能发版/能不能 push”时使用。
+- 只做 readiness 判断；不做代码审查、不实现修复、不清理文件、不 install/apply 链接、不发布，除非用户明确要求继续执行。
 
-## Contract
-- Output one decision: `ready`, `blocked`, or `ready with risks`.
-- Base the decision on current evidence: worktree, diff, tests/build/lint, doctor, version/manifest/package/release state, and dry-runs.
-- Missing verification is a risk or blocker, never a pass.
-- Dry-run is evidence of a plan, not proof that an action happened.
+## 契约
+- 只输出一个判断：`ready`、`blocked` 或 `ready with risks`。
+- 判断必须基于当前证据：工作树、diff、测试/build/lint、doctor、manifest/package/release 状态、远端状态和 dry-run。
+- 缺失验证是风险或阻塞，不能当作通过。
+- dry-run 只能证明计划，不证明动作已经执行。
 
-## Workflow
-1. Identify delivery target: commit, push, merge, package, release, publish, PR, skill sync, or readiness only.
-2. Read `git status --short --branch -uall`; separate intended, unrelated, untracked, staged, and generated files.
-3. Match every target file or artifact to the delivery goal. Exclude unclear files from the ready scope.
-4. Run or inspect project-local validators: diff check, tests, lint/build/doctor, package contents, version/manifest, release/tag/origin/CI, and relevant dry-runs.
-5. Decide in order: blockers first, then risks, then verified evidence.
-6. Follow through with stage, commit, push, tag, release, publish, install, or apply only after explicit user request and only if the decision allows it.
+## 工作流
+1. 定交付目标：commit、push、merge、package、release、publish、PR、skill sync 或 readiness only。
+2. 读 `git status --short --branch -uall`，区分 intended、unrelated、untracked、staged 和 generated 文件。
+3. 将每个目标文件或产物映射到交付目标；不清楚的文件排除在 ready 范围外。
+4. 跑或检查项目本地验证：diff check、相关测试、lint/build/doctor、package 内容、版本/manifest、tag/release/origin/CI 和相关 dry-run。
+5. 按顺序判断：先列 blocker，再列 risk，最后列已验证证据。
+6. 只有用户已明确要求，且判断允许，才继续 stage、commit、push、tag、release、publish、install 或 apply。
 
 ## Skills Source Hints
-- In a skills source root, useful validators are `git diff --check -- <target-files>`, `node scripts/doctor.mjs --json`, `node scripts/validate-cross-platform.mjs`, and `node meta/skill-installer/bin/skill-installer.mjs --json` when those files exist.
-- Resolve the source root from cwd, `AI_SKILLS_HOME`, or project config; never hard-code a user home path.
-- Outside that repo, use the local project rules and verification commands instead of hard-coding these.
+- 在 skills source root 中，优先使用存在的验证器：`git diff --check -- <target-files>`、`node scripts/doctor.mjs --json`、`node scripts/validate-cross-platform.mjs`、`node meta/darwin-skill/scripts/validate-skill-assets.mjs`、`node meta/skill-installer/bin/skill-installer.mjs --json`。
+- 从 cwd、`AI_SKILLS_HOME` 或项目配置解析 source root；不要写死用户 home。
+- 仓库外任务使用本地项目规则和验证命令，不套用 skills 仓库命令。
 
-## Hard Gates
-- No stash, reset, checkout, clean, hiding user files, or destructive git setup.
-- No cleanup here; route deletion to `cleanup-guard`.
-- No dry-run treated as execution.
-- No subagent-only verification.
-- No "verified", "released", or "synced" claim without current command output.
+## 门禁
+- 不 stash、reset、checkout、clean、隐藏用户文件或做破坏性 git 操作。
+- 清理删除转 `cleanup-guard`。
+- 不把 dry-run 当执行结果。
+- 不接受只由子代理完成的验证。
+- 没有当前命令输出时，不声明 verified、released、synced 或 pushed。
 
-## Output
+## 输出
 交付判断 -> 阻塞项 -> 已验证证据 -> 未覆盖/风险 -> 下一步。

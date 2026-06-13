@@ -3,6 +3,7 @@ import json
 import os
 import time
 from datetime import datetime
+from pathlib import Path
 
 def format_timestamp(ts):
     """Convert unix timestamp to human-readable string."""
@@ -127,9 +128,10 @@ def filter_douyin_response(input_path, output_path=None):
     return filtered_results
 
 if __name__ == "__main__":
-    # Example usage for the specific file
-    INPUT_FILE = r'c:\Users\zijie\.claude\skills\union-search-skill\scripts\douyin\responses\20260219_121906_douyin_search_v3.json'
-    OUTPUT_FILE = r'c:\Users\zijie\.claude\skills\union-search-skill\scripts\douyin\responses\filtered_summary.json'
+    # Example usage with the current user's home directory.
+    response_dir = Path.home() / ".claude" / "skills" / "union-search-skill" / "scripts" / "douyin" / "responses"
+    INPUT_FILE = str(response_dir / "20260219_121906_douyin_search_v3.json")
+    OUTPUT_FILE = str(response_dir / "filtered_summary.json")
     
     try:
         results = filter_douyin_response(INPUT_FILE, OUTPUT_FILE)

@@ -79,7 +79,7 @@ def main() -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Sync Kingdee skills into agent host skill directories.")
-    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Active skills root.")
+    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Skills workspace root.")
     parser.add_argument("--host", action="append", default=[], help="Host id or alias to check/sync.")
     parser.add_argument("--dry-run", action="store_true", help="Only report planned changes.")
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
@@ -216,7 +216,7 @@ def build_plan(root: Path, hosts: list[Host], skills: list[dict[str, str]]) -> l
                         "targetPath": str(host.target_dir / skill["id"]),
                         "action": "noop",
                         "status": "managed_via_external_dir",
-                        "reason": "host_discovers_active_root",
+                        "reason": "host_discovers_source_root",
                         "wouldChange": False,
                     }
                 )
@@ -231,7 +231,7 @@ def inspect_host(host: Host, root: Path) -> dict[str, str]:
     if host.install_mode == "external_dirs":
         configured = inspect_external_dirs(root, host.config_path)
         if configured["ok"]:
-            return {"status": "available", "reason": "external_dirs_includes_active_root"}
+            return {"status": "available", "reason": "external_dirs_includes_source_root"}
         if host.explicit:
             return {"status": "needs_external_dir_config", "reason": configured["reason"]}
         return {"status": "optional_host_unavailable", "reason": f"optional_host_external_dirs:{configured['reason']}"}
@@ -253,7 +253,7 @@ def inspect_external_dirs(root: Path, config_path: Path | None) -> dict[str, Any
 
     resolved = {str(Path(value).expanduser().resolve()) for value in values}
     if str(root.resolve()) in resolved:
-        return {"ok": True, "reason": "active_root_listed"}
+        return {"ok": True, "reason": "source_root_listed"}
     return {"ok": False, "reason": "source_root_not_listed" if resolved else "external_dirs_empty"}
 
 

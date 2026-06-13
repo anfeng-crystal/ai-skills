@@ -123,7 +123,7 @@ Supported environment variables:
 
 | Variable | Description |
 | --- | --- |
-| `AI_SKILLS_HOME` | Active skills root. |
+| `AI_SKILLS_HOME` | Source skills root. |
 | `AI_HOST_HOME` | Home directory used to derive host tool skill directories. |
 
 Config file locations:

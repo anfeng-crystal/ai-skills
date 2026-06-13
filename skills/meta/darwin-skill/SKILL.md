@@ -67,7 +67,8 @@ metadata:
 10. 验证：
    ```bash
    git diff --check -- <skill-files>
-   node scripts/validate-cross-platform.mjs
+   node <repo-root>/scripts/validate-cross-platform.mjs
+   node <skills-root>/meta/darwin-skill/scripts/validate-skill-assets.mjs
    ```
    skill 自带脚本或测试时跑对应验证。
 11. 做能力覆盖复核：逐项确认能力清单仍有落点；格式校验通过但能力丢失时视为失败。

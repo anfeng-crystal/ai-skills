@@ -30,7 +30,7 @@ def main() -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Check Kingdee host adapter readiness without writing files.")
-    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Active skills root.")
+    parser.add_argument("--root", type=Path, default=Path.cwd(), help="Skills workspace root.")
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
     return parser.parse_args()
 
@@ -150,7 +150,7 @@ def inspect_external_dirs(root: Path, config_path: Path | None) -> dict[str, Any
 
     resolved = {str(Path(value).expanduser().resolve()) for value in values}
     if str(root.resolve()) in resolved:
-        return {"ok": True, "reason": "external_dirs_includes_active_root"}
+        return {"ok": True, "reason": "external_dirs_includes_source_root"}
     return {"ok": False, "reason": "source_root_not_listed" if resolved else "external_dirs_empty"}
 
 
