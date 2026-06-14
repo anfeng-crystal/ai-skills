@@ -231,7 +231,37 @@ export async function buildPlan(options) {
     summary: summarize(records),
     records,
   };
+
+  // 孤儿链接检测：全量同步时扫描各宿主，找出指向 sourceRoot 内部的断裂 symlink。
+  if (selectedSkills.length === 0 || selectedSkills === availableSkills) {
+    for (const tool of tools.filter((item) => !item.invalid && item.name !== "hermes")) {
+      const orphans = await findOrphanLinks(tool, options.sourceRoot);
+      for (const orphan of orphans) {
+        records.push({
+          scannedAt: new Date().toISOString(),
+          tool: tool.name,
+          skill: orphan.skillName,
+          sourcePath: orphan.resolvedTarget,
+          sourceExists: false, sourceIsDir: false, sourceHasSkillMd: false,
+          targetRoot: tool.root, targetPath: orphan.targetPath,
+          targetExists: true, targetType: "symlink", targetIsSymlink: true,
+          targetLinkRaw: orphan.rawTarget, targetLinkResolved: orphan.resolvedTarget,
+          action: "remove_orphan_link", status: "orphan_link",
+          reason: "dangling_symlink_into_source_root", wouldChange: true,
+        });
+      }
+    }
+  }
+
+  return {
+    sourceRoot: options.sourceRoot,
+    home: options.home,
+    tools: tools.filter((item) => !item.invalid),
+    summary: summarize(records),
+    records,
+  };
 }
+
 
 function isExcludedSourceSkill(skillId) {
   return DEFAULT_EXCLUDED_SOURCE_PREFIXES.some((prefix) => skillId.startsWith(prefix));
@@ -442,6 +472,29 @@ function ancestorDir(dir, levels) {
     current = path.dirname(current);
   }
   return current;
+}
+
+/**
+ * 扫描宿主目标目录，找出指向 sourceRoot 内部但目标已不存在的断裂 symlink。
+ * 只回收 skill-installer 自己创建的链接，不触碰外部链接或真实目录。
+ */
+async function findOrphanLinks(tool, sourceRoot) {
+  const resolvedSourceRoot = path.resolve(sourceRoot);
+  const orphans = [];
+  let entries;
+  try { entries = await fs.readdir(tool.root, { withFileTypes: true }); } catch { return orphans; }
+
+  for (const entry of entries) {
+    if (entry.name.startsWith(".") || !entry.isSymbolicLink()) continue;
+    const targetPath = path.join(tool.root, entry.name);
+    let rawTarget;
+    try { rawTarget = await fs.readlink(targetPath); } catch { continue; }
+    const resolvedTarget = path.resolve(tool.root, rawTarget);
+    if (resolvedTarget !== resolvedSourceRoot && !resolvedTarget.startsWith(resolvedSourceRoot + path.sep)) continue;
+    try { await fs.stat(targetPath); continue; } catch {} // 目标仍存在则跳过
+    orphans.push({ skillName: entry.name, targetPath, rawTarget, resolvedTarget });
+  }
+  return orphans;
 }
 
 /**
@@ -705,6 +758,16 @@ export async function applyPlan(records) {
     record.targetIsSymlink = true;
     record.targetLinkRaw = record.sourcePath;
     record.targetLinkResolved = record.sourcePath;
+    continue;
+  }
+
+  for (const record of records) {
+    if (record.status === "orphan_link" && record.action === "remove_orphan_link") {
+      await fs.unlink(record.targetPath);
+      record.status = "applied";
+      record.reason = "removed_dangling_symlink";
+      record.wouldChange = false;
+    }
   }
 }
 

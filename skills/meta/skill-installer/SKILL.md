@@ -3,7 +3,7 @@ name: skill-installer
 description: "需要把本地 skill 安装到统一源目录，或同步 skills 到 Codex、Claude、Junie、Agents、Hermes 时使用。"
 metadata:
   author: anfeng
-  version: "0.2.1"
+  version: "0.3.0"
   license: MIT
   tags: [skills, symlink, sync, distribution]
 ---

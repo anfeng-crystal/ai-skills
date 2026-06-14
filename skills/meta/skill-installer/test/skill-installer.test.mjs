@@ -209,6 +209,10 @@ async function makeSkillAt(dir, name, extraFrontmatter) {
   );
 }
 
+async function linkExists(targetPath) {
+  try { await fs.lstat(targetPath); return true; } catch { return false; }
+}
+
 async function exists(targetPath) {
   try {
     await fs.stat(targetPath);
