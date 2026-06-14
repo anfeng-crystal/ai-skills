@@ -32,6 +32,12 @@ metadata:
 4. 表格/树操作前必须等待 `onInit()` Promise;嵌套回调用箭头函数保 `this`;`didMount` 注册的监听在 `willUnmount` 配对清理。
 5. 产出前自检:控件标识一致、事件触发时机正确、资源清理到位、样式选择器精准且无 at-rules。
 
+## 真实环境与网络边界
+- 默认只生成、解释或审查前端脚本和样式;不登录真实环境、不点击业务按钮、不发起真实网络调用。
+- 需要打开页面、复用登录态、调用 `fetchData` / `customEvent` / `postMessage` / `openUrl` 或验证线上行为时,先确认目标环境、账号权限、数据范围和是否只读。
+- 生产环境默认只做源码/配置/截图/用户提供证据分析;任何真实页面操作或接口调用都需要用户明确生产授权。
+- Cookie、token、session、账号、密码、租户地址、数据中心、内部 URL 和业务敏感字段值只用占位符或脱敏摘要,不写入脚本、样式、输出或日志。
+
 ## References
 - 事件体系与 7 类控件 API:`references/events-and-api.md`
 - 前后端通信与 PC/移动端扩展:`references/server-and-extend.md`
@@ -46,7 +52,7 @@ metadata:
 - iframe/postMessage 必须做 `event.origin` 白名单校验。
 - 自定义样式:`$` 代表当前控件 className(不可自定义),`$` 后接后代选择器必须留空格;主题色 `'themeColor'` 必须单引号;**不支持 `@keyframes`/`@media`/`@import` 等 at-rules**;只作用子孙元素(body 下弹窗/下拉不受影响);表格字段定位必须用 `[data-code="..."]`,禁用编译产物 hash 类名。
 - 元素选取用浏览器 F12(Elements 选中目标)跨平台完成;不依赖 `Start-Process` 或任何单平台本地工具页。
-- 不在脚本/样式/输出中写真实地址、账号、密码。
+- 不在脚本/样式/输出中写真实地址、账号、密码、Cookie、token 或内部 URL。
 
 ## Output
 使用简体中文:结论 → 入口/事件依据 → 代码或样式 → 控件标识依据(已确认/未确认)→ 验证与清理点。

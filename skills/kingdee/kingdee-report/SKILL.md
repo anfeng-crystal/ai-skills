@@ -11,7 +11,7 @@ metadata:
 # Kingdee Report
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
-报表开发的权威入口。Algo/DataSet API 精确签名以本 skill 为单一权威来源;通用 Java 二开走 `kingdee-cosmic`,本 skill 只承载报表取数与 Algo 流水线。
+报表开发的权威入口。Algo/DataSet API 精确签名默认以本 skill references 为权威参考;若项目 jar/Javadoc 与 references 不一致,以项目依赖版本为准并标注差异。通用 Java 二开走 `kingdee-cosmic`,本 skill 只承载报表取数与 Algo 流水线。
 
 ## 触发边界
 - **适用**:苍穹报表插件(`AbstractReportListDataPlugin` / `AbstractReportFormPlugin`)开发、报表取数、DataSet/Algo 流水线、JOIN/分组聚合、FilterInfo 解析、报表架构选型、Algo API 精确签名查询。
@@ -44,8 +44,8 @@ metadata:
 - 财务计算必须 BigDecimal,比较用 `compareTo()`,禁 `double`/`float`/`==`。
 - DataSet 单次消费:遍历后需复用先 `.copy()`;AlgoKey 用 `getClass().getName()+"_suffix"` 保唯一。
 - 字段 key、实体编码、refType、SDK 方法签名不能凭记忆猜:用元数据、项目依赖、`kingdee-sdk-helper` 或本 skill references 确认。
-- 不在输出/示例中写真实数据库 IP、账号、密码;示例一律用占位符。
-- Algo API 签名以本 skill `references/algo-api.md` 为单一权威来源;与项目实际依赖版本不一致时以项目 jar/Javadoc 为准并标注。
+- 不在输出/示例中写真实数据库 IP、账号、密码、租户、数据中心、内部 URL、DB schema、连接串或业务敏感字段样例值;示例一律用占位符。
+- Algo API 签名默认以本 skill `references/algo-api.md` 为权威参考;与项目实际依赖版本不一致时以项目 jar/Javadoc 为准并标注。
 
 ## Output
 使用简体中文:结论 → 架构选型依据 → 取数代码 → 字段/口径依据(已确认/未确认)→ 验证与风险。

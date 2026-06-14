@@ -21,16 +21,17 @@ metadata:
 ## Quick Commands
 
 ```bash
-python3 scripts/validate_ksql.py "select top 10 * from T_BD_MATERIAL"
-python3 scripts/config_resolver.py --cwd /path/to/project --print
-python3 scripts/git_secret_guard.py --repo /path/to/project --json
+SQL_SKILL_ROOT=<当前 kingdee-sql-and-data skill 根目录>
+python3 "$SQL_SKILL_ROOT/scripts/validate_ksql.py" "select top 10 * from T_BD_MATERIAL"
+python3 "$SQL_SKILL_ROOT/scripts/config_resolver.py" --cwd <project-root> --print
+python3 "$SQL_SKILL_ROOT/scripts/git_secret_guard.py" --repo <project-root> --json
 ```
 
 生成预置数据脚本时，先解析配置，再显式传入生成器：
 
 ```bash
-CONFIG=$(python3 scripts/config_resolver.py --cwd /path/to/project --print)
-python3 scripts/ksql_generate/cli.py generate --type coderule --entity bd_currency --config "$CONFIG"
+CONFIG=$(python3 "$SQL_SKILL_ROOT/scripts/config_resolver.py" --cwd <project-root> --print)
+python3 "$SQL_SKILL_ROOT/scripts/ksql_generate/cli.py" generate --type coderule --entity bd_currency --config "$CONFIG"
 ```
 
 ## References
@@ -42,6 +43,10 @@ python3 scripts/ksql_generate/cli.py generate --type coderule --entity bd_curren
 
 ## Boundaries
 
+- 默认只做 KSQL 校验、脚本生成、配置解析或只读核对；不连接生产库、不执行 DML、不写入业务数据。
+- 真实查询前必须确认环境、路由、库、表、数据范围、凭据来源和只读边界；生产查询必须再次确认并限制分页/超时。
+- 生成 `DELETE` / `INSERT` 预置数据脚本默认只是审阅稿；执行脚本、连接生产、写文件或覆盖已有脚本前必须二次确认目标环境和回滚方案。
+- `config_resolver.py --print`、错误栈和报告输出必须脱敏数据库连接串、host/schema、账号、密码、tenant、token、内部 URL 和业务敏感字段值。
 - `scripts/git_secret_guard.py` 只做只读检查，不修改 Git、配置或源码。
 - `templates/config.example.ini` 是脱敏模板，不应写入真实密码。
 - 未迁移 `db-query/libs` 的 JDBC/PowerShell 资产；原因见 `references/db-query.md`。

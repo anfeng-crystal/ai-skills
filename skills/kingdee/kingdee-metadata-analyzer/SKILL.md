@@ -15,6 +15,7 @@ metadata:
 - **适用场景**：按实体标识分析苍穹元数据、绑定插件、页面/操作挂载点、插件源码、字段读写、服务调用和上下游单据关系;跨环境/跨库元数据差异对比、基础资料引用检查、元数据导出(Excel/HTML)。
 - **不适用场景**（应交给其他 skills）：
   - SDK API 用法查询（如"如何使用 SaveServiceHelper"）→ 使用 `kingdee-sdk-helper`
+  - 报表、Algo/DataSet 流水线或报表取数架构 → 使用 `kingdee-report`
   - 代码实现指导（如"如何写表单插件"）→ 使用 `kingdee-cosmic`
   - 运行时错误排查（如"NullPointerException 怎么解决"）→ 使用 `kingdee-cosmic`
   - 业务逻辑咨询（如"单据保存流程是什么"）→ 使用 `kingdee-cosmic`
@@ -86,6 +87,7 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 - 新产物默认写入本机缓存目录；读取结果必须以脚本打印的 `__INVENTORY_PATH__` / `__OUTPUT_DIR__` 为准，不假设在业务仓库 `build/` 下
 - 识别可复用途径
 - 分析时间较长（分钟级）
+- 只围绕目标实体、目标配置和必要依赖取证；不扫全库、全租户、全知识库或无关项目源码。
 
 ---
 
@@ -110,7 +112,7 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
    - 输出字段证据时要分层标注：`fieldKey`、中文名、字段类型、物理列名、PC/移动布局位置分别来自哪里；缺少任一层证据时写“未确认”，不要把其它层证据外推。
    - 涉及单据字段时必须标注字段在单据头还是具体分录/子单据体；只证明“实体里有这个 fieldKey”不等于证明“目标代码可按单据头读取”。
    - 输出插件挂载证据时至少同时核对 `className`、`pageElement`、`formPage` 三层；同一个类在业务实体、移动表单、移动列表上可重复出现，不能因为类名相同就默认是同一个执行入口。
-10. 需要给其它 Kingdee skill 消费时，运行 `scripts/metadata_contract.py --inventory <inventory.json> --environment <dev|prod|test|unknown>` 生成 machine-readable 摘要；如果只有 quick query 缓存，可用 `--quick-cache scripts/.metadata_cache/<entity>.json` 补字段摘要。
+10. 需要给其它 Kingdee skill 消费时，运行 `"$METADATA_SKILL_ROOT/scripts/metadata_contract.py" --inventory <inventory.json> --environment <dev|prod|test|unknown>` 生成 machine-readable 摘要；如果只有 quick query 缓存，可用 `--quick-cache "$METADATA_SKILL_ROOT/scripts/.metadata_cache/<entity>.json"` 补字段摘要。
 11. **用户确认检查点**：展示关键发现摘要（插件数量、高风险关系、可复用资源），询问用户：”是否需要深入分析某个插件或关系？”等待用户确认后再生成完整报告。
 12. 按 references 生成分析报告；如果已经存在可复用的插件源码、模板、helper、服务调用链或标准平台能力，也在报告中点明，避免后续重复实现。
 
@@ -126,14 +128,15 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 
 ## Guardrails
 - 不读取原始市场包的 `config.json`。
+- 元数据查询默认只读；生产环境查询必须限制目标实体、目标配置、分页/超时和证据用途，不做全库扫描或跨租户枚举。
 - 优先使用向上定位到的项目根显式环境配置；不要默认拿某个子目录或泛化 `ok-cosmic.json` 触发缺密码提示，也不要因为第一个配置失败就放弃元数据 skill。
 - 一个环境不可用时，输出必须包含“目标环境状态、已尝试候选、可用替代证据、仍未确认项”；跨环境结果只能作为对照或推断，不得包装成目标环境已确认事实。
 - 新的 analyzer 产物默认不落入 Git 工作树；相对 `metadataAnalyzer.output.reportDir` 不再表示项目内输出位置，读取结果时必须信任脚本打印路径。
 - 检测到输出目标在 Git 工作树内时，默认使用本机缓存目录；除非用户明确要求保留仓库内产物，否则不要启用 `--allow-git-output`。
 - 元数据查询缺少 Python 依赖时，先用 `$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py` 主动创建/复用本地 venv 并安装依赖；不要只提示用户手工安装，也不要把解释器 fallback 当成最终方案。
 - 依赖安装失败要报告具体失败类型和 pip 源；允许用户配置 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` 后重试。
-- 不在 skill、报告、聊天输出或新增模板中写数据库明文密码；既有项目 JSON 含 `database.password` 时只作为兼容读取来源，不主动复制、展示或要求新增。
-- 检测到项目配置里存在 `metadataAnalyzer.database.password` 明文密码时，默认主动迁移：在同项目 `.env` 中写入对应 `passwordEnv` 变量，JSON 只保留 `passwordEnv` 并移除 `password`；`.env` 必须确认被 Git 忽略，迁移过程和交付说明不得打印密码值。
+- 不在 skill、报告、聊天输出或新增模板中写数据库明文密码、连接串、租户号、数据中心、账号、内部 URL、DB host/schema、配置路径细节或业务敏感字段样例值；错误栈和脚本输出先脱敏再展示。
+- 检测到项目配置里存在 `metadataAnalyzer.database.password` 明文密码时，默认只报告迁移建议和风险；只有用户明确授权时才迁移到同项目 `.env`、移除 JSON 明文、备份原配置并给出回滚方式，且必须确认 `.env` 被 Git 忽略，全程不得打印密码值。
 - `metadataAnalyzer.enabled=false` 时不连接数据库。
 - 凭据解析顺序以脚本为准；缺全局环境变量或缺 `AI_KNOWLEDGE_ROOT` 不等于缺凭据，先检查当前项目显式配置、配置中的 `.env` 声明、同名 `.env`、项目 `.env` 和既有 JSON 兼容字段。
 - 遇到数据库连接失败、网络中断时，不把“当前会话缺少运行前提”表述成“没有元数据”或“没有这个能力”；先说明失败类型，再基于已有产物、源码或 JAR 证据继续能完成的部分。
@@ -146,4 +149,4 @@ python3 "$METADATA_SKILL_ROOT/scripts/bootstrap-python-env.py" -- "$METADATA_SKI
 - 不把执行过程、排查过程、命令流水或交付口径写入报告正文。
 
 ## Output
-使用简体中文：配置状态（只写凭据来源类型，不写值） → 采集结果 → 整体概述 → 插件分析 → 外部关系 → 复用途径 → 风险与待确认项
+使用简体中文：配置状态（只写凭据来源类型，不写值） → 采集结果 → 整体概述 → 插件分析 → 外部关系 → 复用途径 → 脱敏字段 → 风险与待确认项

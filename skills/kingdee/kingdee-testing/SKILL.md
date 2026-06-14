@@ -21,8 +21,10 @@ metadata:
 - Do not automatically commit, stage, push, or create pull requests.
 - Do not automatically modify production configuration, online metadata, form configuration, business rules, or database data.
 - If a test or probe requires production or metadata changes, output the proposed change, evidence, risk, and verification plan for user approval.
-- Prefer read-only probes and local test harnesses. Network probes must target explicit dev/test URLs or user-approved targets.
+- Prefer read-only probes and local test harnesses. Network probes must target explicit dev/test URLs; production runtime probes are prohibited, even when a target URL is known.
+- Production scope is limited to offline logs, configuration, metadata evidence, or user-provided artifacts; do not reuse live login state, Cookie, token, session, or account credentials for probes.
 - Keep changes minimal and limited to requested test files, harness files, or reports.
+- Runtime evidence, reports, command output, and failure summaries must redact token, Cookie, session, tenant, account, data center, internal URL, database connection strings, and business-sensitive sample values.
 
 ## Workflow
 1. Classify the request: unit test generation, Gradle verification, runtime probe, evidence collection, regression guard, or testability refactor check.
