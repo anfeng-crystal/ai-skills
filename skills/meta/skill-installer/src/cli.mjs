@@ -1,13 +1,11 @@
 import path from "node:path";
 import { loadConfig } from "./config.mjs";
 
-const DEFAULT_CONFIG = loadConfig();
-
-export function parseArgs(argv) {
+export function parseArgs(argv, defaultConfig = loadConfig()) {
   const parsed = {
-    sourceRoot: DEFAULT_CONFIG.sourceRoot,
-    home: DEFAULT_CONFIG.home,
-    config: DEFAULT_CONFIG,
+    sourceRoot: defaultConfig.sourceRoot,
+    home: defaultConfig.home,
+    config: defaultConfig,
     apply: false,
     json: false,
     skills: [],
@@ -40,10 +38,10 @@ export function parseArgs(argv) {
 
     switch (token) {
       case "--source-root":
-        parsed.sourceRoot = path.resolve(argv[++i]);
+        parsed.sourceRoot = path.resolve(requiredValue(argv, ++i, token));
         break;
       case "--home":
-        parsed.home = path.resolve(argv[++i]);
+        parsed.home = path.resolve(requiredValue(argv, ++i, token));
         break;
       case "--apply":
         parsed.apply = true;
@@ -52,20 +50,20 @@ export function parseArgs(argv) {
         parsed.json = true;
         break;
       case "--skill":
-        parsed.skills.push(...splitValues(argv[++i]));
+        parsed.skills.push(...splitValues(requiredValue(argv, ++i, token)));
         break;
       case "--category":
-        parsed.category = argv[++i];
+        parsed.category = requiredValue(argv, ++i, token);
         break;
       case "--name":
-        parsed.name = argv[++i];
+        parsed.name = requiredValue(argv, ++i, token);
         break;
       case "--path":
-        parsed.path = argv[++i];
+        parsed.path = requiredValue(argv, ++i, token);
         break;
       case "--tool":
       case "--target":
-        parsed.tools.push(...splitValues(argv[++i]));
+        parsed.tools.push(...splitValues(requiredValue(argv, ++i, token)));
         break;
       case "--check-updates":
         parsed.checkUpdates = true;
@@ -83,7 +81,7 @@ export function parseArgs(argv) {
         parsed.sync = true;
         break;
       case "--last":
-        parsed.last = parseInt(argv[++i], 10) || 10;
+        parsed.last = parseInt(requiredValue(argv, ++i, token), 10) || 10;
         break;
       case "--purge":
         parsed.purge = true;
@@ -105,7 +103,21 @@ export function parseArgs(argv) {
     i++;
   }
 
+  if (!parsed.help && !parsed.sourceRoot) {
+    throw new Error(
+      "错误：无法确定 skills source root，请使用 --source-root <path>、AI_SKILLS_HOME 或配置文件 sourceRoot。",
+    );
+  }
+
   return parsed;
+}
+
+function requiredValue(argv, index, token) {
+  const value = argv[index];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`错误：${token} 需要指定值`);
+  }
+  return value;
 }
 
 function splitValues(value) {

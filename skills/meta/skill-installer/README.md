@@ -96,6 +96,10 @@ Restore only one tool:
 npx @anfeng1314/skill-installer --skill neat-freak --tool codex --apply
 ```
 
+Full sync also reports dangling symlinks that point inside the current `sourceRoot`.
+With `--apply`, Skill Linker removes only those broken symlinks; real directories,
+files, and symlinks that point outside `sourceRoot` are left untouched.
+
 `remove --purge` deletes the source directory after unlinking. After a purge, restore the source from Git or its upstream repository first, then run sync again.
 
 ## Hermes
@@ -149,7 +153,7 @@ Example config:
 PowerShell example:
 
 ```powershell
-$env:AI_SKILLS_HOME = "$env:USERPROFILE\AI\skills"
+$env:AI_SKILLS_HOME = "<skills-root>"
 npx @anfeng1314/skill-installer install .\my-skill --category meta --json
 ```
 
@@ -182,7 +186,7 @@ Key options:
 
 | Option | Description |
 | --- | --- |
-| `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME`, config, current tree, or the host user's default skills root. |
+| `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME`, config, or the current source tree. |
 | `--home <path>` | Host home. Defaults to `AI_HOST_HOME` or `$HOME`. |
 | `--skill <name>` | Skill name or relative path. Repeat or use comma-separated values. |
 | `--tool <name>` | `codex`, `claude`, `claude-code`, `junie`, `agents`, `hermes`, `qoder`, `qoderwork`, `workbuddy`, `trae`, `openclaw`, `opencode`, `antigravity`, `antigravity-cli`, or `antigravity-desktop`. |

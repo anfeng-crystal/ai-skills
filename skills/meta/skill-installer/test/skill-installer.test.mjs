@@ -3,8 +3,34 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { parseArgs as parseCliArgs } from "../src/cli.mjs";
 import { buildInstallPlan, applyInstallPlan } from "../src/install.mjs";
-import { buildPlan, linkTypeForPlatform, resolveTools } from "../src/sync-links.mjs";
+import { applyPlan, buildPlan, linkTypeForPlatform, resolveTools } from "../src/sync-links.mjs";
+
+test("cli requires source root when config and inference have no answer", () => {
+  assert.throws(
+    () => parseCliArgs([], {
+      sourceRoot: null,
+      home: path.join(os.tmpdir(), "skill-installer-home"),
+      targetDirs: {},
+      hermesConfigPath: null,
+    }),
+    /无法确定 skills source root/,
+  );
+});
+
+test("cli source-root flag overrides configured source root", async () => {
+  const configured = await makeSourceRoot();
+  const explicit = await makeSourceRoot("skill installer explicit root ");
+  const parsed = parseCliArgs(["--source-root", explicit], {
+    sourceRoot: configured,
+    home: path.join(os.tmpdir(), "skill-installer-home"),
+    targetDirs: {},
+    hermesConfigPath: null,
+  });
+
+  assert.equal(parsed.sourceRoot, path.resolve(explicit));
+});
 
 test("install dry-run plans classified target without writing files", async () => {
   const fixture = await makeSkill("Demo Skill", "tags: [meta]");
@@ -159,6 +185,121 @@ test("real target directories remain blocking conflicts", async () => {
   assert.equal(plan.records[0].wouldChange, false);
 });
 
+test("source root with spaces plans host links", async () => {
+  const active = await makeSourceRoot("skill installer active root ");
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-home-"));
+  await makeSkillAt(path.join(active, "core", "demo-skill"), "demo-skill", "");
+  await fs.mkdir(path.join(home, ".codex", "skills"), { recursive: true });
+
+  const plan = await buildPlan({
+    sourceRoot: active,
+    home,
+    tools: ["codex"],
+    skills: ["demo-skill"],
+    config: {},
+  });
+
+  assert.equal(plan.records.length, 1);
+  assert.equal(plan.records[0].status, "planned");
+  assert.equal(plan.records[0].action, "create_link");
+  assert.match(plan.records[0].sourcePath, /skill installer active root /);
+});
+
+test("full sync reports and applies source-root orphan links only", async () => {
+  const active = await makeSourceRoot();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-home-"));
+  const targetRoot = path.join(home, ".codex", "skills");
+  const sourceSkill = path.join(active, "core", "demo-skill");
+  const goodLink = path.join(targetRoot, "demo-skill");
+  const orphanLink = path.join(targetRoot, "removed-skill");
+  const externalLink = path.join(targetRoot, "external-removed");
+  const realDirectory = path.join(targetRoot, "real-directory");
+  const externalRoot = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-external-"));
+
+  await makeSkillAt(sourceSkill, "demo-skill", "");
+  await fs.mkdir(targetRoot, { recursive: true });
+  await fs.symlink(sourceSkill, goodLink, "dir");
+  await fs.symlink(path.join(active, "core", "removed-skill"), orphanLink, "dir");
+  await fs.symlink(path.join(externalRoot, "removed-skill"), externalLink, "dir");
+  await fs.mkdir(realDirectory);
+
+  const plan = await buildPlan({
+    sourceRoot: active,
+    home,
+    tools: ["codex"],
+    skills: [],
+    config: {},
+  });
+  const orphanRecords = plan.records.filter((record) => record.status === "orphan_link");
+
+  assert.equal(orphanRecords.length, 1);
+  assert.equal(orphanRecords[0].targetPath, orphanLink);
+  assert.equal(plan.summary.byStatus.orphan_link, 1);
+  assert.equal(plan.summary.byAction.remove_orphan_link, 1);
+
+  await applyPlan(plan.records);
+
+  assert.equal(await linkExists(orphanLink), false);
+  assert.equal(await linkExists(externalLink), true);
+  assert.equal(await exists(realDirectory), true);
+});
+
+test("targeted sync does not prune unrelated orphan links", async () => {
+  const active = await makeSourceRoot();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-home-"));
+  const targetRoot = path.join(home, ".codex", "skills");
+  const sourceSkill = path.join(active, "core", "demo-skill");
+  const orphanLink = path.join(targetRoot, "removed-skill");
+
+  await makeSkillAt(sourceSkill, "demo-skill", "");
+  await fs.mkdir(targetRoot, { recursive: true });
+  await fs.symlink(sourceSkill, path.join(targetRoot, "demo-skill"), "dir");
+  await fs.symlink(path.join(active, "core", "removed-skill"), orphanLink, "dir");
+
+  const plan = await buildPlan({
+    sourceRoot: active,
+    home,
+    tools: ["codex"],
+    skills: ["demo-skill"],
+    config: {},
+  });
+
+  assert.equal(plan.records.some((record) => record.status === "orphan_link"), false);
+  assert.equal(await linkExists(orphanLink), true);
+});
+
+test("orphan apply skips links changed after dry-run", async () => {
+  const active = await makeSourceRoot();
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-home-"));
+  const targetRoot = path.join(home, ".codex", "skills");
+  const sourceSkill = path.join(active, "core", "demo-skill");
+  const orphanLink = path.join(targetRoot, "removed-skill");
+  const externalRoot = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-external-"));
+
+  await makeSkillAt(sourceSkill, "demo-skill", "");
+  await fs.mkdir(targetRoot, { recursive: true });
+  await fs.symlink(sourceSkill, path.join(targetRoot, "demo-skill"), "dir");
+  await fs.symlink(path.join(active, "core", "removed-skill"), orphanLink, "dir");
+
+  const plan = await buildPlan({
+    sourceRoot: active,
+    home,
+    tools: ["codex"],
+    skills: [],
+    config: {},
+  });
+  const orphanRecord = plan.records.find((record) => record.status === "orphan_link");
+  assert.ok(orphanRecord);
+
+  await fs.unlink(orphanLink);
+  await fs.symlink(path.join(externalRoot, "removed-skill"), orphanLink, "dir");
+  await applyPlan([orphanRecord]);
+
+  assert.equal(await linkExists(orphanLink), true);
+  assert.equal(orphanRecord.status, "skipped");
+  assert.equal(orphanRecord.reason, "orphan_link_changed");
+});
+
 test("windows uses junction while posix uses directory symlink", () => {
   assert.equal(linkTypeForPlatform("win32"), "junction");
   assert.equal(linkTypeForPlatform("linux"), "dir");
@@ -166,7 +307,7 @@ test("windows uses junction while posix uses directory symlink", () => {
 });
 
 test("optional host aliases resolve under host home", () => {
-  const home = path.resolve("/tmp/example-home");
+  const home = path.join(os.tmpdir(), "example-home");
   const tools = resolveTools(
     ["qoder", "qoderwork", "workbuddy", "trae", "openclaw", "opencode", "qoder-work", "trae-ide", "claude-code", "antigravity"],
     home,
@@ -186,8 +327,8 @@ test("optional host aliases resolve under host home", () => {
   assert.equal(tools[9].name, "antigravity-cli");
 });
 
-async function makeSourceRoot() {
-  const active = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-active-"));
+async function makeSourceRoot(prefix = "skill-installer-active-") {
+  const active = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
   for (const category of ["automation", "core", "kingdee", "meta"]) {
     await fs.mkdir(path.join(active, category), { recursive: true });
   }

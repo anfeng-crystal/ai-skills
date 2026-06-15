@@ -224,16 +224,7 @@ export async function buildPlan(options) {
     }
   }
 
-  return {
-    sourceRoot: options.sourceRoot,
-    home: options.home,
-    tools: tools.filter((item) => !item.invalid),
-    summary: summarize(records),
-    records,
-  };
-
-  // 孤儿链接检测：全量同步时扫描各宿主，找出指向 sourceRoot 内部的断裂 symlink。
-  if (selectedSkills.length === 0 || selectedSkills === availableSkills) {
+  if (options.skills.length === 0) {
     for (const tool of tools.filter((item) => !item.invalid && item.name !== "hermes")) {
       const orphans = await findOrphanLinks(tool, options.sourceRoot);
       for (const orphan of orphans) {
@@ -241,13 +232,22 @@ export async function buildPlan(options) {
           scannedAt: new Date().toISOString(),
           tool: tool.name,
           skill: orphan.skillName,
+          sourceRoot: path.resolve(options.sourceRoot),
           sourcePath: orphan.resolvedTarget,
-          sourceExists: false, sourceIsDir: false, sourceHasSkillMd: false,
-          targetRoot: tool.root, targetPath: orphan.targetPath,
-          targetExists: true, targetType: "symlink", targetIsSymlink: true,
-          targetLinkRaw: orphan.rawTarget, targetLinkResolved: orphan.resolvedTarget,
-          action: "remove_orphan_link", status: "orphan_link",
-          reason: "dangling_symlink_into_source_root", wouldChange: true,
+          sourceExists: false,
+          sourceIsDir: false,
+          sourceHasSkillMd: false,
+          targetRoot: tool.root,
+          targetPath: orphan.targetPath,
+          targetExists: true,
+          targetType: "symlink",
+          targetIsSymlink: true,
+          targetLinkRaw: orphan.rawTarget,
+          targetLinkResolved: orphan.resolvedTarget,
+          action: "remove_orphan_link",
+          status: "orphan_link",
+          reason: "dangling_symlink_into_source_root",
+          wouldChange: true,
         });
       }
     }
@@ -482,16 +482,27 @@ async function findOrphanLinks(tool, sourceRoot) {
   const resolvedSourceRoot = path.resolve(sourceRoot);
   const orphans = [];
   let entries;
-  try { entries = await fs.readdir(tool.root, { withFileTypes: true }); } catch { return orphans; }
+  try {
+    entries = await fs.readdir(tool.root, { withFileTypes: true });
+  } catch {
+    return orphans;
+  }
 
   for (const entry of entries) {
     if (entry.name.startsWith(".") || !entry.isSymbolicLink()) continue;
     const targetPath = path.join(tool.root, entry.name);
     let rawTarget;
-    try { rawTarget = await fs.readlink(targetPath); } catch { continue; }
-    const resolvedTarget = path.resolve(tool.root, rawTarget);
-    if (resolvedTarget !== resolvedSourceRoot && !resolvedTarget.startsWith(resolvedSourceRoot + path.sep)) continue;
-    try { await fs.stat(targetPath); continue; } catch {} // 目标仍存在则跳过
+    try {
+      rawTarget = await fs.readlink(targetPath);
+    } catch {
+      continue;
+    }
+    const resolvedTarget = path.resolve(path.dirname(targetPath), rawTarget);
+    if (!isPathInside(resolvedTarget, resolvedSourceRoot)) continue;
+    try {
+      await fs.stat(targetPath);
+      continue;
+    } catch {}
     orphans.push({ skillName: entry.name, targetPath, rawTarget, resolvedTarget });
   }
   return orphans;
@@ -763,10 +774,7 @@ export async function applyPlan(records) {
 
   for (const record of records) {
     if (record.status === "orphan_link" && record.action === "remove_orphan_link") {
-      await fs.unlink(record.targetPath);
-      record.status = "applied";
-      record.reason = "removed_dangling_symlink";
-      record.wouldChange = false;
+      await removeOrphanLink(record);
     }
   }
 }
@@ -781,6 +789,62 @@ async function replaceWithSymlink(sourcePath, targetPath, options = {}) {
     await fs.unlink(targetPath);
   }
   await fs.rename(tempPath, targetPath);
+}
+
+async function removeOrphanLink(record) {
+  let targetStat;
+  try {
+    targetStat = await fs.lstat(record.targetPath);
+  } catch {
+    markSkipped(record, "orphan_link_already_missing");
+    return;
+  }
+
+  if (!targetStat.isSymbolicLink()) {
+    markSkipped(record, "orphan_target_not_symlink");
+    return;
+  }
+
+  let rawTarget;
+  try {
+    rawTarget = await fs.readlink(record.targetPath);
+  } catch {
+    markSkipped(record, "orphan_link_unreadable");
+    return;
+  }
+
+  const resolvedTarget = path.resolve(path.dirname(record.targetPath), rawTarget);
+  if (
+    resolvedTarget !== record.targetLinkResolved ||
+    resolvedTarget !== record.sourcePath ||
+    !isPathInside(resolvedTarget, record.sourceRoot)
+  ) {
+    markSkipped(record, "orphan_link_changed");
+    return;
+  }
+
+  try {
+    await fs.stat(record.targetPath);
+    markSkipped(record, "orphan_target_now_exists");
+    return;
+  } catch {}
+
+  await fs.unlink(record.targetPath);
+  record.status = "applied";
+  record.reason = "removed_dangling_symlink";
+  record.wouldChange = false;
+  record.targetExists = false;
+}
+
+function markSkipped(record, reason) {
+  record.status = "skipped";
+  record.reason = reason;
+  record.wouldChange = false;
+}
+
+function isPathInside(candidatePath, rootPath) {
+  const relative = path.relative(path.resolve(rootPath), path.resolve(candidatePath));
+  return relative === "" || Boolean(relative && !relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 /**

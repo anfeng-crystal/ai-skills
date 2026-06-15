@@ -7,6 +7,8 @@ test("parseArgs captures host and install filters", () => {
   const options = parseArgs([
     "--home",
     "/tmp/host-home",
+    "--source-root",
+    "/tmp/skills root",
     "--tool",
     "codex",
     "--tool",
@@ -18,6 +20,7 @@ test("parseArgs captures host and install filters", () => {
   ]);
 
   assert.equal(options.home, "/tmp/host-home");
+  assert.equal(options.sourceRoot, "/tmp/skills root");
   assert.deepEqual(options.tools, ["codex", "claude"]);
   assert.deepEqual(options.skills, ["fix-bug"]);
   assert.equal(options.runDoctor, false);
@@ -29,6 +32,7 @@ test("buildPlan runs git pull, install, and doctor in order", () => {
     activeRoot: "/repo/skills/active",
     gitRoot: "/repo",
     home: "/home/anfeng",
+    sourceRoot: "/repo/skills",
     tools: ["codex"],
     skills: ["fix-bug"],
     runDoctor: true,
@@ -49,6 +53,8 @@ test("buildPlan runs git pull, install, and doctor in order", () => {
   assert.equal(plan.commands[1].command, process.execPath);
   assert.deepEqual(plan.commands[1].args, [
     "/repo/skills/active/install.mjs",
+    "--source-root",
+    "/repo/skills",
     "--home",
     "/home/anfeng",
     "--tool",
@@ -72,6 +78,7 @@ test("buildPlan supports non-mutating dry runs", () => {
     activeRoot: "/repo/skills/active",
     gitRoot: "/repo",
     home: "/home/anfeng",
+    sourceRoot: "/repo/skills",
     tools: [],
     skills: [],
     runDoctor: true,

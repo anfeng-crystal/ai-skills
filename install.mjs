@@ -4,12 +4,12 @@
  * One-line installer for anfeng/skills.
  *
  * Usage:
- *   git clone https://github.com/anfeng/skills.git ~/AI/skills
- *   node ~/AI/skills/install.mjs                    # install all skills
- *   node ~/AI/skills/install.mjs --dry-run          # preview only
- *   node ~/AI/skills/install.mjs --tool claude       # install for Claude Code only
- *   node ~/AI/skills/install.mjs --skill fix-bug     # install one skill
- *   node ~/AI/skills/install.mjs --list              # list available skills
+ *   git clone <skills-repo-url> <checkout-dir>
+ *   node <checkout-dir>/install.mjs                    # install all skills
+ *   node <checkout-dir>/install.mjs --dry-run          # preview only
+ *   node <checkout-dir>/install.mjs --tool claude       # install for Claude Code only
+ *   node <checkout-dir>/install.mjs --skill fix-bug     # install one skill
+ *   node <checkout-dir>/install.mjs --list              # list available skills
  */
 
 import { spawnSync } from "node:child_process";
@@ -29,7 +29,7 @@ if (args.includes("--help") || args.includes("-h")) {
 }
 
 if (args.includes("--list")) {
-  listSkills();
+  listSkills(resolveSourceRoot(args));
   process.exit(0);
 }
 
@@ -47,10 +47,18 @@ const result = spawnSync(process.execPath, [BOOTSTRAP, ...bootstrapArgs], {
 });
 process.exit(result.status ?? 1);
 
-function listSkills() {
+function resolveSourceRoot(argv) {
+  const index = argv.indexOf("--source-root");
+  if (index >= 0 && argv[index + 1] && !argv[index + 1].startsWith("--")) {
+    return path.resolve(argv[index + 1]);
+  }
+  return path.resolve(process.env.AI_SKILLS_HOME || SKILLS_DIR);
+}
+
+function listSkills(skillsRoot) {
   const skills = [];
-  for (const category of readdirSync(SKILLS_DIR)) {
-    const catDir = path.join(SKILLS_DIR, category);
+  for (const category of readdirSync(skillsRoot)) {
+    const catDir = path.join(skillsRoot, category);
     if (!statSync(catDir).isDirectory() || category.startsWith(".")) continue;
     for (const name of readdirSync(catDir)) {
       const skillDir = path.join(catDir, name);
@@ -86,6 +94,8 @@ function printHelp() {
 Options:
   --apply            Install skills (default behavior)
   --dry-run          Preview changes without applying
+  --source-root <path>
+                     Skills source root (default: checkout skills/ or AI_SKILLS_HOME)
   --tool <name>      Install for a specific host tool; repeatable
                      (claude, claude-code, codex, junie, agents, hermes,
                       qoder, qoderwork, workbuddy, trae, openclaw, opencode,

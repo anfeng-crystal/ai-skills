@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ACTIVE_ROOT = path.resolve(SCRIPT_DIR, "..");
+const DEFAULT_SOURCE_ROOT = path.join(ACTIVE_ROOT, "skills");
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
@@ -19,6 +20,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
 
 export function parseArgs(argv, env = process.env) {
   const parsed = {
+    sourceRoot: path.resolve(env.AI_SKILLS_HOME || DEFAULT_SOURCE_ROOT),
     home: path.resolve(env.AI_HOST_HOME || os.homedir()),
     tools: [],
     skills: [],
@@ -33,6 +35,9 @@ export function parseArgs(argv, env = process.env) {
     switch (token) {
       case "--home":
         parsed.home = path.resolve(requiredValue(argv, ++index, token));
+        break;
+      case "--source-root":
+        parsed.sourceRoot = path.resolve(requiredValue(argv, ++index, token));
         break;
       case "--tool":
         parsed.tools.push(requiredValue(argv, ++index, token));
@@ -78,6 +83,8 @@ export function buildPlan(options) {
     command: process.execPath,
     args: [
       path.join(options.activeRoot, "install.mjs"),
+      "--source-root",
+      options.sourceRoot,
       "--home",
       options.home,
       ...repeatArgs("--tool", options.tools),
@@ -103,6 +110,7 @@ export function buildPlan(options) {
 
   return {
     activeRoot: options.activeRoot,
+    sourceRoot: options.sourceRoot,
     gitRoot: options.gitRoot,
     dryRun: Boolean(options.dryRun),
     commands,
@@ -170,6 +178,7 @@ function findGitRoot(startDir) {
 
 function printPlan(plan) {
   console.log(`Active skills: ${plan.activeRoot}`);
+  console.log(`Source root: ${plan.sourceRoot}`);
   console.log(`Git root: ${plan.gitRoot}`);
   console.log(plan.dryRun ? "Mode: dry-run" : "Mode: apply");
   console.log("");
@@ -220,6 +229,8 @@ Pull the Git checkout, install active skills into the host home, and run doctor.
 
 Options:
   --home <path>      Target host home. Defaults to AI_HOST_HOME or OS home.
+  --source-root <path>
+                     Skills source root. Defaults to AI_SKILLS_HOME or checkout skills/.
   --tool <name>      Limit install to a host tool; repeatable.
   --skill <name>     Limit install to a skill; repeatable.
   --skip-doctor      Skip the post-install doctor check.

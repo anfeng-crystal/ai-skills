@@ -66,13 +66,14 @@ node bin/skill-installer.mjs --tool codex --skill web-access --apply
 - `planned`、`ready_to_migrate`：需要 apply 确认。
 - `missing_skill`、`invalid_source`、`missing_target_root`、`target_exists`：路径/源未修好前阻塞。
 - `real_path_conflict`、`external_symlink_conflict`、`hermes_local_shadow_conflict`：阻塞；报告精确目标，不覆盖。旧 `active/skills` 托管软链接会规划为 `replace_link`。
+- `orphan_link`：全量同步中发现指向当前 source root 内部但目标已不存在的托管 symlink；`--apply` 时只删除该 symlink。
 - `needs_external_dir_config`：Hermes 需要配置或跳过。
 - `needs_review`：install 被归到 `incoming`；审核/分类前不分发。
 - `migrated`：根级迁移完成。
 
 ## 门禁
 - 没有用户要求或已批准 handoff，不加 `--apply`。
-- 不删除、不覆盖、不强制 relink、不做清理。
+- 不删除真实目录、外部链接或未知文件；只清理可证明指向当前 source root 内部的断裂托管 symlink。
 - 不接受白名单外任意目标目录。
 - install 只写源目录；host 目录链接由 sync 管。
 - apply 后必须再次 dry-run 或检查链接。

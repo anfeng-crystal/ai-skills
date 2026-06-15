@@ -529,7 +529,7 @@ Usage:
   skill-installer history [options]
 
 Options:
-  --source-root <path>   Source skills root. Defaults to AI_SKILLS_HOME, config, current tree, or the host user's default skills root.
+  --source-root <path>   Source skills root. Defaults to AI_SKILLS_HOME, config, or the current source tree.
   --home <path>          Host home. Defaults to AI_HOST_HOME or $HOME.
   --skill <name>         Skill name or relative path. Can be repeated or comma-separated.
   --tool <name>          codex, claude, claude-code, junie, agents, hermes, qoder, qoderwork, workbuddy, trae, openclaw, opencode, or antigravity.
