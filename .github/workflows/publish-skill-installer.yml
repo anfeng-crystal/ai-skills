@@ -1,0 +1,84 @@
+name: Publish skill-installer
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "skill-installer-v*"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout package source
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: skills/active/skills/meta/skill-installer
+
+      - name: Upload package source
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-installer-source
+          path: skills/active/skills/meta/skill-installer
+
+  test:
+    needs: package-source
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: skill-installer
+
+    steps:
+      - name: Download package source
+        uses: actions/download-artifact@v4
+        with:
+          name: skill-installer-source
+          path: skill-installer
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Test
+        run: npm test
+
+      - name: Check package contents
+        run: npm pack --dry-run
+
+  publish:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/skill-installer-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: skill-installer
+
+    steps:
+      - name: Download package source
+        uses: actions/download-artifact@v4
+        with:
+          name: skill-installer-source
+          path: skill-installer
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish
+        run: npm publish

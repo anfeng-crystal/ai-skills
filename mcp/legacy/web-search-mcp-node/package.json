@@ -1,0 +1,21 @@
+{
+  "name": "@anfeng087/web-search-mcp",
+  "version": "1.1.0",
+  "description": "通用联网搜索 MCP 服务器，支持内容过滤和格式化",
+  "main": "index.js",
+  "bin": {
+    "web-search-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["mcp", "search", "web", "联网搜索"],
+  "author": "anfeng087",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

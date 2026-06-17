@@ -164,12 +164,12 @@ This package is published as `@anfeng1314/skill-installer`.
 Release flow:
 
 ```bash
-cd <repo>/skills/meta/skill-installer
+cd <repo>/skills/active/skills/meta/skill-installer
 npm version patch
 git push origin main --tags
 ```
 
-Tags matching `skill-installer-v*` are published by GitHub Actions from `skills/meta/skill-installer`. Configure npm Trusted Publishing once for repository `anfeng-crystal/ai-workspace` and workflow `publish-skill-installer.yml`.
+Tags matching `skill-installer-v*` are published by GitHub Actions from `skills/active/skills/meta/skill-installer`. Configure npm Trusted Publishing once for repository `anfeng-crystal/ai-workspace` and workflow `publish-skill-installer.yml`.
 
 ## Commands
 

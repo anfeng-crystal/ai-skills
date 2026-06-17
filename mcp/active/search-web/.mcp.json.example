@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "search-web": {
+      "command": "python",
+      "args": ["/ABSOLUTE/PATH/TO/search_mcp_server.py", "stdio"],
+      "env": {
+        "SEARCH_ENABLE_SEARXNG": "false",
+        "SEARCH_SEARXNG_URL": "",
+        "SEARCH_PREFER_DOMAINS": "kingdee.com,kdcloud.com",
+        "SEARCH_BLOCK_DOMAINS": "facebook.com,pinterest.com,quora.com"
+      }
+    }
+  }
+}
