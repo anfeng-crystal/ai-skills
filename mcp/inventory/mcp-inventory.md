@@ -4,7 +4,7 @@
 | 名称 | 路径 | 类型 | 状态 |
 |---|---|---|---|
 | `kingdee-knowledge` | `/Users/anfeng/AI/mcp/active/kingdee-knowledge` | stdio Node MCP | active |
-| `search-web` | `/Users/anfeng/AI/mcp/active/search-web` | stdio/http Python MCP | active |
+| `search-web` | `/Users/anfeng/AI/mcp/active/search-web` | stdio TypeScript/npm MCP | active |
 | `doc-reader` | `/Users/anfeng/AI/mcp/active/doc-reader` | FastAPI 文档读取服务 | active |
 
 ## Legacy
