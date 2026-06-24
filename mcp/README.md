@@ -10,7 +10,7 @@
 | 名称 | 入口 | 用途 | 运行方式 |
 |---|---|---|---|
 | `kingdee-knowledge` | `active/kingdee-knowledge/mcp-server.js` | 检索金蝶云苍穹知识库 | `node active/kingdee-knowledge/mcp-server.js` |
-| `search-web` | `active/search-web/search_mcp_server.py` | 联网搜索、页面抓取、证据包生成 | `python3 active/search-web/search_mcp_server.py stdio` |
+| `search-web` | `active/search-web/dist/cli.js` | 联网搜索、页面抓取、证据片段生成 | `npx -y @anfeng087/search-web-mcp --env-file /path/to/.env` |
 | `doc-reader` | `active/doc-reader/app/main.py` | 读取 docx、xlsx 文档内容 | `python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000` |
 
 ## 配置入口
