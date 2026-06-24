@@ -22,21 +22,24 @@ metadata:
 - Evidence: current repo constraints, AGENTS/CLAUDE/docs, similar implementations, config, official docs when relevant, and live facts for anything unstable.
 - Done: goal, non-goals, constraints, recommendation, rejected option, validation, risk, rollback, and handoff are clear.
 - No write: planning does not edit files, create directories, or claim implementation is complete.
+- Memory and prior plans are context, not authority; current user instructions, current source, and current environment evidence win on conflict.
 
 ## Workflow
 1. Choose mode: lightweight fix direction, evaluation, or full plan.
 2. Confirm cwd and read the nearest rules, docs, config, prior plan, and relevant existing implementation.
 3. Surface hard conflicts. Ask only if the conflict cannot be resolved from local evidence.
-4. Give one recommendation. Add at most one alternative when the tradeoff is genuinely close.
-5. Attack the recommendation for dependency failure, scale, rollback cost, permissions, data migration, and external state.
-6. Produce handoff: files/modules, behavior change, validation commands, acceptance criteria, rollback, and next skill.
-7. If the user later says to execute an approved plan, route by task type: implementation -> `implement-feature`, bug -> `fix-bug`, release/push -> `delivery-check`, visual build -> `frontend-design`. The executor should only do drift check before editing.
+4. If the user has already rejected an option, record it as excluded and keep it out of later recommendations unless new evidence changes the premise.
+5. Give one recommendation. Add at most one alternative when the tradeoff is genuinely close.
+6. Attack the recommendation for dependency failure, scale, rollback cost, permissions, data migration, and external state.
+7. Produce handoff: files/modules, behavior change, validation commands, acceptance criteria, rollback, and next skill.
+8. If the user later says to execute an approved plan, route by task type: implementation -> `implement-feature`, bug -> `fix-bug`, release/push -> `delivery-check`, visual build -> `frontend-design`. The executor should only do drift check before editing.
 
 ## Hard Rules
 - Evaluation questions start with `Keep`, `Kill`, or `Pivot`.
 - No `TBD`, `TODO`, `后续补齐`, or `类似上一步` in an approved plan.
 - Every phase must be independently verifiable; otherwise write a single-phase plan.
 - If an approved plan drifted from current facts, name the drift and narrow or stop.
+- Do not reintroduce a rejected approach as a fallback, edge-case guard, or "safer" variant without naming the new evidence that justifies reconsidering it.
 - Do not store project-private paths, release commands, or local context as generic skill rules.
 - Preserve user worktree changes and do not run destructive git commands.
 
