@@ -14,6 +14,7 @@ metadata:
 ## 核心规则
 - 默认“封装优先，原生兜底”：项目已有 `kd.cd.common.plugin` 扩展基类、`OpUtils`、`BotpUtils`、`QueryUtils`、`DynamicObjectUtils` 或同类 helper 能覆盖时，不再另写第二套平台封装。
 - 字段、`entityId`、枚举值、`refType`、SDK 方法签名和 `@Override` 事件签名不能凭记忆猜；用元数据、项目依赖、`kingdee-sdk-helper` 或本 skill 脚本确认。
+- 改插件注册、页面打开参数或挂载链路前，先确认实体、表单、布局、派生页面和操作的真实挂载/继承关系。
 
 ## 触发与路由
 1. 只处理金蝶云苍穹 Java 二开、插件、配置、诊断或改造任务。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
@@ -34,8 +35,9 @@ metadata:
 2. 依赖目标环境元数据的问题，把元数据取证交给 `kingdee-metadata-analyzer`；本 skill 并行查源码、同类实现、模板、snippet 和运行时堆栈。
 3. 按需读取最小资料集：插件/配置选型 `rules/decision-matrix.md`；API 速查 `rules/cheat-sheet.md`；插件类型 `references/plugin-types-cheatsheet.md`；BOTP `references/botp-convert.md`；DynamicObject `references/dynamic-object.md`；生命周期 `references/event-lifecycle.md`；DataSet 概览 `references/query-dataset.md`。
 4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。
-5. 编码后执行模块级 Gradle 编译/测试；无法定位模块时执行 `python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <file_or_dir> --fix-hint`。
-6. 收口按 `rules/post-check.md` 给出依据、改动、验证和风险。
+5. 页面事件已覆盖验收路径时，不默认追加保存、操作、接口或批量链路兜底；只有需求明确覆盖绕过页面事件的入口时才扩展链路。
+6. 编码后执行模块级 Gradle 编译/测试；无法定位模块时执行 `python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <file_or_dir> --fix-hint`。
+7. 收口按 `rules/post-check.md` 给出依据、改动、验证和风险。
 
 ## Scripts
 - 配置预检：`scripts/cosmic-config-check.py`
@@ -49,6 +51,7 @@ metadata:
 
 ## 门禁
 - 最小必要修改；不改公共接口、依赖或文件结构，除非用户明确要求或方案已确认。
+- 已有挂载或继承链路能覆盖当前页面/操作时，不重复注册插件或追加同类打开参数。
 - 不把实施过程、排查路径或交付口径写入代码注释、README、skills 或长期操作说明。
 - 新增类、公共方法、复杂私有方法、关键平台调用、事务/跨库/回写/DataSet/工作流边界只写长期有效的功能性注释。
 - 不直接 SQL，不拼接 SQL/KSQL 条件字符串；验证性数据核对可用独立只读脚本完成，不作为业务交付实现。
