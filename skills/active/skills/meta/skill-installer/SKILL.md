@@ -3,7 +3,7 @@ name: skill-installer
 description: "需要把本地 skill 安装到统一源目录，或同步 skills 到 Codex、Claude、Junie、Agents、Hermes 时使用。"
 metadata:
   author: anfeng
-  version: "0.3.0"
+  version: "0.3.1"
   license: MIT
   tags: [skills, symlink, sync, distribution]
 ---
@@ -30,25 +30,48 @@ metadata:
 - 配置路径：macOS/Linux 用 `$XDG_CONFIG_HOME/skill-installer/config.json` 或 `~/.config/skill-installer/config.json`；Windows 用 `%APPDATA%\\skill-installer\\config.json`。
 - 宿主目录固定在 `AI_HOST_HOME`（默认 home）下：`.codex/skills`、`.claude/skills`、`.junie/skills`、`.agents/skills`、`.hermes/skills`、`.qoder/skills`、`.qoderwork/skills`、`.workbuddy/skills`、`.trae/skills`、`.openclaw/workspace/skills`、`.opencode/skills`。
 
-## 工作流
-安装外部本地 skill 到统一源目录：
+## 入口脚本（三个入口）
+
+源目录根 (`active/`) 下有三个入口，**推荐使用 `sync-and-install.mjs` 一站式完成**：
+
+| 脚本 | 用途 | 执行顺序 |
+|------|------|----------|
+| `scripts/sync-and-install.mjs` | **主入口**：pull → install → doctor | 三合一 |
+| `install.mjs` | 链接审计 / 安装（`--home` + `--tool`） | 仅步骤 2 |
+| `scripts/doctor.mjs` | 健康诊断（`--source-root` + `--home`） | 仅步骤 3 |
+
+### 1. 一站式同步 + 安装 + 诊断（推荐）
+
 ```bash
-node bin/skill-installer.mjs install /absolute/path/to/skill --json
-node bin/skill-installer.mjs install /absolute/path/to/skill --apply
+# dry-run：预览所有操作，不执行
+node scripts/sync-and-install.mjs --tool hermes --dry-run
+
+# apply：执行 pull → install → doctor
+node scripts/sync-and-install.mjs --tool hermes
+
+# 选项
+#   --home <path>     目标宿主 HOME（默认 $AI_HOST_HOME 或 OS home）
+#   --tool <name>     限定目标工具（可重复）
+#   --skill <name>    限定目标 skill（可重复）
+#   --skip-doctor     跳过诊断
+#   --no-pull         跳过 git pull（远端已最新时用）
+#   --dry-run         仅打印计划，不执行
 ```
 
-迁移根级 skill 到 `{category}/`：
+### 2. 仅安装 / 审计链接
+
 ```bash
-node bin/skill-installer.mjs migrate --json
-node bin/skill-installer.mjs migrate --apply
+# 审计 Hermes 链接（不 apply）
+node install.mjs --home "$HOME" --tool hermes
+
+# 审计所有宿主 + apply
+node install.mjs --home "$HOME" --json --apply
 ```
 
-审计或同步宿主链接：
+### 3. 仅医生诊断
+
 ```bash
-node bin/skill-installer.mjs --json
-node bin/skill-installer.mjs --skill web-access --skill skill-installer --json
-node bin/skill-installer.mjs --tool codex --tool claude --skill web-access --json
-node bin/skill-installer.mjs --tool codex --skill web-access --apply
+node scripts/doctor.mjs --source-root /path/to/skills/active --home "$HOME"
 ```
 
 任何真实变更前先 dry-run。只有用户明确要求 apply，或已批准方案点名 apply，才执行。
@@ -78,6 +101,24 @@ node bin/skill-installer.mjs --tool codex --skill web-access --apply
 - install 只写源目录；host 目录链接由 sync 管。
 - apply 后必须再次 dry-run 或检查链接。
 - 全量同步、不指定 `--skill`、发现冲突、Hermes 显式缺 external_dirs、migrate 根级 skill 时，先报告范围再执行。
+
+## 陷阱
+
+### Hermes external_dirs 下同名 skill 分别在根目录和分类子目录会触发 ambiguous skill 错误
+源目录中如果存在 `neat-freak/SKILL.md` 和 `skills/meta/neat-freak/SKILL.md` 两个入口，Hermes 扫描时会报 `Ambiguous skill name 'neat-freak': 2 skills match across your local skills dir and external_dirs.`，直接阻塞 `skill_view` 和技能加载。
+- **修复**：从源目录删除/合并重复入口，只保留一个 SKILL.md。分类目录优先，避免裸根 duplication。
+- **注意**：这不是 install/sync 脚本能自动处理的，需要在源技能仓库归一化 skill 的位置。
+
+### `git stash push -u` 会吞噬未提交的新脚本
+`sync-and-install.mjs`、`install.mjs` 等新增脚本如果在工作区但尚未 `git add`，`git stash push -u`（含 untracked）会把它们藏进 stash 并从工作区删除，导致后续 `node scripts/sync-and-install.mjs` 报 `MODULE_NOT_FOUND`。
+- **修复**：`git stash pop` 恢复。
+- **预防**：清理前先用 `git status` 确认未跟踪文件列表；或用 `git stash`（不含 `-u`）。
+
+### Hermes `external_dirs` 模式下无需"重新安装"
+如果 `~/.hermes/config.yaml` 的 `skills.external_dirs` 已指向源目录，Hermes 直接从源目录实时读取技能——远端更新拉取后自动生效。此时 `install.mjs` 会报告所有技能为 `managed_via_external_dir` / `wouldChange: 0`，不需要也不应该做额外安装或 symlink 操作。
+
+### 废弃旧技能：源目录删掉即可
+当旧技能被新技能取代（如 `skill-linker` → `skill-installer`）且 Hermes 使用 `external_dirs` 时，直接从源目录删除旧技能目录（`rm -rf <source>/skills/<category>/<old-skill>`）即可移除。不需要运行 install/sync 脚本——下一次 Hermes 扫描就会自动消失。确认已无 cron 引用后提交源仓库。
 
 ## 输出
 简体中文：
