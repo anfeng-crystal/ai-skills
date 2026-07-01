@@ -71,7 +71,7 @@ node install.mjs --home "$HOME" --json --apply
 ### 3. 仅医生诊断
 
 ```bash
-node scripts/doctor.mjs --source-root /path/to/skills/active --home "$HOME"
+node scripts/doctor.mjs --source-root /path/to/skill-source-root --home "$HOME"
 ```
 
 任何真实变更前先 dry-run。只有用户明确要求 apply，或已批准方案点名 apply，才执行。

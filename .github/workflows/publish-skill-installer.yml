@@ -21,13 +21,13 @@ jobs:
       - name: Checkout package source
         uses: actions/checkout@v6
         with:
-          sparse-checkout: skills/active/skills/meta/skill-installer
+          sparse-checkout: skills/meta/skill-installer
 
       - name: Upload package source
         uses: actions/upload-artifact@v4
         with:
           name: skill-installer-source
-          path: skills/active/skills/meta/skill-installer
+          path: skills/meta/skill-installer
 
   test:
     needs: package-source

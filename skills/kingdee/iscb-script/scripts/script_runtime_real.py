@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -67,7 +68,7 @@ def run_java(command: str, script_text: str, bindings: dict[str, Any] | None = N
 		args = [
 			"java",
 			"-cp",
-			f"{RUNNER_CLASSES}:{JAR_PATH}",
+			os.pathsep.join([str(RUNNER_CLASSES), str(JAR_PATH)]),
 			MAIN_CLASS,
 			command,
 			str(script_path),

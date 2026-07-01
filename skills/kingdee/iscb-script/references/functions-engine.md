@@ -160,14 +160,16 @@ String.split("a|b|c", "|")     // ["a", "b", "c"]
 String.split("a,b,c,d", ",", 2)// ["a", "b,c,d"]
 ```
 
-### String.join(separator, strings...) -> String
-拼接字符串。
-- 第一个参数为分隔符，后续为待拼接元素
-- 支持传入集合或多个参数
-- 可传入第三个参数为 getter 函数，从每个元素提取值
+### String.join(collection, separator?, getter?) -> String
+将集合/数组用分隔符拼成一个字符串。
+- 第一个参数为集合或数组（必填）
+- 第二个参数为分隔符（可选，默认为 `", "`）
+- 第三个参数为 getter 函数（可选），从每个元素提取值
 ```javascript
-String.join(",", "a", "b", "c")  // "a,b,c"
-String.join("-", list)           // 列表元素用 - 连接
+var list = ["a", "b", "c"];
+String.join(list)                // "a, b, c"（默认分隔符）
+String.join(list, "-")           // "a-b-c"
+String.join(users, ", ", function(u) { return u.name })  // getter 模式
 ```
 
 ### String.space(count) -> String

@@ -23,15 +23,14 @@ skills/**/test-prompts.json
 skills/**/results.tsv
 skills/**/results.tsv.backup
 
-# Binary assets and sensitive config
-*.jar
+# Sensitive config and local data
 *.db
 config.ini
 !templates/config.example.ini
 
 # darwin-skill eval/test artifacts
-skills/active/skills/meta/darwin-skill/*-evaluation.md
-skills/active/skills/meta/darwin-skill/optimization-report-*.md
-skills/active/skills/meta/darwin-skill/result-cards-*.md
-skills/active/skills/meta/darwin-skill/showcase.html
-skills/active/skills/meta/darwin-skill/SKILL-optimized.md
+skills/meta/darwin-skill/*-evaluation.md
+skills/meta/darwin-skill/optimization-report-*.md
+skills/meta/darwin-skill/result-cards-*.md
+skills/meta/darwin-skill/showcase.html
+skills/meta/darwin-skill/SKILL-optimized.md
