@@ -61,6 +61,10 @@ def parse_modules(gradle_root: Path) -> Dict[str, Path]:
 
     支持标准格式：
         include 'moduleName'
+        include ':moduleName'
+        include(
+            ':moduleName',
+        )
         project(':moduleName').projectDir = new File('relative/path')
     """
     modules: Dict[str, Path] = {}
@@ -73,14 +77,26 @@ def parse_modules(gradle_root: Path) -> Dict[str, Path]:
 
     text = settings.read_text(encoding="utf-8")
 
-    # 收集所有 include 声明
-    includes = re.findall(r"include\s+'([^']+)'", text)
+    def normalize_module_name(name: str) -> str:
+        return name.strip().lstrip(":")
+
+    # 收集所有 include 声明，兼容单行和 include(...) 多行格式
+    include_chunks = [m.group(1) for m in re.finditer(r"include\s*\((.*?)\)", text, re.DOTALL)]
+    include_chunks.extend(m.group(1) for m in re.finditer(r"include\s+([^\n]+)", text))
+    includes = [
+        normalize_module_name(name)
+        for chunk in include_chunks
+        for name in re.findall(r"['\"]([^'\"]+)['\"]", chunk)
+    ]
 
     # 收集 projectDir 映射
-    project_dirs: Dict[str, str] = dict(re.findall(
-        r"project\(':([^']+)'\)\.projectDir\s*=\s*new\s+File\('([^']+)'\)",
-        text,
-    ))
+    project_dirs: Dict[str, str] = {
+        normalize_module_name(name): path
+        for name, path in re.findall(
+            r"project\('(:?[^']+)'\)\.projectDir\s*=\s*new\s+File\('([^']+)'\)",
+            text,
+        )
+    }
 
     for mod_name in includes:
         if mod_name in project_dirs:
@@ -195,7 +211,7 @@ def _get_java_home_version(java_home: str) -> Optional[int]:
 def _get_required_jdk(gradle_root: Path) -> tuple:
     """计算 Gradle 项目所需的 JDK 版本范围。
 
-    取 max(项目声明版本, Gradle 运行时最低要求) 作为下限。
+    项目声明版本优先作为下限；未声明时才按 Gradle 运行时范围兜底。
     Returns: (min_jdk, max_jdk)
     """
     props = _read_properties(gradle_root / "gradle.properties")
@@ -218,7 +234,7 @@ def _get_required_jdk(gradle_root: Path) -> tuple:
     ).strip()
     project_jdk = _parse_jdk_major(project_jdk_str)
 
-    min_jdk = max(project_jdk, gradle_min) if project_jdk else gradle_min
+    min_jdk = project_jdk if project_jdk else gradle_min
     return min_jdk, gradle_max
 
 

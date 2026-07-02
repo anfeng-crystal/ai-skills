@@ -20,6 +20,8 @@ python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <生成的文件或目录> --f
 2. 找到 → Gradle 编译（解析 `settings.gradle` 确定模块，执行 `./gradlew :module:compileJava`）
 3. 未找到 → 回退到 `cosmic-post-lint.py --fix-hint` 静态校验
 
+JDK 兼容判断优先使用项目声明的 `systemProp.jdk.version`、`systemProp.jdk_version` 或 `sourceCompatibility`；金蝶苍穹 JDK8 项目应允许在 JDK8 下执行编译检查，不因 Gradle wrapper 版本被抬高到 JDK17。
+
 ## 严格模式（仅 post-lint 回退时生效）
 
 当用户明确要求"严格校验""模板升级治理""补事实来源留痕"时，再追加严格模式：
