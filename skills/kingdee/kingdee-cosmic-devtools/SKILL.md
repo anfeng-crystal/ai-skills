@@ -1,17 +1,18 @@
 ---
 name: kingdee-cosmic-devtools
-description: "Kingdee devtools: KDDT project creation, plugin class gen, resource pack staging/apply/rollback."
+description: "用于 KDDT 苍穹工程/模块骨架、插件或服务类骨架，以及本机 COSMIC_HOME 资源包的 inspect、staging、apply 和 rollback。不用于业务模块的 Gradle 编译测试、jarZip、uploadZipRestartAndWait、DEV/TEST/PROD 部署、服务重启或部署验收。"
 metadata:
   author: anfeng
   version: "1.0.0"
   license: MIT
-  tags: [kingdee, cosmic, devtools, gradle, plugin]
+  tags: [kingdee, cosmic, kddt, scaffold, cosmic-home, resource-pack]
 ---
 
 # Kingdee Cosmic DevTools
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 ## 路由边界
+- **default**：仅因任务出现“Gradle”“插件”“部署”“DEV”“页面测试”不得加载本 skill。业务模块的 `compileJava`、`test`、`jarZip`、`uploadZipRestartAndWait`、服务重启和部署验收交给当前仓库任务，并由 `kingdee-cosmic`、`kingdee-testing` 或 `kingdee-kcs-ops` 按职责处理；同一任务明确包含工程骨架或 `COSMIC_HOME` 资源处理时，只为该子任务加载。
 - 本 skill 只负责工程骨架、模块模板、插件/服务类模板和 `COSMIC_HOME` 资源环境处理。
 - 业务插件逻辑、运行时诊断和最终改造收口交给 `kingdee-cosmic`；实体、字段、表单或插件挂载证据交给 `kingdee-metadata-analyzer`；SDK/API 签名查询交给 `kingdee-sdk-helper`。
 - 工具任务完成后，将工程、模块、文件路径、资源包 manifest、校验结果或 rollback 信息交回当前主控任务。

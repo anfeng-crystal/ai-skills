@@ -5,10 +5,16 @@
   {"query": "资源包 staging 和 apply 操作", "should_trigger": true},
   {"query": "苍穹资源包 rollback", "should_trigger": true},
   {"query": "COSMIC_HOME 环境配置", "should_trigger": true},
+  {"query": "先更新本机 COSMIC_HOME 资源，再构建业务模块", "should_trigger": true},
   {"query": "写一个苍穹表单插件", "should_trigger": false},
   {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
   {"query": "苍穹插件报错了", "should_trigger": false},
-  {"query": "帮我写一个 ISCB 脚本", "should_trigger": false}
+  {"query": "帮我写一个 ISCB 脚本", "should_trigger": false},
+  {"query": "修改业务插件后用 Gradle 部署到 DEV", "should_trigger": false},
+  {"query": "执行 compileJava、test、jarZip 和 uploadZipRestartAndWait", "should_trigger": false},
+  {"query": "重启 mservice 并检查 DEV 部署状态", "should_trigger": false},
+  {"query": "部署完成后我来做页面测试", "should_trigger": false},
+  {"query": "用 Gradle 构建并发布苍穹业务插件", "should_trigger": false}
 ]
