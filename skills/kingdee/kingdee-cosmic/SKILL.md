@@ -25,7 +25,10 @@ metadata:
 6. 报表插件取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析和 Algo API 精确签名，转 `kingdee-report`；本 skill 只保留轻量路由和概览。
 
 ## 取证
-- 目标项目可用时，在项目根执行 `python3 <SKILL_ROOT>/scripts/cosmic-config-check.py`。`ERROR` 阻断生成代码；`WARNING` 只说明在线能力降级，并限制后续在线脚本调用。
+- 只有任务实际需要本 skill 的在线 API、知识库或扩展点查询时才做配置预检；纯源码分析、Java 修改、模块级 Gradle 编译/测试、`jarZip`、`uploadZipRestartAndWait`、服务重启或部署验收不得仅为例行检查运行它。
+- 配置预检先从当前目录向上定位聚合项目根，再按“用户明确目标环境 → 当前任务已确定环境 → 同项目通用配置仅作明确后备”选择配置。环境已确定时优先使用 `ok-cosmic.<env>.json`，不得用其它环境或泛化 `ok-cosmic.json` 静默替代。
+- 环境配置文件按目标环境选择，但 `graph.dbPath` 表示本地离线知识库，同一项目的 DEV/PROD 可以按项目约定共享同一路径；路径相同不是跨环境混用。共享文件不存在时应报告知识库缺失，不能误判为环境配置选择错误。
+- 执行时必须显式传绝对配置路径：`python3 <SKILL_ROOT>/scripts/cosmic-config-check.py --config <PROJECT_ROOT>/ok-cosmic.<env>.json`。未确定环境或未找到对应配置时只停用相关在线能力，不得声称“仓库未提供配置”，也不得阻断不依赖在线能力的本地编译、测试或部署。
 - 业务话术先读 `rules/intent-routing.md`，再按 `rules/decision-matrix.md` 选插件、配置、脚本或诊断路径。
 - 生成或修改 Java 前，读 `rules/platform-baseline.md`、`rules/cheat-sheet.md` 和最接近的 `assets/*.java` 模板；事件顺序不确定时读 `references/event-lifecycle.md`。
 - 在线元数据不可用时，可复用 analyzer 产物、quick-query 缓存、项目源码、JAR 和本 skill references，但输出必须区分“源码推断”和“目标环境元数据已确认/未确认”。

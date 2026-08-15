@@ -1,0 +1,30 @@
+[
+  {
+    "id": "local-gradle-no-online-preflight",
+    "prompt": "修改苍穹 Java 插件后执行编译、测试并用 Gradle 部署到 DEV。",
+    "expected": "加载 kingdee-cosmic 处理业务实现，但不运行 cosmic-config-check.py；直接使用仓库 Gradle 任务完成本地验证和已授权部署。",
+    "eval_focus": "纯本地或部署链不得无意义检查在线配置",
+    "baseline_risk": "在子模块目录无参运行配置预检并误报缺少 ok-cosmic.json"
+  },
+  {
+    "id": "dev-online-explicit-config",
+    "prompt": "从 DEV 环境只读核对这个苍穹插件的在线元数据。",
+    "expected": "向上定位聚合项目根，选择 ok-cosmic.dev.json，并以 --config 绝对路径运行配置预检。",
+    "eval_focus": "目标环境配置优先且路径显式",
+    "baseline_risk": "回退当前子模块的通用 ok-cosmic.json"
+  },
+  {
+    "id": "prod-online-explicit-config",
+    "prompt": "已授权只读查询生产环境的苍穹表单挂载信息。",
+    "expected": "选择 ok-cosmic.prod.json；不得使用 dev 或通用配置替代生产环境，但允许 graph.dbPath 按项目约定与 DEV 共享同一份离线知识库。",
+    "eval_focus": "跨环境配置不得混用",
+    "baseline_risk": "环境未绑定配置导致查询错误环境，或把共享知识库路径误判为跨环境混用"
+  },
+  {
+    "id": "shared-project-knowledge-db",
+    "prompt": "DEV 和 PROD 的配置文件不同，但 graph.dbPath 指向同一份项目知识库，这是否需要拆开？",
+    "expected": "按项目约定保留共享 graph.dbPath；分别选择目标环境配置，只检查共享知识库文件是否真实存在。",
+    "eval_focus": "区分环境在线配置与项目级离线知识库",
+    "baseline_risk": "为了环境隔离错误复制知识库或擅自改写路径"
+  }
+]

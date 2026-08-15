@@ -28,8 +28,21 @@ Issue = Dict[str, str]
 
 
 def resolve_project_config_path(config_path: Optional[str] = None) -> Path:
-    """Resolve ``ok-cosmic.json`` path from CLI input or current working directory."""
-    return Path(config_path).expanduser() if config_path else Path.cwd() / "ok-cosmic.json"
+    """Resolve an explicit relative config upward; keep legacy no-arg fallback."""
+    if not config_path:
+        return Path.cwd() / "ok-cosmic.json"
+
+    requested = Path(config_path).expanduser()
+    if requested.is_absolute():
+        return requested
+
+    current_dir = Path.cwd()
+    for base_dir in (current_dir, *current_dir.parents):
+        candidate = base_dir / requested
+        if candidate.is_file():
+            return candidate
+
+    return current_dir / requested
 
 
 def read_project_config(config_path: Optional[str] = None) -> Tuple[Path, Dict[str, Any]]:

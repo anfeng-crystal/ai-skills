@@ -4,10 +4,9 @@
 cosmic-config-check.py — Step 0 config preflight for ok-cosmic.
 
 Usage:
-    python3 cosmic-config-check.py
     python3 cosmic-config-check.py --config /path/to/ok-cosmic.json
-    python3 cosmic-config-check.py --config ok-cosmic.json --strict
-    python3 cosmic-config-check.py --config ok-cosmic.json --json
+    python3 cosmic-config-check.py --config ok-cosmic.dev.json --strict
+    python3 cosmic-config-check.py --config ok-cosmic.prod.json --json
 """
 
 import argparse
@@ -44,7 +43,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Step 0 配置预检：检查 ok-cosmic.json 是否存在以及关键内容是否缺失。"
     )
-    parser.add_argument("--config", help="Path to ok-cosmic.json")
+    parser.add_argument(
+        "--config",
+        required=True,
+        help="目标环境配置文件路径；相对路径会从当前目录向上查找",
+    )
     parser.add_argument("--strict", action="store_true", help="Treat warnings as failures.")
     parser.add_argument("--json", action="store_true", help="Output machine-readable JSON report.")
     args = parser.parse_args()
@@ -62,7 +65,7 @@ def main() -> int:
                 json.dumps(
                     {
                         "ok": False,
-                        "configPath": args.config or "ok-cosmic.json",
+                        "configPath": args.config,
                         "errors": [{"level": "ERROR", "key": "__file__", "message": message}],
                         "warnings": [],
                     },
