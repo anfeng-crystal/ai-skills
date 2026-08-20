@@ -24,35 +24,32 @@ const MANIFEST_PATH = path.join(REPO_ROOT, "config/skills-manifest.json");
 
 const SKILL_TEMPLATE = `---
 name: {{SKILL_NAME}}
-description: {{DESCRIPTION}}
-metadata:
-  author: anfeng
-  version: "1.0.0"
-  license: MIT
-  tags: []
+description: {{DESCRIPTION_YAML}}
 ---
 
 # {{SKILL_TITLE}}
 
-> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。
-> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 ## 触发边界
-- 描述何时使用此 skill
-- 描述何时不使用此 skill
+- [填写可观察的触发条件和精确路由]
+- [填写不触发条件及目标 skill/tool]
 
-## 快速工作流
-1. 步骤一
-2. 步骤二
-3. 步骤三
+## 契约
+- [填写输入、模式、允许副作用和完成证据]
 
-## 门禁与降级
-- 关键约束条件
-- 降级策略
+## 工作流
+1. [填写动作、输入和可观察输出]
+2. [填写失败分类和下一动作]
 
-## Guardrails
-- 不做什么
-- 必须遵守的规则
+## 门禁与失败
+- [填写停止、确认、降级和恢复的明确条件]
+
+## 验证
+- [填写可执行命令或行为断言]
+
+## 输出
+- [填写固定输出字段]
 `;
 
 main();
@@ -289,6 +286,12 @@ async function createSkill(config) {
 
   // 创建 skill 目录和文件
   const skillPath = path.join(SKILLS_ROOT, category, skillName);
+  try {
+    await fs.access(skillPath);
+    throw new Error(`skill 已存在，拒绝覆盖: ${category}/${skillName}`);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
   await fs.mkdir(skillPath, { recursive: true });
 
   const skillTitle = skillName
@@ -298,7 +301,7 @@ async function createSkill(config) {
 
   const skillContent = SKILL_TEMPLATE
     .replace(/{{SKILL_NAME}}/g, skillName)
-    .replace(/{{DESCRIPTION}}/g, description)
+    .replace(/{{DESCRIPTION_YAML}}/g, JSON.stringify(description))
     .replace(/{{SKILL_TITLE}}/g, skillTitle);
 
   await fs.writeFile(path.join(skillPath, "SKILL.md"), skillContent, "utf8");
@@ -329,8 +332,9 @@ async function createSkill(config) {
   console.log(`\n下一步:`);
   console.log(`  1. 编辑 ${category}/${skillName}/SKILL.md 完善内容`);
   console.log(`  2. 如需脚本或资源，在 ${category}/${skillName}/ 下创建 scripts/ 或其他目录`);
-  console.log(`  3. 运行 ./scripts/bootstrap.sh --apply 创建软链接`);
-  console.log(`  4. 运行 node ./scripts/doctor.mjs 验证配置`);
+  console.log(`  3. 运行 node scripts/validate-skill-runtime-card.mjs --new-skill --path ${category}/${skillName} --strict`);
+  console.log(`  4. 运行 node scripts/validate-cross-platform.mjs`);
+  console.log(`  5. 运行 node install.mjs --dry-run --skill ${skillName} 做跨宿主安装预检`);
 }
 
 async function scanCategories() {

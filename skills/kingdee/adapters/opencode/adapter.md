@@ -4,7 +4,7 @@
 - Host id: `opencode`
 - Default: optional
 - Install mode: symlink
-- Target directory: `~/.opencode/skills`
+- Target directory: `~/.config/opencode/skills`
 
 ## Behavior
 - opencode is skipped in default all-host runs when the target directory is not present.

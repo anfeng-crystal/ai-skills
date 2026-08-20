@@ -41,7 +41,7 @@
       "label": "opencode",
       "default": "optional",
       "installMode": "symlink",
-      "targetDir": "~/.opencode/skills",
+      "targetDir": "~/.config/opencode/skills",
       "adapter": "../../adapters/opencode/adapter.md"
     },
     {

@@ -15,7 +15,7 @@
 import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 
-const HEADER_BLOCK = '> **Cross-platform Agent Skill** — Claude Code · OpenAI Codex · OpenCode · OpenClaw 通用。\n> 跨平台 SKILL.md，遵循开放 Agent Skill 规范。';
+const HEADER_BLOCK = '> Cross-platform Agent Skill: use host-neutral paths and current project commands.';
 
 function parseArgs(argv) {
   const args = argv.slice(2);
@@ -101,22 +101,18 @@ function buildFrontmatter(data) {
     lines.push(`description: ${data.description}`);
   }
 
-  const meta = data.metadata || {};
-  lines.push('metadata:');
-  lines.push(`  author: ${meta.author || 'anfeng'}`);
-  lines.push(`  version: "${meta.version || '1.0.0'}"`);
-  lines.push(`  license: ${meta.license || 'MIT'}`);
-  lines.push(`  tags: [${(meta.tags || []).join(', ')}]`);
+  lines.push(`license: ${data.license || 'MIT'}`);
 
-  // platforms (kingdee-cosmic-login specific)
-  if (meta.platforms) {
-    lines.push('  platforms:');
-    for (const [platform, config] of Object.entries(meta.platforms)) {
-      lines.push(`    ${platform}:`);
-      for (const [k, v] of Object.entries(config)) {
-        lines.push(`      ${k}: "${v}"`);
-      }
-    }
+  const meta = data.metadata || {};
+  const tags = Array.isArray(meta.tags)
+    ? meta.tags.join(', ')
+    : String(meta.tags || '');
+  lines.push('metadata:');
+  lines.push(`  author: "${meta.author || 'anfeng'}"`);
+  lines.push(`  version: "${meta.version || '1.0.0'}"`);
+  lines.push(`  tags: "${tags}"`);
+  if (data.allowedTools) {
+    lines.push(`allowed-tools: "${data.allowedTools}"`);
   }
 
   lines.push('---');
@@ -182,35 +178,29 @@ function processSkill(skillDir, opts) {
   // Build new frontmatter
   // Auto-generate tags from skill name if none provided and none in existing metadata
   const existingTags = opts.tags || data.metadata?.tags || data.tags;
-  const autoTags = existingTags?.length ? existingTags : skillName.split('-').filter(Boolean);
+  const normalizedTags = Array.isArray(existingTags)
+    ? existingTags
+    : String(existingTags || '').split(',').map((tag) => tag.trim()).filter(Boolean);
+  const autoTags = normalizedTags.length ? normalizedTags : skillName.split('-').filter(Boolean);
 
   const fmData = {
     name: skillName,
     description: data.description,
     descriptionQuoted: isQuoted ? data.description : null,
+    license: data.license || data.metadata?.license || 'MIT',
+    allowedTools: data['allowed-tools'] || null,
     metadata: {
-      author: 'anfeng',
-      version: '1.0.0',
-      license: 'MIT',
+      author: data.metadata?.author || 'anfeng',
+      version: data.metadata?.version || '1.0.0',
       tags: autoTags,
     },
   };
 
-  // Handle kingdee-cosmic-login: move argument-hint/allowed-tools into platforms
-  if (data['argument-hint'] || data['allowed-tools']) {
-    fmData.metadata.platforms = {
-      'claude-code': {
-        'argument-hint': data['argument-hint'] || '',
-        'allowed-tools': data['allowed-tools'] || '',
-      },
-    };
+  if (data['argument-hint'] || data.metadata?.platforms) {
+    console.warn(`  ${skillName}: omitted host-specific argument/platform metadata; keep it in a host adapter`);
   }
 
-  // Handle H1 fix for review-code
   let bodyContent = body;
-  if (skillName === 'review-code') {
-    bodyContent = bodyContent.replace(/^# Code Review/m, '# Review Code');
-  }
 
   // Insert cross-platform header (skip if already present)
   if (!bodyContent.includes('Cross-platform Agent Skill')) {
@@ -223,7 +213,6 @@ function processSkill(skillDir, opts) {
   if (opts.dryRun) {
     console.log(`  ${skillName}: would convert`);
     console.log(`    frontmatter keys: ${Object.keys(fmData).join(', ')}`);
-    if (fmData.metadata.platforms) console.log(`    platforms: ${JSON.stringify(fmData.metadata.platforms)}`);
   } else {
     writeFileSync(skillMd, newContent);
     console.log(`  ${skillName}: converted`);

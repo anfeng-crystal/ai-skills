@@ -14,7 +14,7 @@ test("parseArgs captures host and install filters", () => {
     "--tool",
     "claude",
     "--skill",
-    "fix-bug",
+    "web-access",
     "--skip-doctor",
     "--no-pull",
   ]);
@@ -22,7 +22,7 @@ test("parseArgs captures host and install filters", () => {
   assert.equal(options.home, "/tmp/host-home");
   assert.equal(options.sourceRoot, "/tmp/skills root");
   assert.deepEqual(options.tools, ["codex", "claude"]);
-  assert.deepEqual(options.skills, ["fix-bug"]);
+  assert.deepEqual(options.skills, ["web-access"]);
   assert.equal(options.runDoctor, false);
   assert.equal(options.pull, false);
 });
@@ -34,7 +34,7 @@ test("buildPlan runs git pull, install, and doctor in order", () => {
     home: "/home/anfeng",
     sourceRoot: "/repo/skills",
     tools: ["codex"],
-    skills: ["fix-bug"],
+    skills: ["web-access"],
     runDoctor: true,
     pull: true,
   });
@@ -60,7 +60,7 @@ test("buildPlan runs git pull, install, and doctor in order", () => {
     "--tool",
     "codex",
     "--skill",
-    "fix-bug",
+    "web-access",
   ]);
   assert.equal(plan.commands[1].cwd, "/repo/skills/active");
   assert.equal(plan.commands[2].command, process.execPath);
