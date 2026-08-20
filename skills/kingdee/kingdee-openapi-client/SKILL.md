@@ -1,11 +1,11 @@
 ---
 name: kingdee-openapi-client
 description: "Kingdee Cosmic OpenAPI client: OAuth2 getToken, queryOpenApi discovery, request param probing, Java/Python call code. Use for 调用金蝶云苍穹/星瀚 OpenAPI、getToken 鉴权与刷新、queryOpenApi 查接口清单、参数探测、生成 Java/Python 调用代码;服务端 OpenAPI 开发用 kingdee-cosmic,接口安全审计用 kingdee-security-review,Web 登录态用 kingdee-cosmic-login。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [kingdee, cosmic, openapi, oauth2, client, integration]
+  tags: "kingdee, cosmic, openapi, oauth2, client, integration"
 ---
 
 # Kingdee OpenAPI Client
@@ -33,7 +33,7 @@ metadata:
 - 接口清单查询与参数探测:`references/query-and-probe.md`
 - Java / Python 调用模板:`references/call-templates.md`
 
-## Guardrails
+## 契约与门禁
 - 仅 Java 与 Python 两种调用模板;不默认产出 C#/PHP/Go/JS。
 - 鉴权请求 `timestamp` 需在当前时间 ±5 分钟内;token 有效期 2 小时,提前 5 分钟刷新。
 - 提交/保存类接口必须带 `Idempotency-Key`(每次唯一 UUID),防重复提交。

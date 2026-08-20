@@ -309,7 +309,7 @@ test("windows uses junction while posix uses directory symlink", () => {
 test("optional host aliases resolve under host home", () => {
   const home = path.join(os.tmpdir(), "example-home");
   const tools = resolveTools(
-    ["qoder", "qoderwork", "workbuddy", "trae", "openclaw", "opencode", "qoder-work", "trae-ide", "claude-code", "antigravity"],
+    ["qoder", "qoderwork", "workbuddy", "trae", "openclaw", "opencode", "qoder-work", "trae-ide", "claude-code", "antigravity", "grok", "grok-build"],
     home,
     {},
   );
@@ -320,11 +320,14 @@ test("optional host aliases resolve under host home", () => {
   assert.equal(roots.workbuddy, path.join(home, ".workbuddy/skills"));
   assert.equal(roots.trae, path.join(home, ".trae/skills"));
   assert.equal(roots.openclaw, path.join(home, ".openclaw/workspace/skills"));
-  assert.equal(roots.opencode, path.join(home, ".opencode/skills"));
+  assert.equal(roots.opencode, path.join(home, ".config/opencode/skills"));
+  assert.equal(roots.agents, path.join(home, ".agents/skills"));
   assert.equal(tools[6].name, "qoderwork");
   assert.equal(tools[7].name, "trae");
   assert.equal(tools[8].name, "claude");
   assert.equal(tools[9].name, "antigravity-cli");
+  assert.equal(tools[10].name, "agents");
+  assert.equal(tools[11].name, "agents");
 });
 
 async function makeSourceRoot(prefix = "skill-installer-active-") {

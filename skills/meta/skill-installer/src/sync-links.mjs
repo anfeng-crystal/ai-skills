@@ -16,7 +16,7 @@ const TARGET_DIR_SUFFIXES = {
   workbuddy: ".workbuddy/skills",
   trae: ".trae/skills",
   openclaw: ".openclaw/workspace/skills",
-  opencode: ".opencode/skills",
+  opencode: ".config/opencode/skills",
   "antigravity-cli": ".gemini/antigravity-cli/skills",
   "antigravity-desktop": ".gemini/config/plugins/anfeng-active-skills/skills",
 };
@@ -27,6 +27,8 @@ const TOOL_ALIASES = {
   antigravity: "antigravity-cli",
   "qoder-work": "qoderwork",
   "trae-ide": "trae",
+  grok: "agents",
+  "grok-build": "agents",
 };
 
 const DEFAULT_EXCLUDED_SOURCE_PREFIXES = ["incoming/", "skills/incoming/"];

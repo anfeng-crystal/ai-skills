@@ -1,6 +1,6 @@
 # Skill Linker
 
-Distribute local AI skills to Codex, Claude Code, Junie, Agents, Hermes, qoder, WorkBuddy, Trae, and other supported hosts.
+Distribute local AI skills to Codex, Claude Code, OpenCode, Grok Build, Junie, Agents, Hermes, qoder, WorkBuddy, Trae, and other supported hosts.
 
 Skill Linker audits the source skill tree first, then creates only safe symlinks for supported tools. It refuses real-path conflicts, external symlink conflicts, and duplicate source names that would map to the same target skill.
 
@@ -81,19 +81,19 @@ If auto classification is uncertain, the skill goes to `incoming/<name>` and is 
 Soft removal deletes only managed symlinks. The source skill directory stays in the active tree.
 
 ```bash
-npx @anfeng1314/skill-installer remove neat-freak --apply
+npx @anfeng1314/skill-installer remove web-access --apply
 ```
 
 Restore a soft-removed skill by syncing it again:
 
 ```bash
-npx @anfeng1314/skill-installer --skill neat-freak --apply
+npx @anfeng1314/skill-installer --skill web-access --apply
 ```
 
 Restore only one tool:
 
 ```bash
-npx @anfeng1314/skill-installer --skill neat-freak --tool codex --apply
+npx @anfeng1314/skill-installer --skill web-access --tool codex --apply
 ```
 
 Full sync also reports dangling symlinks that point inside the current `sourceRoot`.
@@ -189,7 +189,7 @@ Key options:
 | `--source-root <path>` | Source skills root. Defaults to `AI_SKILLS_HOME`, config, or the current source tree. |
 | `--home <path>` | Host home. Defaults to `AI_HOST_HOME` or `$HOME`. |
 | `--skill <name>` | Skill name or relative path. Repeat or use comma-separated values. |
-| `--tool <name>` | `codex`, `claude`, `claude-code`, `junie`, `agents`, `hermes`, `qoder`, `qoderwork`, `workbuddy`, `trae`, `openclaw`, `opencode`, `antigravity`, `antigravity-cli`, or `antigravity-desktop`. |
+| `--tool <name>` | `codex`, `claude`, `claude-code`, `junie`, `agents`, `grok`, `grok-build`, `hermes`, `qoder`, `qoderwork`, `workbuddy`, `trae`, `openclaw`, `opencode`, `antigravity`, `antigravity-cli`, or `antigravity-desktop`. `grok` aliases the shared `agents` target. |
 | `--category <name>` | `core`, `automation`, `kingdee`, `meta`, `incoming`, or `auto`. |
 | `--name <name>` | Override installed skill directory name. |
 | `--path <subdir>` | Use a subdirectory inside a Git source. |

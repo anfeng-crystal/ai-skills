@@ -1,11 +1,11 @@
 ---
 name: html-output-quality
 description: "Quality gate for local HTML artifacts: review cards, dashboards, comparison charts. Not for quick answers."
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [html, report, dashboard, quality, design-review]
+  tags: "html, report, dashboard, quality"
 ---
 
 # HTML Output Quality
@@ -25,7 +25,7 @@ metadata:
 - 低风险一次性回答，或 Markdown 已足够表达的少量表格。
 - 需要把完整 HTML 粘进聊天上下文的交付方式。
 
-## 标准链路
+## 工作流
 
 1. 产出方 skill 生成稳定 source data（JSON/TSV/Markdown 摘要）。
 2. 用固定模板或脚本渲染本地 HTML；不要让模型每次自由重写大段 HTML。
@@ -36,7 +36,7 @@ metadata:
      --source <optional-json-or-tsv> \
      --out <output-dir>
    ```
-4. 对可视化或审核型 HTML，调用 `design-review` 做视觉复核。
+4. 对可视化或审核型 HTML，基于实际桌面/移动截图直接做视觉复核。
 5. 聊天只交付结论、路径、High/Medium 问题和验证结果；不粘贴完整 HTML。
 
 ## 产物约定
@@ -56,7 +56,7 @@ metadata:
 - 交互控件必须可键盘聚焦，有 hover/focus/active 状态；状态变化要反馈到页面，例如可见条数、当前筛选、展开状态或复制结果。
 - 不使用装饰性动效；动画只用于状态切换反馈，时长控制在 150-200ms。
 
-## 质量门禁
+## 契约与质量门禁
 
 `check-html.mjs` 会输出 JSON 和 Markdown 摘要。出现 High 时不得直接交付为通过：
 - HTML 缺少标题或主内容区。

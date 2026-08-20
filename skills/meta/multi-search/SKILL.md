@@ -1,11 +1,11 @@
 ---
 name: multi-search
 description: "需要跨多个平台搜索、对比来源、过滤结果、搜图/下载图片，或优先使用无 API key 搜索路径时使用。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "0.2.0"
-  license: MIT
-  tags: [search, multi-platform, aggregation, web-scraping, social-media, no-api-key, cdp]
+  tags: "search, multi-platform, aggregation, web-scraping, social-media, no-api-key, cdp"
 ---
 
 # Multi Search
@@ -58,7 +58,7 @@ python scripts/union_image_search/multi_platform_image_search.py "query" --limit
 3. 默认优先无 API/免费组；只有用户要求或凭据已配置时用付费/API 平台。
 4. 平台范围不明确时，用最小有效默认值 `search --preset small`，并说明假设。
 5. 执行搜索；结果少或噪音大时，调整平台组、关键词、时效或 limit。
-6. 对关键事实抓原文核验，必要时转 `web-access`。
+6. 对关键事实抓原文核验；当单平台脚本无法读取原文、URL 重定向或动态内容时转 `web-access`。
 7. 只输出有用字段；不要粘贴大段原始 JSON。若生成 raw 文件，只给路径和用途。
 
 ## 门禁

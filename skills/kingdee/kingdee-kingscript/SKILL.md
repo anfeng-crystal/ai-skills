@@ -1,23 +1,25 @@
 ---
 name: kingdee-kingscript
-description: "KingScript plugin: SDK declarations, runtime errors, risk review."
+description: "用于 KingScript、苍穹脚本插件、SDK 声明与脚本运行错误/风险审查；Java 二开交 kingdee-cosmic，AbstractReportListDataPlugin/Algo DataSet 报表取数交 kingdee-report，ISCB DSL 交 iscb-script，前端页面/扩展 JS 交 kingdee-frontend-script，独立 KDApi 自定义控件交 kingdee-custom-control。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [kingdee, KingScript, script, plugin, SDK]
+  tags: "kingdee, KingScript, script, plugin, SDK"
 ---
 
 # Kingdee KingScript
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 ## 触发边界
-- 用户明确涉及 KingScript、Kingscript、脚本插件、苍穹脚本开发、脚本 SDK、脚本运行错误时使用。
+- 用户明确涉及 KingScript/Kingscript、苍穹脚本插件、脚本 SDK 声明、脚本运行错误或风险审查时使用。
 - 普通苍穹 Java 插件开发不使用；改用 `kingdee-cosmic`。
-- ISCB、ISC 脚本、集成云 DSL 或数据集成方案脚本不使用；改用 `kingdee-iscb-script`。
+- `AbstractReportListDataPlugin`、Algo/DataSet 报表取数或分组汇总不使用；即使用户建议“放 KingScript”，默认仍交 `kingdee-report`。只有目标环境的 KingScript 声明和现有实现明确支持该报表插件形态时，才按当前证据调整路由。
+- ISCB、ISC 脚本、集成云 DSL 或数据集成方案脚本不使用；改用 `iscb-script`。
+- 前端页面/扩展 `index.js`、`index_m.js` 或浏览器端页面脚本不使用；改用 `kingdee-frontend-script`。独立 KDApi 自定义控件源码、生命周期、构建和交付改用 `kingdee-custom-control`。
 - 只说“脚本”但未说明 KingScript/苍穹脚本插件上下文时，先澄清脚本体系，不默认接管。
 
-## 快速工作流
+## 工作流与资源发现
 1. 先确认任务类型：生成脚本、修改脚本、解释 SDK、排查运行错误或风险审查。
 2. 先检查当前项目或工作区里是否已有同类脚本模块、公共函数、共享工具、SDK wrapper、模板或示例实现，能复用时优先复用。
 3. 再读 `references/index.md`，按任务落到 `templates/`、`examples/`、`sdk/` 或 `language/` 的具体入口。
@@ -29,7 +31,6 @@ metadata:
 9. 只有当 skill 内 `references/` 仍不足以确认 API、声明或运行边界时，才降级到当前项目 `.d.ts`、本地 jar/Javadoc 或外部文档。
 10. 输出前检查事件类型、参数类型、API 归属、字段标识、异常处理、空值边界和复用决策。
 
-## 本地资源发现与收敛
 - 默认发现顺序：当前项目或工作区已有实现 → `references/index.md` → 对应子目录 `index.md` / `indexes/*.md` / 具体 `*.md`。
 - 若当前任务只给出插件类型、类名、方法名、事件名、场景词或报错词，先回到 `references` 对应索引入口，再落到具体知识卡或示例，不直接凭目录名或示例标题作答。
 - `examples/` 侧先看 `references/examples/index.md`、`references/examples/plugins/index.md`，再进入插件分类目录下的 `index.md` 与目标场景 `*.md`。
@@ -57,7 +58,7 @@ metadata:
 - 函数注释说明参数来源、返回语义、空值/权限/异常边界，以及调用方需要保证的前置条件。
 - 简单 getter、简单透传、纯字段拼装不强行写长注释；禁止把排查路径、修改经过或交付口径写进脚本。
 
-## Guardrails
+## 契约与门禁
 - 默认只生成、解释、修改建议或风险审查;不部署脚本、不注册插件、不登录真实环境、不执行真实业务动作。
 - 涉及 `BusinessDataServiceHelper`、操作插件、保存、提交、删除、反审核、调度任务、消息发送或 HTTP 出站时,先确认环境、权限、数据范围、幂等性、回滚方案和测试路径;生产环境默认只读分析。
 - 需要真实运行、接口调用或环境验证时,必须由用户明确目标环境和授权边界;未确认时只给本地静态检查建议。

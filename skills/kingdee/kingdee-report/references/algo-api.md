@@ -5,11 +5,26 @@
 ## 工厂 `kd.bos.algo.Algo`
 ```java
 static Algo create(String algoKey)
+static AlgoContext newContext()
 DataSet createDataSet(Collection<Object[]> rowList, RowMeta rowMeta)
 DataSet createDataSet(Iterator<Object[]> it, RowMeta rowMeta)
 DataSet createDataSet(ResultSet rs, RowMeta rowMeta)
 DataSet createDataSet(Input[] inputs)            // OrmInput/CollectionInput
 DataSetBuilder createDataSetBuilder(RowMeta rowMeta)
+```
+
+## 资源作用域 `kd.bos.algo.AlgoContext`
+```java
+interface AlgoContext extends java.io.Closeable, java.lang.AutoCloseable
+void close()
+```
+`Algo.newContext()` 创建当前 Algo 资源作用域；离开 try-with-resources 时会关闭该作用域内创建的 `DataSet`。适合一个方法产生多个派生 DataSet 的异常安全收口：
+```java
+try (AlgoContext ignored = Algo.newContext()) {
+    DataSet source = QueryServiceHelper.queryDataSet(...);
+    DataSet result = source.filter(...).groupBy(...).sum(...).finish();
+    // 使用 result；正常返回或抛异常都会由上下文统一释放资源。
+}
 ```
 
 ## 查询 `kd.bos.servicehelper.QueryServiceHelper`
@@ -127,6 +142,7 @@ QFilter or(QFilter other)
 ## 标准 import 集
 ```java
 import kd.bos.algo.Algo;
+import kd.bos.algo.AlgoContext;
 import kd.bos.algo.DataSet;
 import kd.bos.algo.DataType;
 import kd.bos.algo.GroupbyDataSet;

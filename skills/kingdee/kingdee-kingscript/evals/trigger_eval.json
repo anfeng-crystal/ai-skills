@@ -5,10 +5,15 @@
   {"query": "KingScript 运行报错了", "should_trigger": true},
   {"query": "脚本风险审查", "should_trigger": true},
   {"query": "苍穹脚本 SDK 用法", "should_trigger": true},
+  {"query": "KingScript confirmCallBack 里的 MessageBoxClosedEvent 参数怎么写", "should_trigger": true},
   {"query": "写一个苍穹 Java 表单插件", "should_trigger": false},
   {"query": "写一个 ISCB 数据集成脚本", "should_trigger": false},
   {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
-  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false}
+  {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
+  {"query": "写一个 ISCB DSL 条件脚本", "should_trigger": false},
+  {"query": "写一个苍穹 Java 操作插件", "should_trigger": false},
+  {"query": "修改前端 index.js 的表单事件", "should_trigger": false},
+  {"query": "从零开发并打包一个 KDApi 自定义控件", "should_trigger": false}
 ]
