@@ -68,12 +68,53 @@
       "notes": "覆盖默认保存名约定；validator 只回归脚本有效性。"
     },
     {
+      "id": "engine-new-id-uppercase",
+      "intent": "当前 bundled runtime 必须使用区分大小写的 NEW_ID，并返回可转为 32 位文本的值。",
+      "context": "engine",
+      "script_path": "cases/engine/new-id-uppercase.iscb",
+      "validation_mode": "engine_run",
+      "expected_output": "32",
+      "notes": "锁定官方 NEW_ID 名称；防止重新写回在当前 runtime 返回 null 的 NewID。"
+    },
+    {
+      "id": "mapping-direct-int-id",
+      "intent": "数据集成直接赋值使用 new_int_id 映射宏，不包成脚本。",
+      "context": "data_mapping",
+      "script_path": "cases/mapping/direct-int-id.mapping",
+      "validation_mode": "mapping_static",
+      "notes": "覆盖直接赋值宏和独立 mapping profile。"
+    },
+    {
+      "id": "mapping-aggregation-chain",
+      "intent": "数据集成聚合运算按顺序组合 split、rtrim 和 join。",
+      "context": "data_mapping",
+      "script_path": "cases/mapping/aggregation-chain.mapping",
+      "validation_mode": "mapping_static",
+      "notes": "覆盖双冒号聚合链。"
+    },
+    {
+      "id": "mapping-relative-time",
+      "intent": "数据集成过滤条件使用 now 相对时间宏。",
+      "context": "data_mapping",
+      "script_path": "cases/mapping/relative-time.mapping",
+      "validation_mode": "mapping_static",
+      "notes": "覆盖过滤条件固定比较值。"
+    },
+    {
       "id": "platform-data-integration-transform",
       "intent": "用户明确说是数据集成方案转换脚本，可以使用 src / tar。",
       "context": "data_integration",
       "script_path": "cases/platform/data-integration-transform.iscb",
       "validation_mode": "reference_only",
       "notes": "reference-only case；允许 src / tar，但仍需要真实平台上下文。"
+    },
+    {
+      "id": "platform-bizquery-target-connection",
+      "intent": "数据集成目标查询必须将目标 ConnectionWrapper `$tar` 作为 bizQuery 首参，不能传字符串连接别名。",
+      "context": "data_integration",
+      "script_path": "cases/platform/bizquery-target-connection.iscb",
+      "validation_mode": "reference_only",
+      "notes": "覆盖 bizQuery 正确连接对象用法；仍需在真实平台上下文验证实体与数据。"
     },
     {
       "id": "platform-missing-resource-reference",
@@ -98,6 +139,14 @@
       "script_path": "cases/platform/webapi-reference.iscb",
       "validation_mode": "reference_only",
       "notes": "reference-only case；必须提醒 #request 相关结构待用户补齐。"
+    },
+    {
+      "id": "platform-official-catalog-reference",
+      "intent": "识别官方平台速查中的岗位人员、隐私脱敏、事件补偿和资源类名称，不交给 engine JAR 误判。",
+      "context": "platform_reference",
+      "script_path": "cases/platform/official-catalog-reference.iscb",
+      "validation_mode": "reference_only",
+      "notes": "只确认官方名称和平台依赖；随附速查未给出的签名仍需目标版本证据。"
     }
   ]
 }

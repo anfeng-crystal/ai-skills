@@ -85,13 +85,16 @@ var res = $src_service("ExecuteBillQuery", {"#data": [{"FormId": "BD_Currency"}]
 ### $tar_service(serviceName, params) -> Object
 调用目标系统星空/EAS API。仅在数据集成方案中可用。
 
-### bizQuery(cn, entity, requires, filters, orderby?) -> List\<Map>
+### bizQuery(connection, entity, requires, filters, orderby?) -> List\<Map>
 查询单据对象列表（支持苍穹、EAS、星空、PG）。
+- `connection`：平台传入的 `ConnectionWrapper`，不是连接别名字符串。
+- 数据集成方案中：查询来源使用 `$src`，查询目标使用 `$tar`；值转换规则中使用当前上下文实际提供的 `$src`、`$tar` 或 `$this`。
+- 不得写 `bizQuery('ierp', ...)` 或 `bizQuery('cn', ...)`。字符串连接别名只适用于参数明确为 `cn: String` 的函数，例如 `$action`、`$service`。
 - `requires`：需要的字段（String，逗号分隔）
 - `filters`：过滤条件 Map
 - `orderby`：排序 Map（可选）
 ```javascript
-var list = bizQuery('ierp', 'isc_data_copy_trigger',
+var list = bizQuery($tar, 'isc_data_copy_trigger',
     'number,id,name,data_copy.id',
     {number: 'isc_demo_basedata_5-isc_demo_basedata_3'},
     {id: 'ASC'});
@@ -347,6 +350,8 @@ var result = StartEventServiceFlow("event_flow",
 
 ### BusinessFlowDataService.loadBillLinkUpNodes(entityNumber, billIds, onlyDirtSource) -> Map
 上查上游关联追溯树（树形结构）。
+
+官方速查还确认 `BusinessFlowDataService.findTargetBills`、`BusinessFlowDataService.loadBillLinkDown`、`BusinessFlowDataService.loadBillLinkDownNodes`。随附速查没有参数签名；使用前查目标版本官方页面或现有运行脚本，不按上查 API 对称猜参。
 
 ---
 

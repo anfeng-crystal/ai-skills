@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -15,7 +16,9 @@ ROOT = Path(__file__).resolve().parent
 JAR_PATH = ROOT.parent / "assets" / "isc-iscb-util.jar"
 RUNNER_SRC = ROOT / "script_runtime_main" / "ScriptRuntimeMain.java"
 CACHE_ROOT = Path(tempfile.gettempdir()) / "kingdee-iscb-script" / "script_runtime_real"
-RUNNER_CLASSES = CACHE_ROOT / "classes"
+TARGET_JAVA_RELEASE = 8
+EXPECTED_CLASS_MAJOR = 52
+RUNNER_CLASSES = CACHE_ROOT / f"release-{TARGET_JAVA_RELEASE}" / "classes"
 MAIN_CLASS = "local.iscb.runtime.ScriptRuntimeMain"
 
 
@@ -30,14 +33,43 @@ def needs_compile() -> bool:
 	main_class = RUNNER_CLASSES / "local" / "iscb" / "runtime" / "ScriptRuntimeMain.class"
 	if not main_class.exists():
 		return True
+	if class_major_version(main_class) != EXPECTED_CLASS_MAJOR:
+		return True
 	class_mtime = main_class.stat().st_mtime
 	return RUNNER_SRC.stat().st_mtime > class_mtime or JAR_PATH.stat().st_mtime > class_mtime
+
+
+def class_major_version(class_file: Path) -> int | None:
+	header = class_file.read_bytes()[:8]
+	if len(header) != 8 or header[:4] != b"\xca\xfe\xba\xbe":
+		return None
+	return int.from_bytes(header[6:8], byteorder="big")
+
+
+def javac_major_version() -> int:
+	result = run(["javac", "-version"], cwd=ROOT)
+	version_text = f"{result.stdout}\n{result.stderr}"
+	match = re.search(r"\bjavac\s+(?:1\.)?(\d+)", version_text)
+	if not match:
+		raise RuntimeError(f"无法识别 javac 版本: {version_text.strip()}")
+	return int(match.group(1))
+
+
+def release_args(javac_major: int) -> list[str]:
+	if javac_major < TARGET_JAVA_RELEASE:
+		raise RuntimeError(
+			f"javac {javac_major} 低于目标 Java {TARGET_JAVA_RELEASE}"
+		)
+	if javac_major == TARGET_JAVA_RELEASE:
+		return ["-source", str(TARGET_JAVA_RELEASE), "-target", str(TARGET_JAVA_RELEASE)]
+	return ["--release", str(TARGET_JAVA_RELEASE)]
 
 
 def compile_project() -> None:
 	RUNNER_CLASSES.mkdir(parents=True, exist_ok=True)
 	cmd = [
 		"javac",
+		*release_args(javac_major_version()),
 		"-encoding",
 		"UTF-8",
 		"-d",
@@ -47,6 +79,12 @@ def compile_project() -> None:
 		str(RUNNER_SRC),
 	]
 	run(cmd, cwd=ROOT)
+	main_class = RUNNER_CLASSES / "local" / "iscb" / "runtime" / "ScriptRuntimeMain.class"
+	actual_major = class_major_version(main_class)
+	if actual_major != EXPECTED_CLASS_MAJOR:
+		raise RuntimeError(
+			f"runtime wrapper 字节码版本错误: actual={actual_major} expected={EXPECTED_CLASS_MAJOR}"
+		)
 
 
 def ensure_compiled() -> None:

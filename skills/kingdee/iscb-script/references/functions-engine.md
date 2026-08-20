@@ -4,6 +4,23 @@
 
 ---
 
+## 0. 智能字符串与系统值
+
+### $$(template) -> String
+解析字符串中的 `#{name}` 占位符，值来自当前脚本上下文。
+```javascript
+var name = "hello";
+return $$("#{name}");
+```
+
+### `NEW_ID`
+当前 bundled runtime 返回一个可转为 32 位十六进制文本的 `BinaryString`。名称区分大小写；`NewID` 在当前 runtime 中返回 null，不使用。
+```javascript
+return String.toString(NEW_ID);
+```
+
+---
+
 ## 1. Hash 工具包
 
 ### Hash.MD5(data) -> String
@@ -398,6 +415,12 @@ Date.format(Date.now(), "yyyy-MM-dd")       // "2024-01-15"
 Date.format(Date.now(), "yyyy年MM月dd日")    // "2024年01月15日"
 ```
 
+### Date.parse2(timeString, format, timezone) -> Date
+按指定格式和时区解析日期字符串。`timezone` 使用目标平台支持的 `GMT+08:00`、`Asia/Shanghai` 等时区 ID。
+
+### Date.format2(date, format, timezone) -> String
+按指定时区格式化日期对象。自然年月日通常使用 `yyyy`、`dd`；不要把周历年 `YYYY` 或年内日 `DD` 当作自然年月日。
+
 ### Date.add(date, unit, count) -> Date
 日期加减。unit 使用时间单位常量。
 ```javascript
@@ -462,6 +485,8 @@ Date.part(Date.now(), DAY_OF_WEEK)   // 1-7
 | `$THIS_MONTH` / `$LAST_MONTH` / `$NEXT_MONTH` | 月范围 |
 | `$THIS_QUARTER` / `$LAST_QUARTER` / `$NEXT_QUARTER` | 季范围 |
 | `$THIS_YEAR` / `$LAST_YEAR` / `$NEXT_YEAR` | 年范围 |
+
+官方文档将这些单位、分量和范围常量统称为 `DateIdentifiers`。
 
 ### 时间单位常量
 
@@ -536,10 +561,10 @@ Collection.sort(list, (a, b) -> a.age - b.age); // 自定义排序
 批量移除（从 c1 中移除 c2 的所有元素）。
 
 ### Collection.addAll(c1, c2) -> Collection
-批量添加。
+批量添加。当前 bundle 已验证第二参为 List 时运行通过；传单个 String 会在 runtime 抛 `ClassCastException`。单项追加使用 `list += element`，未知变量类型先确认。
 
 ### Collection.slice(collection, start, end?) -> Collection
-切片。
+列表切片；当前 bundle 对 List 运行通过，第三参按结束位置处理。
 
 ### Collection.visit(collection, visitor) -> int
 遍历并执行 visitor 函数，返回遍历计数。
@@ -701,10 +726,7 @@ Static.get("java.lang.Integer", "MAX_VALUE")  // 2147483647
 ## 10. Array 工具包
 
 ### Array.sub(array, start, len?) -> array
-子数组。
-```javascript
-var sub = Array.sub([1,2,3,4,5], 1, 3);  // [2,3,4]
-```
+真实 array 的子数组。当前 bundle 对 List literal 运行会类型转换失败，List 请使用 `Collection.slice()`；第三参数语义须以目标 array 运行样本确认。
 
 ### Array.sort(array, comparator?) -> array
 数组排序。
@@ -805,20 +827,26 @@ NewArray([L(1), L(2)], BIGINT)         // long[]
 var count = query_value($src, "SELECT COUNT(*) FROM t_user WHERE fstatus = ?", [1], [INTEGER]);
 ```
 
-### query_row(cn, sql, params?, types?) -> Map
-查询单行（返回 Map，**key 总是小写**）。无结果返回 null。
+### query_row(cn, sql, params?, types?) -> DataRow
+查询单行。官方平台节点返回只读 `DataRow`，字段 key 小写；无结果返回 null。
 ```javascript
 var user = query_row($src, "SELECT fid, fnumber, fname FROM t_user WHERE fnumber = ?",
     ['admin'], [VARCHAR]);
 // user: {fid: 1, fnumber: 'admin', fname: '管理员'}
 ```
 
-### query_list(cn, sql, params?, types?) -> List\<Map>
-查询多行。无结果返回空列表。
+### query_row2(cn, sql, params?, types?) -> Map
+查询单行并返回可修改 `Map`；字段 key 小写，无结果返回 null。需要真实连接资源。
+
+### query_list(cn, sql, params?, types?) -> List\<DataRow>
+查询多行只读 `DataRow` 列表。无结果返回空列表。
 - 受 `ISC_QUERY_MAX_SIZE` 限制（默认 20MB），超限抛异常
 ```javascript
 var list = query_list($src, "SELECT fid, fname FROM t_user WHERE fstatus = 0");
 ```
+
+### query_list2(cn, sql, params?, types?) -> List\<Map>
+查询多行并返回可修改 `Map` 列表；字段 key 小写。需要真实连接资源。
 
 ### query_column(cn, sql, params?, types?) -> List
 查询单列值列表。返回所有行的第一列值。

@@ -1,0 +1,1 @@
+return String.toString(NEW_ID).length;

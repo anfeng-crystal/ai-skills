@@ -1,0 +1,6 @@
+{
+  "params": [1, 1001],
+  "types": ["INTEGER", "BIGINT"],
+  "precheck_params": [1001],
+  "precheck_types": ["BIGINT"]
+}

@@ -1,0 +1,2 @@
+({"$entityname":"isc_data_source","id":"ds-1","number":"current","name":{"zh_CN":"当前连接"}})
+({"$entityname":"isc_service_flow","number":"approved_dml","resources":[{"res_alias":"DB1","res_ref_id":"ds-1"}],"define_json_tag":"({\"nodes\":{\"1\":{\"id\":\"1\",\"type\":\"ManualStarter\"},\"3\":{\"id\":\"3\",\"type\":\"Script\",\"script\":\"return {};\"},\"9\":{\"id\":\"9\",\"type\":\"End\"}},\"links\":{}})"})

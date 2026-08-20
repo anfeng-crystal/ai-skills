@@ -1,6 +1,10 @@
 {
   "schema_version": 1,
   "generated_on": "2026-03-25",
+  "verified_on": "2026-07-26",
+  "runtime_overrides": {
+    "NEW_ID": "runtime eval returns a 32-character value; legacy NewID returns null"
+  },
   "jar": {
     "file": "isc-iscb-util.jar",
     "sha256": "ed5927eb6241744851ae47c75b7fd27113786094ad5b51d5bd7350ec0c45e152"
@@ -288,7 +292,7 @@
     "NULL_IF",
     "NVARCHAR",
     "NewArray",
-    "NewID",
+    "NEW_ID",
     "Not",
     "NotEmpty",
     "NotNULL",
@@ -555,7 +559,7 @@
     "NULL_IF",
     "NVARCHAR",
     "NewArray",
-    "NewID",
+    "NEW_ID",
     "Not",
     "NotEmpty",
     "NotNULL",

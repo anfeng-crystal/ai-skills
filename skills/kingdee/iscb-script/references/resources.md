@@ -28,6 +28,8 @@
 | WebAPI | ISC_APIC_WEBAPI | WebAPI 登记 |
 | 数据流触发器 | ISCX_DATA_FLOW_TRIGGER | 数据流事件触发 |
 
+官方平台脚本资源类名另见 `functions-platform-official.md`。`DataSourceResource`、`DataCopySchemaResource` 等名称描述资源类型，不是可自行猜测的连接别名；实际调用必须使用当前节点已经引入的资源实例。
+
 ---
 
 ## 上下文变量可用性

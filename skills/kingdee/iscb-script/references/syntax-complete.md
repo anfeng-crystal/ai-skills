@@ -142,6 +142,11 @@ for(item : list) {
     println(item);
 }
 
+// 当前 bundle 同样验证通过的声明形式
+for(var item : list) {
+    println(item);
+}
+
 // 带索引遍历
 for((item, index) : list) {
     println(index + ": " + item);
@@ -184,6 +189,8 @@ continue;     // 跳过本次迭代
 ```
 
 ### 3.5 异常处理
+当前 bundle 已验证 `try/catch/finally/throw`；部分旧平台经验认为不可用，目标版本不明时先做最小 compile probe，不用判空规则替代异常语义。
+
 ```javascript
 try {
     var result = riskyOperation();
@@ -460,4 +467,36 @@ var x = 1; // 行尾注释
 IS_NULL(value, default)     // value 为 null 时返回 default
 IS_NULL([v1, v2], default)  // v1 和 v2 都为 null 时返回 default
 NULL_IF(v1, v2)             // v1 == v2 时返回 null，否则返回 v1
+```
+
+## 9. 决策块与声明语法
+
+### `case2` / `select2` / `switch2`
+
+- `case2{condition:value; default:value}` 返回第一个满足条件的值。
+- `select2{condition:value; default:value}` 返回所有满足条件的值；无条件命中时返回 default。
+- `switch2(value){key:value; default:value}` 返回首个相等分支。
+
+```javascript
+var first = case2{false: 1; 1 == 1: 3; default: 5};
+var all = select2{true: 1; false: 2; 1 == 1: 3; default: 5};
+var state = switch2('resolved'){'active': 'A'; 'resolved': 'R'; default: 'U'};
+return {first: first, all: all, state: state};
+```
+
+### `declare` / `swap` / `use`
+
+- `declare name TYPE` 声明脚本变量类型；实际转换结果以当前 runtime 和目标上下文验证为准。
+- 官方来源标题中的 `delare` 是拼写错误；语法关键字是 `declare`。
+- `swap a,b` 交换两个变量值。
+- `use Namespace` 后可省略该工具包前缀；只引用 manifest 中存在的工具包。
+
+```javascript
+declare amount BIGINT;
+amount = 2;
+var left = 1;
+var right = 2;
+swap left, right;
+use Date;
+return {amount: amount, left: left, right: right, today: format(today(), 'yyyy-MM-dd')};
 ```

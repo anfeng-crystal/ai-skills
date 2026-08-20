@@ -1,0 +1,5 @@
+var persons = GetPersonByPosition(positionId);
+var masked = PrivacyTool.convertValue(value);
+StartEventDataCopy(triggerNumber, filterParams);
+var source = DataSourceResource;
+return {persons: persons, masked: masked, source: source};

@@ -1,0 +1,11 @@
+{
+  "approved": true,
+  "authorization_ref": "fixture-approval",
+  "environment": "dev",
+  "scope": "single fixture row",
+  "rollback_plan": "restore fixture row from test snapshot",
+  "max_rows": 1,
+  "resource_alias": "DB1",
+  "flow_number": "approved_dml",
+  "node_id": "3"
+}

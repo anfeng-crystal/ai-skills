@@ -16,6 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REAL_SCRIPT_RUNTIME = REPO_ROOT / "scripts" / "script_runtime_real.py"
 MANIFEST_PATH = REPO_ROOT / "scripts" / "engine_api_manifest.json"
+PLATFORM_MANIFEST_PATH = REPO_ROOT / "scripts" / "platform_api_manifest.json"
 JAR_PATH = REPO_ROOT / "assets" / "isc-iscb-util.jar"
 CURATED_CASES_ROOT = REPO_ROOT / "assets" / "cases"
 CURATED_CASES_PATH = CURATED_CASES_ROOT / "manifest.json"
@@ -27,6 +28,10 @@ GLOBAL_CALL_RE = re.compile(r"(?<![.\w$])([A-Za-z_$%][A-Za-z0-9_$%]*)\s*\(")
 NAMESPACED_CALL_RE = re.compile(r"(?<![\w$])([A-Za-z_$][A-Za-z0-9_$]*)\.([A-Za-z_$%][A-Za-z0-9_$%]*)\s*\(")
 FUNCTION_DEF_RE = re.compile(r"\bfunction\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(")
 VAR_DECL_RE = re.compile(r"\bvar\s+([A-Za-z_$][A-Za-z0-9_$]*)\b")
+BIZQUERY_STRING_CONNECTION_RE = re.compile(
+    r"\bbizQuery\s*\(\s*(?P<quote>['\"])(?P<connection>(?:\\.|(?!\1).)*)\1",
+    re.S,
+)
 
 IGNORE_GLOBAL_CALLS = {
     "if",
@@ -42,7 +47,9 @@ IGNORE_GLOBAL_CALLS = {
 ENGINE_EXTERNAL_GLOBALS = {
     "query_value",
     "query_row",
+    "query_row2",
     "query_list",
+    "query_list2",
     "query_column",
     "execute_update",
     "execute_batch",
@@ -70,10 +77,11 @@ ENGINE_EXTERNAL_NAMESPACES = {
     "AttachPanel",
     "AttachField",
     "BusinessFlowDataService",
+    "PrivacyTool",
 }
 CORE_ENGINE_EXTERNAL_PREFIXES = ("query_", "execute_", "Http", "CallWebService")
 JAVASCRIPT_FENCE_RE = re.compile(r"```javascript\n(.*?)\n```", re.S)
-CURATED_VALIDATION_MODES = {"engine_compile", "engine_run", "reference_only"}
+CURATED_VALIDATION_MODES = {"engine_compile", "engine_run", "mapping_static", "reference_only"}
 LEAN_SKILL_SIGNATURE_LIMIT = 12
 
 PLATFORM_NAMESPACE_REQUIREMENTS = {
@@ -89,11 +97,14 @@ PLATFORM_NAMESPACE_REQUIREMENTS = {
     "AttachPanel": "附件面板或平台资源上下文",
     "AttachField": "附件字段或平台资源上下文",
     "BusinessFlowDataService": "业务流程或平台资源上下文",
+    "PrivacyTool": "苍穹平台隐私标签与脱敏上下文",
 }
 PLATFORM_GLOBAL_REQUIREMENTS = {
     "query_value": "数据源连接或资源别名",
     "query_row": "数据源连接或资源别名",
+    "query_row2": "数据源连接或资源别名",
     "query_list": "数据源连接或资源别名",
+    "query_list2": "数据源连接或资源别名",
     "query_column": "数据源连接或资源别名",
     "execute_update": "数据源连接或资源别名",
     "execute_batch": "数据源连接或资源别名",
@@ -119,7 +130,33 @@ PLATFORM_CONTEXT_MARKERS = (
     (re.compile(r"\$process\b"), None, "`$process`", "服务流程上下文"),
     (re.compile(r"\$cn\b"), None, "`$cn`", "连接资源或 WebAPI / HTTP 上下文"),
     (re.compile(r"#request\b"), None, "`#request`", "请求对象结构或字段定义"),
+    (re.compile(r"#DEFINE\b"), None, "`#DEFINE`", "当前平台节点定义对象"),
+    (re.compile(r"#RUNTIME\.#(?:DEFINE|ID)\b"), None, "`#RUNTIME`", "服务流程运行实例上下文"),
+    (
+        re.compile(r"\bnew\s+java\.util\.ArrayList\s*\("),
+        None,
+        "`java.util.ArrayList`",
+        "支持 Java 集合构造的平台脚本节点",
+    ),
 )
+
+MAPPING_DIRECT_MACRO_RE = re.compile(
+    r"^#\{(?:new_boid\((?P<bostype>[^()]+)\)|new_int_id\(\)|new_string_id\(\)|"
+    r"new_uuid\(\)|now|today|now-(?:(?P<span>\d+)(?P<unit>day|hour|minute)|(?P<timespan>TIMESPAN)))\}$"
+)
+MAPPING_SIMPLE_OPERATORS = {"count", "date", "decimal", "int", "long"}
+MAPPING_CALL_OPERATORS = {
+    "join",
+    "split",
+    "rtrim",
+    "default",
+    "if",
+    "null_if",
+    "to_eas_id",
+}
+MAPPING_CALL_RE = re.compile(r"^(?P<name>[a-z_]+)\((?P<args>.*)\)$")
+MAPPING_INDEX_SELECTOR_RE = re.compile(r"^\[(?P<index>-?\d+)\]$")
+MAPPING_FIELD_SELECTOR_RE = re.compile(r"^\[(?P<field>[^=\[\]]+)=(?P<value>[^\[\]]+)\]$")
 
 
 @dataclass
@@ -156,9 +193,18 @@ def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict
     seen_references: set[str] = set()
     seen_missing_items: set[str] = set()
     local_vars = set(VAR_DECL_RE.findall(script))
+    platform_manifest = load_platform_manifest()
+    platform_globals = set(platform_manifest["globals"])
+    platform_globals.update(platform_manifest["deprecated"])
+    platform_globals.update(
+        token
+        for token in platform_manifest["operators"]
+        if re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", token)
+    )
+    platform_namespaces = set(platform_manifest["namespaces"])
 
     for namespace, method in NAMESPACED_CALL_RE.findall(script):
-        if namespace not in ENGINE_EXTERNAL_NAMESPACES:
+        if namespace not in ENGINE_EXTERNAL_NAMESPACES and namespace not in platform_namespaces:
             continue
         add_unique(references, f"`{namespace}.{method}()`", seen_references)
         add_unique(
@@ -170,12 +216,23 @@ def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict
     for global_name in GLOBAL_CALL_RE.findall(script):
         if global_name in IGNORE_GLOBAL_CALLS or global_name in user_functions:
             continue
-        if global_name not in ENGINE_EXTERNAL_GLOBALS:
+        if global_name not in ENGINE_EXTERNAL_GLOBALS and global_name not in platform_globals:
             continue
         add_unique(references, f"`{global_name}()`", seen_references)
         add_unique(
             missing_items,
             PLATFORM_GLOBAL_REQUIREMENTS.get(global_name, "平台连接资源或资源别名"),
+            seen_missing_items,
+        )
+
+    resources = platform_manifest["resources"]
+    for resource_name in [*resources["available"], *resources["declared_unavailable"]]:
+        if not re.search(rf"(?<![\w$]){re.escape(resource_name)}\b", script):
+            continue
+        add_unique(references, f"`{resource_name}`", seen_references)
+        add_unique(
+            missing_items,
+            "当前节点实际引入的资源实例与别名",
             seen_missing_items,
         )
 
@@ -205,10 +262,26 @@ def build_platform_dependency_message(mode: str, dependencies: dict[str, object]
         )
     return (
         f"检测到平台层参考脚本依赖（{refs}）。待补齐项：{missing_items}。"
-        "`check-script --mode general` 仅做 reference-only 弱预检；"
+        "`check-script --mode platform` 仅做 reference-only 弱预检；"
         "bundled manifest 不能完整覆盖平台方法签名，因此不能据此宣称可运行。"
         "补齐资源/上下文后，请到苍穹集成平台或使用真实 runtime 验证。"
     )
+
+
+def bizquery_connection_findings(script: str) -> list[Finding]:
+    findings: list[Finding] = []
+    for match in BIZQUERY_STRING_CONNECTION_RE.finditer(script):
+        connection = match.group("connection")
+        findings.append(
+            Finding(
+                "error",
+                "bizquery-string-connection",
+                "`bizQuery()` 首参必须是 ConnectionWrapper（如 `$src`、`$tar`、`$this`），"
+                f"不能传字符串连接别名 `{connection}`。",
+                "script",
+            )
+        )
+    return findings
 
 
 @lru_cache(maxsize=1)
@@ -221,6 +294,47 @@ def load_manifest() -> dict[str, object]:
         if key not in payload:
             raise SystemExit(f"invalid engine api manifest: missing `{key}` in {MANIFEST_PATH}")
     return payload
+
+
+@lru_cache(maxsize=1)
+def load_platform_manifest() -> dict[str, object]:
+    if not PLATFORM_MANIFEST_PATH.exists():
+        raise SystemExit(f"missing platform api manifest: {PLATFORM_MANIFEST_PATH}")
+
+    payload = json.loads(PLATFORM_MANIFEST_PATH.read_text(encoding="utf-8"))
+    for key in (
+        "context_symbols",
+        "operators",
+        "globals",
+        "namespaces",
+        "resources",
+        "deprecated",
+    ):
+        if key not in payload:
+            raise SystemExit(
+                f"invalid platform api manifest: missing `{key}` in {PLATFORM_MANIFEST_PATH}"
+            )
+    resources = payload["resources"]
+    if not isinstance(resources, dict) or not all(
+        isinstance(resources.get(key), list) for key in ("available", "declared_unavailable")
+    ):
+        raise SystemExit(f"invalid platform api manifest resources: {PLATFORM_MANIFEST_PATH}")
+    return payload
+
+
+def platform_reference_tokens() -> list[str]:
+    payload = load_platform_manifest()
+    tokens = [
+        *payload["context_symbols"],
+        *payload["operators"],
+        *payload["globals"],
+        *payload["resources"]["available"],
+        *payload["resources"]["declared_unavailable"],
+        *payload["deprecated"],
+    ]
+    for namespace, methods in payload["namespaces"].items():
+        tokens.extend(f"{namespace}.{method}" for method in methods)
+    return list(dict.fromkeys(tokens))
 
 
 @lru_cache(maxsize=1)
@@ -312,6 +426,33 @@ def audit_skill() -> dict[str, object]:
             extract_doc_signatures(REPO_ROOT / "references" / "functions-engine.md"),
         ),
     ]
+
+    platform_reference_path = REPO_ROOT / "references" / "functions-platform-official.md"
+    platform_tokens = platform_reference_tokens()
+    if not platform_reference_path.exists():
+        findings.append(
+            Finding(
+                "error",
+                "missing-platform-reference",
+                "Missing official platform reference catalog.",
+                str(platform_reference_path.relative_to(REPO_ROOT)),
+            )
+        )
+        platform_reference_text = ""
+    else:
+        platform_reference_text = platform_reference_path.read_text(encoding="utf-8")
+    missing_platform_tokens = [
+        token for token in platform_tokens if token not in platform_reference_text
+    ]
+    for token in missing_platform_tokens:
+        findings.append(
+            Finding(
+                "error",
+                "missing-platform-token",
+                f"Official platform token `{token}` is missing from the platform reference.",
+                str(platform_reference_path.relative_to(REPO_ROOT)),
+            )
+        )
 
     for path, signatures in docs_to_scan:
         for name, _args, _ret in signatures:
@@ -457,6 +598,8 @@ def audit_skill() -> dict[str, object]:
         "checked_signature_count": len(checked_entries),
         "exact_match_count": exact_matches,
         "manifest_signature_count": len(manifest_signatures),
+        "platform_reference_token_count": len(platform_tokens),
+        "missing_platform_token_count": len(missing_platform_tokens),
         "skill_signature_count": skill_signature_count,
         "findings": [asdict(finding) for finding in findings],
         "manifest_index": manifest_index,
@@ -602,6 +745,9 @@ def audit_curated_cases() -> dict[str, object]:
             if context != "engine":
                 fail("Engine validation modes must use `context: engine`.")
                 continue
+        elif validation_mode == "mapping_static" and context != "data_mapping":
+            fail("mapping_static cases must use `context: data_mapping`.")
+            continue
 
         if validation_mode == "engine_compile":
             payload = check_script_with_runtime(script, "engine", True)
@@ -642,6 +788,13 @@ def audit_curated_cases() -> dict[str, object]:
                 )
                 continue
 
+        elif validation_mode == "mapping_static":
+            payload = check_mapping_expression(script)
+            if payload["status"] == "fail":
+                findings = payload.get("findings", [])
+                fail(str(findings[0]["message"]) if findings else "Mapping validation failed.")
+                continue
+
         else:
             if context == "engine":
                 fail("reference_only cases must use a non-engine context.")
@@ -652,7 +805,7 @@ def audit_curated_cases() -> dict[str, object]:
                     "reference_only script must contain an explicit platform dependency marker such as src/tar/$process/#request/cn, or a known platform namespace/global."
                 )
                 continue
-            payload = check_script(script, "general")
+            payload = check_script(script, "platform")
             if payload["status"] == "fail":
                 findings = payload.get("findings", [])
                 fail(str(findings[0]["message"]) if findings else "Reference-only preflight failed.")
@@ -724,6 +877,178 @@ def audit_bundle() -> dict[str, object]:
     }
 
 
+def looks_like_mapping_expression(value: str) -> bool:
+    expression = value.strip()
+    if not expression or "\n" in expression or "\r" in expression:
+        return False
+    if expression.startswith("#{") and expression.endswith("}"):
+        return True
+    if "::" in expression:
+        return True
+    if expression in MAPPING_SIMPLE_OPERATORS:
+        return True
+    if MAPPING_INDEX_SELECTOR_RE.fullmatch(expression) or MAPPING_FIELD_SELECTOR_RE.fullmatch(expression):
+        return True
+    call = MAPPING_CALL_RE.fullmatch(expression)
+    return bool(call and call.group("name") in MAPPING_CALL_OPERATORS)
+
+
+def check_mapping_expression(value: str) -> dict[str, object]:
+    expression = value.strip()
+    findings: list[Finding] = []
+    if not expression:
+        findings.append(Finding("error", "empty-mapping-expression", "映射表达式不能为空。", "mapping"))
+    elif "\n" in expression or "\r" in expression:
+        findings.append(
+            Finding("error", "multiline-mapping-expression", "映射表达式必须是单个字段值。", "mapping")
+        )
+    else:
+        macro = MAPPING_DIRECT_MACRO_RE.fullmatch(expression)
+        if expression.startswith("#{"):
+            if macro is None:
+                findings.append(
+                    Finding(
+                        "error",
+                        "unknown-mapping-macro",
+                        "未知的直接赋值/过滤宏；使用官方 `#{new_*}`、`#{now}`、`#{today}` 或 `#{now-<n><unit>}` 形式。",
+                        "mapping",
+                    )
+                )
+            elif macro.group("bostype") is not None:
+                bostype = macro.group("bostype").strip()
+                if bostype != "BOSTYPE" and not re.fullmatch(r"[0-9A-Fa-f]{8}", bostype):
+                    findings.append(
+                        Finding(
+                            "warn",
+                            "unverified-bostype",
+                            "`new_boid` 的 BOSTYPE 应由目标 EAS/BOS 实体证据确认，通常为 8 位十六进制值。",
+                            "mapping",
+                        )
+                    )
+            elif macro.group("timespan") is not None:
+                findings.append(
+                    Finding(
+                        "warn",
+                        "unresolved-timespan",
+                        "将 `TIMESPAN` 替换为 `1day`、`2hour`、`3minute` 等实际范围。",
+                        "mapping",
+                    )
+                )
+        else:
+            operators = expression.split("::")
+            for index, operator in enumerate(operators, 1):
+                token = operator.strip()
+                if not token:
+                    findings.append(
+                        Finding(
+                            "error",
+                            "empty-mapping-operator",
+                            f"第 {index} 个聚合运算为空。",
+                            "mapping",
+                        )
+                    )
+                    continue
+                if token in MAPPING_SIMPLE_OPERATORS:
+                    continue
+                index_selector = MAPPING_INDEX_SELECTOR_RE.fullmatch(token)
+                if index_selector:
+                    if int(index_selector.group("index")) == 0:
+                        findings.append(
+                            Finding(
+                                "error",
+                                "zero-mapping-selector",
+                                "分录选择器从 `[1]` 或 `[-1]` 开始，`[0]` 没有官方语义。",
+                                "mapping",
+                            )
+                        )
+                    continue
+                if MAPPING_FIELD_SELECTOR_RE.fullmatch(token):
+                    continue
+                call = MAPPING_CALL_RE.fullmatch(token)
+                if call and call.group("name") in MAPPING_CALL_OPERATORS:
+                    name = call.group("name")
+                    args = call.group("args").strip()
+                    if not args:
+                        findings.append(
+                            Finding(
+                                "error",
+                                "missing-mapping-argument",
+                                f"`{name}` 缺少官方表达式要求的参数。",
+                                "mapping",
+                            )
+                        )
+                    elif name in {"if", "null_if"} and "=" not in args:
+                        findings.append(
+                            Finding(
+                                "error",
+                                "invalid-mapping-condition",
+                                f"`{name}` 必须使用 `field=value` 条件。",
+                                "mapping",
+                            )
+                        )
+                    continue
+                findings.append(
+                    Finding(
+                        "error",
+                        "unknown-mapping-operator",
+                        f"第 {index} 个聚合运算 `{token}` 不在官方映射表达式目录中。",
+                        "mapping",
+                    )
+                )
+
+    status = "pass"
+    if any(finding.severity == "error" for finding in findings):
+        status = "fail"
+    elif findings:
+        status = "warn"
+    return {
+        "mode": "mapping",
+        "status": status,
+        "finding_count": len(findings),
+        "findings": [asdict(finding) for finding in findings],
+    }
+
+
+def platform_sql_findings(script: str) -> list[Finding]:
+    findings: list[Finding] = []
+    if re.search(r"\b(?:var\s+)?[A-Za-z_$][A-Za-z0-9_$]*[Ss][Qq][Ll]\s*=\s*['\"][^;]*['\"]\s*\+", script, re.S):
+        findings.append(
+            Finding(
+                "warn",
+                "platform-sql-concat",
+                "官方平台节点兼容默认值是把 SQL 写成单个字符串；本地 engine 接受 `+` 拼接不等于目标平台已验证。",
+                "script",
+            )
+        )
+    return findings
+
+
+def platform_catalog_findings(script: str) -> list[Finding]:
+    payload = load_platform_manifest()
+    findings: list[Finding] = []
+    for name in payload["deprecated"]:
+        if re.search(rf"(?<![\w$]){re.escape(name)}\s*\(", script):
+            findings.append(
+                Finding(
+                    "warn",
+                    "deprecated-platform-api",
+                    f"`{name}()` 已由官方速查标为废弃；维护旧脚本时保留识别，新代码改用目标版本确认的 `OpenAPI.*` API。",
+                    "script",
+                )
+            )
+    for resource_name in payload["resources"]["declared_unavailable"]:
+        if re.search(rf"(?<![\w$]){re.escape(resource_name)}\b", script):
+            findings.append(
+                Finding(
+                    "warn",
+                    "platform-resource-unavailable",
+                    f"官方随附速查将 `{resource_name}` 标为暂不支持/未开发；目标版本有新证据时可覆盖该状态。",
+                    "script",
+                )
+            )
+    return findings
+
+
 def balance_check(script: str) -> list[Finding]:
     findings: list[Finding] = []
     pairs = {"(": ")", "[": "]", "{": "}"}
@@ -764,25 +1089,77 @@ def balance_check(script: str) -> list[Finding]:
 
 
 def check_script(script: str, mode: str) -> dict[str, object]:
+    if mode == "mapping":
+        return check_mapping_expression(script)
+    if mode == "general":
+        mode = "platform"
+
     manifest_index = load_manifest()
+    platform_manifest = load_platform_manifest()
     namespaces: dict[str, set[str]] = {
         key: set(value) for key, value in manifest_index["namespaces"].items()
     }
+    platform_namespaces: dict[str, set[str]] = {
+        key: set(value) for key, value in platform_manifest["namespaces"].items()
+    }
     globals_set: set[str] = set(manifest_index["globals"])
+    platform_globals: set[str] = set(platform_manifest["globals"])
+    platform_globals.update(platform_manifest["deprecated"])
+    platform_globals.update(
+        token
+        for token in platform_manifest["operators"]
+        if re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", token)
+    )
     findings: list[Finding] = bundle_findings()
 
+    if looks_like_mapping_expression(script):
+        findings.append(
+            Finding(
+                "error",
+                "mapping-expression-profile",
+                "检测到数据集成映射表达式；改用 `check-script --mode mapping`，不要送入脚本 engine/platform 校验。",
+                "script",
+            )
+        )
+
     findings.extend(balance_check(script))
+    findings.extend(bizquery_connection_findings(script))
+    if mode == "platform":
+        findings.extend(platform_sql_findings(script))
+        findings.extend(platform_catalog_findings(script))
 
     user_functions = set(FUNCTION_DEF_RE.findall(script))
+    local_vars = set(VAR_DECL_RE.findall(script))
     platform_dependencies = collect_platform_dependencies(script, user_functions)
 
     for namespace, method in NAMESPACED_CALL_RE.findall(script):
+        official_methods = platform_namespaces.get(namespace)
+        if official_methods is not None:
+            if method not in official_methods:
+                findings.append(
+                    Finding(
+                        "warn",
+                        "unverified-platform-method",
+                        f"`{namespace}.{method}()` 不在当前官方平台速查目录；需用目标版本官方文档或运行证据确认。",
+                        "script",
+                    )
+                )
+            continue
         if namespace in ENGINE_EXTERNAL_NAMESPACES:
             continue
         methods = namespaces.get(namespace)
         if methods is None:
             findings.append(
-                Finding("error", "unknown-namespace", f"Unknown namespace `{namespace}`.", "script")
+                Finding(
+                    "error" if mode == "engine" else "warn",
+                    "unknown-namespace" if mode == "engine" else "unverified-platform-namespace",
+                    (
+                        f"Unknown namespace `{namespace}`."
+                        if mode == "engine"
+                        else f"`{namespace}` 不在 bundled engine 或当前官方平台目录；需用目标版本证据确认。"
+                    ),
+                    "script",
+                )
             )
             continue
         if method not in methods:
@@ -806,12 +1183,40 @@ def check_script(script: str, mode: str) -> dict[str, object]:
                     )
                 )
     for global_name in GLOBAL_CALL_RE.findall(script):
-        if global_name in IGNORE_GLOBAL_CALLS or global_name in user_functions:
+        if (
+            global_name in IGNORE_GLOBAL_CALLS
+            or global_name in user_functions
+            or global_name in local_vars
+        ):
             continue
         if global_name in ENGINE_EXTERNAL_GLOBALS:
             continue
-        if global_name not in globals_set:
+        if global_name in globals_set or (mode == "platform" and global_name in platform_globals):
             continue
+        candidates = globals_set | (platform_globals if mode == "platform" else set())
+        lower_to_actual = {value.lower(): value for value in candidates}
+        if global_name.lower() in lower_to_actual:
+            findings.append(
+                Finding(
+                    "error",
+                    "case-mismatch",
+                    f"`{global_name}()` uses the wrong case; current profile uses `{lower_to_actual[global_name.lower()]}()`.",
+                    "script",
+                )
+            )
+        else:
+            findings.append(
+                Finding(
+                    "error" if mode == "engine" else "warn",
+                    "unknown-global" if mode == "engine" else "unverified-platform-global",
+                    (
+                        f"Unknown global function `{global_name}()`."
+                        if mode == "engine"
+                        else f"`{global_name}()` 不在 bundled engine 或当前官方平台目录；需用目标版本证据确认。"
+                    ),
+                    "script",
+                )
+            )
 
     if platform_dependencies["has_dependency"]:
         if mode == "engine":
@@ -828,7 +1233,7 @@ def check_script(script: str, mode: str) -> dict[str, object]:
                 Finding(
                     "warn",
                     "platform-reference-only",
-                    build_platform_dependency_message("general", platform_dependencies),
+                    build_platform_dependency_message("platform", platform_dependencies),
                     "script",
                 )
             )
@@ -984,7 +1389,8 @@ def print_text(payload: dict[str, object], command: str) -> None:
             f"checked_signatures={payload['checked_signature_count']} "
             f"skill_signatures={payload['skill_signature_count']} "
             f"exact_matches={payload['exact_match_count']} "
-            f"manifest_signatures={payload['manifest_signature_count']}"
+            f"manifest_signatures={payload['manifest_signature_count']} "
+            f"platform_tokens={payload['platform_reference_token_count']}"
         )
         if not findings:
             print("findings=0")
@@ -1083,6 +1489,18 @@ def load_script(args: argparse.Namespace) -> str:
     raise SystemExit("script input is required")
 
 
+def result_exit_code(payload: dict[str, object], command: str) -> int:
+    if command == "index":
+        return 0
+    if command == "audit-skill":
+        return 1 if payload["findings"] else 0
+    if command == "audit-examples":
+        return 1 if payload["failures"] else 0
+    if command == "audit-curated-cases":
+        return 1 if payload["failures"] else 0
+    return 1 if payload.get("status") == "fail" else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Audit and validate the ISCB skill against its bundled engine manifest and jar runtime."
@@ -1110,10 +1528,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     bundle_parser.add_argument("--format", choices=("text", "json"), default="text")
 
-    check_parser = subparsers.add_parser("check-script", help="Static-check a generated DSL script.")
+    check_parser = subparsers.add_parser(
+        "check-script", help="Static-check an engine script, platform reference script, or mapping expression."
+    )
     check_parser.add_argument("path", nargs="?", help="Path to a script file.")
     check_parser.add_argument("--stdin", action="store_true", help="Read script from stdin.")
-    check_parser.add_argument("--mode", choices=("engine", "general"), default="engine")
+    check_parser.add_argument(
+        "--mode", choices=("engine", "platform", "mapping", "general"), default="engine"
+    )
     check_parser.add_argument("--runtime", action="store_true", help="Also run real Script runtime compile.")
     check_parser.add_argument("--format", choices=("text", "json"), default="text")
 
@@ -1149,7 +1571,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
         print_text(payload, args.command)
-    return 0
+    return result_exit_code(payload, args.command)
 
 
 if __name__ == "__main__":

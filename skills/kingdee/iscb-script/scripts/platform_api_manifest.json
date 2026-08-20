@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "evidence": "official-platform-reference",
+  "validation": "platform-reference-only",
+  "context_symbols": [
+    "#DEFINE",
+    "#request",
+    "#RUNTIME.#DEFINE",
+    "#RUNTIME.#ID",
+    "$process"
+  ],
+  "operators": [
+    "--=",
+    "++=",
+    "char",
+    "contains",
+    "empty",
+    "encode",
+    "endsWith",
+    "in",
+    "length",
+    "like",
+    "matches",
+    "new_boid",
+    "new_int_id",
+    "new_uuid",
+    "NewArray",
+    "not empty",
+    "null",
+    "print",
+    "println",
+    "Sleep",
+    "startsWith",
+    "static",
+    "System",
+    "THIS_URL",
+    "typeof"
+  ],
+  "globals": [
+    "$action",
+    "$action2",
+    "$batch_action",
+    "$service",
+    "$src_service",
+    "$tar_service",
+    "bizQuery",
+    "CheckCancelSignal",
+    "ClassInfo",
+    "ClassPath",
+    "EAS_BOTP",
+    "executeServiceFlow",
+    "ExternalApiFunc",
+    "FastJsonFormat",
+    "FastJsonParse",
+    "FilterEvaluator",
+    "flatObjectToMapOrList",
+    "GetContext",
+    "GetPersonByPosition",
+    "getWorkflowState",
+    "IERP_BOTP",
+    "initiateWorkflow",
+    "invoke_api",
+    "InvokeHandlerClass",
+    "invokeMicroService",
+    "invokeMicroService2",
+    "NotifyDataCopyEventHandler",
+    "queryWorkflowState",
+    "ScriptApiFunc",
+    "ScriptFunction",
+    "StartEventDataCopy",
+    "StartEventServiceFlow"
+  ],
+  "namespaces": {
+    "BusinessFlowDataService": [
+      "findSourceBills",
+      "findTargetBills",
+      "isPush",
+      "loadBillLinkDown",
+      "loadBillLinkDownNodes",
+      "loadBillLinkUp",
+      "loadBillLinkUpNodes"
+    ],
+    "OpenAPI": [
+      "invokeOperation",
+      "invokeOperation2",
+      "queryData"
+    ],
+    "PrivacyTool": [
+      "convertValue"
+    ]
+  },
+  "resources": {
+    "available": [
+      "DataCopySchemaResource",
+      "DataCopyTriggerResource",
+      "DataSourceResource",
+      "ExternalApiResource",
+      "ScriptApiResource",
+      "ScriptFunctionResource",
+      "ServiceFlowResource",
+      "ValueConversionRuleResource"
+    ],
+    "declared_unavailable": [
+      "MetaSchemaResource",
+      "SubscriberResource"
+    ]
+  },
+  "deprecated": [
+    "invokeOpenApi",
+    "queryOpenApi"
+  ]
+}
