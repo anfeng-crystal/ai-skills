@@ -1,11 +1,11 @@
 ---
 name: skill-vetter
 description: "需要审查第三方或 incoming skill 的来源可信度、脚本行为、宿主写入、破坏性命令、密钥暴露或安装风险时使用。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "0.2.0"
-  license: MIT
-  tags: [security, skill, review, static-analysis]
+  tags: "security, skill, review, static-analysis"
 ---
 
 # Skill Vetter
@@ -19,7 +19,8 @@ metadata:
 - 审查通过后的安装/同步转 `skill-installer`。
 
 ## 契约
-- 输出等级只能是 `allow`、`review_needed` 或 `block`。
+- 安装安全等级只能是 `allow`、`review_needed` 或 `block`。
+- 能力处置单独输出 `absorb`、`rebuild`、`reject` 或 `unassessed`；安装被阻断不等于能力没有价值，安全证据也不能替代质量与重复度评估。
 - 证据来自本地文件、frontmatter、脚本、安装说明、文件系统写入、破坏性命令、网络/密钥模式、人工复核项。
 - 必须明确风险等级、阻塞证据、人工检查点和下一步。
 - 默认只做静态审查，不联网查信誉，不执行目标脚本。
@@ -37,10 +38,12 @@ metadata:
    - `allow`：当前静态证据下无阻断风险。
    - `review_needed`：宿主写入、软链接变更、联网 bootstrap、shell 执行、密钥或中高风险歧义。
    - `block`：可执行脚本/安装命令中的破坏性命令、强制覆盖宿主、远程管道执行或明显凭据外泄风险；仅文档示例命中时降为 `review_needed` 并说明上下文。
+6. 用户要求 intake/吸收判断时，再给能力处置：安全内容可 `absorb`；能力独有但实现不可信时 `rebuild`；现有能力更强或内容无效时 `reject`；证据不足时 `unassessed`。质量优化和行为回归交 `darwin-skill`。
 
 ## 风险信号
 - 破坏性：`rm -rf`、`git reset --hard`、`chmod -R 777`、强制覆盖/删除。
 - 远程执行：`curl|sh`、`wget|bash`、不透明安装器。
+- 网络/数据库：`fetch`、`requests/httpx/aiohttp`、`urllib.request`、Java HTTP client、JDBC/数据库连接；命中要求人工核对目标、凭据和副作用，不等同于拒绝能力。
 - 宿主写入：`.codex/skills`、`.claude/skills`、`.agents/skills`、`.junie/skills`、`.hermes/skills`。
 - 密钥：token/password/API key、Basic Auth、cookies、env dump。
 - 不安全执行：`shell=True`、未校验 subprocess、eval 类路径。
@@ -60,11 +63,13 @@ metadata:
 - 密钥、cookie、URL 凭据和内部敏感 URL 只报告类型、文件行号和脱敏片段，不原样打印值。
 - 路径不存在、目标不清或无 `SKILL.md` 时停止并说明原因。
 - `review_needed` 或 `block` 后用户仍要安装，必须明确接受具名风险。
+- `block + rebuild` 只允许从已核验事实重新实现；不得复制或执行命中阻断证据的脚本、凭据、安装器和宿主写入逻辑。
 - 同一目录多个 skill root 时停止，让用户指定目标；不要把整仓风险套到单个子 skill。
 
 ## 输出
 简体中文：
 - 推荐等级：allow / review_needed / block。
+- 能力处置：absorb / rebuild / reject / unassessed，并写明目标 skill 或拒绝原因。
 - 关键风险：severity、file:line、影响。
 - 人工复核：未解决的具体检查点。
 - 下一步：安装/同步、拒绝或先修复。

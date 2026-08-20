@@ -1,0 +1,37 @@
+{
+  "openai-plugin-eval": {
+    "repo": "https://github.com/openai/plugins",
+    "commit": "bd2122cb92f2ade874d8c2b1d00383976ab9415b",
+    "relevant_paths": [
+      "plugins/plugin-eval/skills/improve-skill",
+      "plugins/plugin-eval/skills/evaluate-skill",
+      "plugins/plugin-eval/scripts/budget.js",
+      "plugins/plugin-eval/scripts/observed-usage.js",
+      "plugins/plugin-eval/references/measurement-plan.js"
+    ],
+    "consumer": "skills/meta/darwin-skill/SKILL.md",
+    "adopted_concepts": [
+      "static trigger/invoke budgets",
+      "observed token usage",
+      "task outcomes",
+      "tool-call audit",
+      "measurement bias guardrails"
+    ]
+  },
+  "microsoft-playwright-cli": {
+    "repo": "https://github.com/microsoft/playwright-cli",
+    "commit": "793cfb32572733cbcb401e6f28d05a7a914ce408",
+    "release": "v0.1.17",
+    "package": "@playwright/cli@0.1.17",
+    "relevant_path": "SKILL.md",
+    "consumers": [
+      "package files",
+      "wrapper",
+      "CLI reference"
+    ],
+    "adopted_concepts": [
+      "find",
+      "video action annotation commands"
+    ]
+  }
+}

@@ -1,11 +1,11 @@
 ---
 name: darwin-skill
 description: "需要用证据、测试 prompt、评分对比和回滚机制优化本地可编辑 SKILL.md 时使用。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [skill, optimizer, darwin, auto-tune, evaluation]
+  tags: "skill, optimizer, darwin, auto-tune, evaluation"
 ---
 
 # Darwin Skill
@@ -19,9 +19,11 @@ metadata:
 
 ## 契约
 - 只有实际提升 agent 行为的修订才保留，不能只追求文字好看。
-- 证据包含 baseline、with-skill 或 dry-run 模拟、结构评分、diff、验证输出。
+- 证据可包含静态触发/加载 token 预算、实际观测 token、任务结果、工具调用审计，以及 baseline、with-skill 或 dry-run 模拟、结构评分、diff、验证输出；没有实际 token 时必须标成静态估算。
 - 优化前必须先提取能力清单；优化后必须证明能力没有静默丢失。
 - 失败修订必须回滚，或保持未提交并说明原因。
+- 先把规则标成 `hard-invariant`、`default` 或 `hypothesis`：只有授权、安全、保密和证据真实性可作为硬边界；工具路线、平台限制、固定阈值和技术结论必须允许当前证据推翻。
+- 当前用户指令、当前源码、SDK、官方接口或可复现实验与 `default`/`hypothesis` 冲突时，不为服从旧 skill 扭曲结果；记录最小反例并评估修订。
 
 ## 运行时评分
 总分 100；结构 60、效果 40。每项 1-10 分后按权重折算：
@@ -29,10 +31,13 @@ metadata:
 - 运行价值：正文直接告诉 agent 当前该怎么做。
 - 边界：能路由到正确 skill/tool，能阻止危险动作。
 - 可执行性：步骤有可观察输入/输出。
-- Token 经济性：删除动机、历史、宽泛教学和聊天式示例。
+- Token 经济性：分别比较 description 的触发成本与 `SKILL.md` 的加载成本，删除动机、历史、宽泛教学和聊天式示例；这是门禁，不能用整体分数或 deferred 文件体积直接判定 skill 质量。
 - 证据/验证：验证强度匹配风险。
 - 失败行为：说明何时停止、询问、降级或 handoff。
 - 行为增量：with-skill 在典型 prompt 上应优于 no-skill。
+- 决策一致性：不同模型对模式、目标、允许动作或失败条件理解不一致时，视为语义歧义，不用缩短文本掩盖分歧。
+
+可取得时，baseline/with-skill 对比记录 input/output/cached/reasoning tokens、任务成功、首轮成功、重试、人工接管，以及工具选择、参数、顺序和失败恢复。
 
 ## 产物记录
 - 评测资产默认是本地临时证据，不提交、不分发、不长期保留；提交仓库前必须确认没有 `test-prompts.json`、`results.tsv` 进入 Git 跟踪。
@@ -43,10 +48,11 @@ metadata:
 
 ## 工作流
 1. 锁定范围：列出可编辑本地 skill 路径，把只读 bundled/cache skill 分开。
+   - 用户要求依据历史错误优化时，先运行 `scripts/extract-session-evidence.mjs` 同时扫描 `sessions` 与 `archived_sessions`；候选消息必须结合前一条 agent 行为和运行证据人工确认，不能把关键词命中直接当 skill 缺陷。
 2. 需要隔离时按当前宿主/git 规则创建优化分支；不要破坏用户已有脏改。
-3. 为每个目标准备 1-3 个典型 prompt；只在本轮需要复核时写入本地临时或未跟踪的 `test-prompts.json`。
-4. 建 baseline：记录不用 skill 时最可能漏掉、越界或路由错误的点。
-5. 跑 with-skill 与 no-skill 对比；可用多模型/子 agent 时至少覆盖默认模型和一个轻量/不同能力模型。
+3. 为每个目标准备典型、边界和反例 prompt；只在本轮需要复核时写入本地临时或未跟踪的 `test-prompts.json`。
+4. 建 baseline：记录不用 skill 时最可能漏掉、越界或路由错误的点；如果 no-skill 已稳定正确，skill 必须提供可观察增量，否则删除噪音规则。
+5. 跑 with-skill 与 no-skill 对比；可用多模型/子 agent 时至少覆盖默认模型和一个轻量/不同能力模型，并比较模式、范围和工具选择是否一致。
 6. 读当前 `SKILL.md`，先提取能力清单，再找人类说明书噪音。能力清单至少覆盖：
    - 触发和路由：何时用、何时不用、转交哪个 skill/tool。
    - 工具和命令：脚本、参数、状态码、输出文件、配置路径。
@@ -54,18 +60,19 @@ metadata:
    - 回退和异常：失败状态、降级路径、阻塞条件、恢复方式。
    - 产物和验证：报告、测试 prompt、results.tsv、截图、dry-run、doctor、lint/test。
 7. 每个能力点必须明确处理结果：保留、合并、移到 reference、脚本承载、或说明理由后删除；不允许静默删除行为。
-8. 找人类说明书噪音：
+8. 对每条绝对禁止、固定阈值和环境限制构造反例；没有安全依据或行为证据时降为带条件的默认策略或删除。
+9. 找人类说明书噪音：
    - 来源故事、理念、销售话术、长示例、发布叙事。
    - 系统/项目规则已覆盖的通用工程常识。
    - 面向用户教程，而不是给 agent 的动作。
-9. 改成中文运行时卡片：
+10. 改成中文运行时卡片：
    - 触发
    - 契约
    - 工作流
    - 门禁
    - 输出
-   - 必要时才引用 references
-10. 验证：
+   - 只有当前任务需要该细节时才引用 references
+11. 验证：
    ```bash
    git diff --check -- <skill-files>
    node <repo-root>/scripts/validate-cross-platform.mjs
@@ -73,18 +80,22 @@ metadata:
    ```
    如果本轮明确保留了本地评测资产，再额外运行 `node <skills-root>/meta/darwin-skill/scripts/validate-skill-assets.mjs --require-eval-assets`。
    skill 自带脚本或测试时跑对应验证。
-11. 做能力覆盖复核：逐项确认能力清单仍有落点；格式校验通过但能力丢失时视为失败。
-12. 重新评分并写入 `results.tsv`；只有 `new_score > old_score` 且相对 baseline 增量变大才保留。
-13. 行为变差或能力覆盖失败就回滚该 skill 文件；已提交时用 `git revert`，不使用 `reset --hard`。
+12. 做能力覆盖复核：逐项确认能力清单仍有落点；格式校验通过但能力丢失时视为失败。
+13. 重新评分并写入 `results.tsv`；只有 `new_score > old_score` 且相对 baseline 增量变大才保留。
+14. 行为变差、决策分歧扩大或能力覆盖失败就回滚该 skill 文件；已提交时用 `git revert`，不使用 `reset --hard`。
 
 ## 门禁
 - 不往 skill 目录加 README、changelog 或过程记录。
 - 不把单次会话的路径、命令、决策写成通用规则。
 - 低风险本地文本优化不需要停住确认；涉及外部状态、共享配置、memory 或破坏性动作才停。
 - 没有真实 prompt 运行或明确 dry-run 模拟时，不声称“已实测 with-skill”。
-- 改动不能改变 skill 核心用途；只能优化表达、边界、流程和验证。
+- 不静默改变 skill 核心用途；当前任务明确授权重构，且路由、能力清单和行为回归证明新边界更好时，可以调整用途并记录迁移去向。
 - 本地 skills 的语言选择以语义完整和用户语境为准：中文为主；命令、字段名、状态码、工具标识和能明显省 token 的短标签可用英文；不能整篇套英文模板或因英文压缩丢失语义。
 - 更短不是成功标准；能力等价和行为增量优先于 token 压缩。
+- `SKILL.md` 只保留会改变模型触发、动作、门禁、恢复、验证或输出的运行指令；不写背景、教程、销售话术和长示例。删除后会产生两种合理解释的内容不得压缩。
+- 结构分提高不能抵消任务结果、能力覆盖或工具调用正确性回退；token 下降本身不足以保留修改。
+- 偏差边界：中文 description 不需要为了检测器强塞英文 `Use when`；LICENSE/assets/templates 的 deferred 体积不等于运行时实际加载；静态分析总分不是质量结论。
+- 保持跨平台与宿主中立，不加入绝对路径、临时路径或本轮固定测量数字。
 - 收尾时删除本轮临时评测文件；只有用户明确要求留档时，才保留在私有未跟踪位置。
 
 ## 输出

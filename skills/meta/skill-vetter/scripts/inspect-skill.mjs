@@ -114,7 +114,7 @@ const RULES = [
     severity: "medium",
     category: "network_access",
     reason: "发现主动联网获取资源或远程接口调用。",
-    regex: /\b(?:curl|wget)\b|fetch\(|requests\.(?:get|post)|axios\./i,
+    regex: /\b(?:curl|wget)\b|fetch\(|requests\.(?:request|get|post|put|patch|delete|head)|axios\.|httpx\.|aiohttp\.|urllib\.request|from\s+urllib\.request\s+import|http\.client|java\.net\.http|HttpClient\.newHttpClient|URLConnection/i,
   },
   {
     id: "database_access",

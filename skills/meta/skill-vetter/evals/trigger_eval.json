@@ -5,6 +5,7 @@
   {"query": "这个 skill 有没有写入宿主目录的风险", "should_trigger": true},
   {"query": "检查一下这个 skill 有没有密钥暴露", "should_trigger": true},
   {"query": "帮我 vet 一下这个 skill", "should_trigger": true},
+  {"query": "这个第三方 skill 不安全，但里面的能力值不值得净化吸收", "should_trigger": true},
   {"query": "帮我同步 skills 到各个工具", "should_trigger": false},
   {"query": "帮我写一个新的 skill", "should_trigger": false},
   {"query": "优化一下这个 skill 的描述", "should_trigger": false},
