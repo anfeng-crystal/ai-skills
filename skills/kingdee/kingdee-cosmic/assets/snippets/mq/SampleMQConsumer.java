@@ -40,14 +40,16 @@ public class SampleMQConsumer implements MessageConsumer {
      * MQ 消费入口。
      *
      * @param message   消息体（类型取决于发送方，常见 String / String[] / JSON）
-     * @param messageId 消息唯一标识
+     * @param messageId 队列投递标识（不是全局业务幂等键）
      * @param resend    是否为重发消息
      * @param acker     消息应答器
      */
     @Override
     public void onMessage(Object message, String messageId, boolean resend, MessageAcker acker) {
-        log.info("MQ 消费开始：messageId={}, message={}", messageId, message);
+        log.info("MQ 消费开始：messageId={}, resend={}", messageId, resend);
         if (message == null) {
+            log.warn("消息体为空，按永久无效消息记录并丢弃：messageId={}", messageId);
+            acker.discard(messageId);
             return;
         }
 
@@ -92,7 +94,7 @@ public class SampleMQConsumer implements MessageConsumer {
 
         } catch (Exception e) {
             log.error("消费异常：{}", e.getMessage(), e);
-            acker.discard(messageId);         // 异常也废弃，避免无限重试
+            acker.deny(messageId);            // 未分类异常默认重试；重试上限由队列/业务台账控制
         }
     }
 
@@ -105,8 +107,9 @@ public class SampleMQConsumer implements MessageConsumer {
      * 典型用途：调用外部接口、同步第三方数据。
      */
     private void consumeWithDLock(Object message, String messageId, MessageAcker acker) {
-        // 以消息内容（通常是单据 PK）作为锁的 key
-        try (DLock dLock = DLock.create(messageId)) {
+        // messageId 非全局唯一；锁 key 使用业务类型 + 业务主键。
+        String idempotencyKey = "kdcd_api_message_pool:" + String.valueOf(message);
+        try (DLock dLock = DLock.create(idempotencyKey)) {
             if (dLock.tryLock()) {
                 // ---------- 加锁成功，处理消息 ----------
                 processMessageBody(message, messageId, acker);
@@ -129,7 +132,7 @@ public class SampleMQConsumer implements MessageConsumer {
         String status = bill.getString("kdcd_status");
         if ("1".equals(status)) {
             log.info("消息已成功处理过，跳过：{}", messageId);
-            acker.discard(messageId);
+            acker.ack(messageId);
             return;
         }
 
@@ -151,7 +154,7 @@ public class SampleMQConsumer implements MessageConsumer {
             log.error("消息处理异常：{}", messageId, e);
             bill.set("kdcd_status", "-1");
             SaveServiceHelper.update(bill);
-            acker.discard(messageId);               // 异常废弃
+            acker.deny(messageId);                  // 未分类异常不得直接丢弃
         }
     }
 
@@ -171,7 +174,8 @@ public class SampleMQConsumer implements MessageConsumer {
     //  选择原则：
     //  - 处理成功 → ack
     //  - 临时故障（如外部接口超时）→ deny（会重试）
-    //  - 业务逻辑失败或异常（不可能通过重试修复）→ discard
+    //  - 明确永久无效且已留可追踪记录 → discard
+    //  - 未分类异常 → deny 或让消费失败，不能直接 discard
 
     // ===================================================================
     //  MQ XML 配置示例（放在 resources 根目录下）

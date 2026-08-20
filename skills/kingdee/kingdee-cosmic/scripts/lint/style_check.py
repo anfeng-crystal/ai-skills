@@ -2,7 +2,7 @@
 """编码偏好检查 (STYLE-*) — 来源: coding-preferences.md"""
 
 import re
-from typing import List
+from typing import List, Optional
 
 from .base import (
     LintIssue,
@@ -186,10 +186,95 @@ ENHANCED_FOR_PATTERN = re.compile(
 SAVE_SERVICE_PATTERN = re.compile(r"\bSaveServiceHelper\s*\.\s*(save|update)\s*\(")
 
 
+def _is_bounded_keyset_page_query(
+    lines: List[str], index: int, method_context: List[Optional[str]]
+) -> bool:
+    """识别循环中的有界主键游标分页，避免把一次/页误报成逐行 N+1。"""
+    method_name = method_context[index]
+    if method_name is None:
+        return False
+
+    statement_start = index
+    while (
+        statement_start > 0
+        and method_context[statement_start - 1] == method_name
+        and ";" not in strip_line_comment(lines[statement_start - 1])
+        and index - statement_start < 3
+    ):
+        statement_start -= 1
+
+    statement_end = index
+    while (
+        statement_end + 1 < len(lines)
+        and method_context[statement_end + 1] == method_name
+        and ";" not in strip_line_comment(lines[statement_end])
+        and statement_end - index < 8
+    ):
+        statement_end += 1
+
+    statement = " ".join(
+        strip_line_comment(line).strip()
+        for line in lines[statement_start:statement_end + 1]
+    )
+    result_match = re.search(
+        r"\bDynamicObjectCollection\s+([A-Za-z_]\w*)\s*=\s*"
+        r"QueryServiceHelper\s*\.\s*query\s*\(",
+        statement,
+    )
+    if not result_match or not re.search(r'"id\s+asc"', statement, re.IGNORECASE):
+        return False
+    limit_match = re.search(r",\s*([A-Za-z_]\w*|\d+)\s*\)\s*;", statement)
+    if not limit_match:
+        return False
+
+    method_start = index
+    while method_start > 0 and method_context[method_start - 1] == method_name:
+        method_start -= 1
+    method_end = index
+    while method_end + 1 < len(lines) and method_context[method_end + 1] == method_name:
+        method_end += 1
+    method_text = " ".join(
+        strip_line_comment(line).strip()
+        for line in lines[method_start:method_end + 1]
+    )
+    method_structure = " ".join(
+        code_for_structure(line).strip()
+        for line in lines[method_start:method_end + 1]
+    )
+
+    limit_token = limit_match.group(1)
+    if limit_token.isdigit():
+        if int(limit_token) <= 0:
+            return False
+    elif not re.search(
+        rf"\bif\s*\(\s*{re.escape(limit_token)}\s*<=\s*0\s*\)\s*"
+        r"\{[^}]*\breturn\s*;",
+        method_structure,
+    ):
+        return False
+
+    cursor_match = re.search(
+        r'(?:new\s+QFilter\s*\(|\.\s*and\s*\()\s*"id"\s*,\s*QCP\s*\.\s*'
+        r'(?:large_than|large_equals)\s*,\s*([A-Za-z_]\w*)\s*\)',
+        method_text,
+    )
+    if not cursor_match:
+        return False
+
+    result_var = re.escape(result_match.group(1))
+    cursor_var = re.escape(cursor_match.group(1))
+    cursor_advance = re.compile(
+        rf"\b{cursor_var}\s*=\s*{result_var}\s*\.\s*get\s*\(\s*"
+        rf"{result_var}\s*\.\s*size\s*\(\s*\)\s*-\s*1\s*\)\s*\.\s*"
+        r'getLong\s*\(\s*"id"\s*\)',
+    )
+    return bool(cursor_advance.search(method_text))
+
+
 def check(filepath: str, lines: List[str]) -> List[LintIssue]:
     """执行编码偏好检查，返回问题列表。"""
     issues: List[LintIssue] = []
-    _, loop_context = analyze_java_context(lines)
+    method_context, loop_context = analyze_java_context(lines)
     plugin_context = analyze_plugin_context(lines)
     skip_lines = classify_lines(lines)
     query_result_vars: dict[str, int] = {}
@@ -356,13 +441,17 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
         loop_db_hit = LOOP_DB_PATTERN.search(code_line) or (
             LOOP_DB_METHOD_PATTERN.search(code_line) and LOOP_DB_HELPER_PATTERN.search(prev_code_line)
         )
-        if loop_line and loop_db_hit:
+        if (
+            loop_line
+            and loop_db_hit
+            and not _is_bounded_keyset_page_query(lines, i, method_context)
+        ):
             issues.append(LintIssue(
                 file=filepath, line=lineno,
                 severity=Severity.ERROR,
                 rule_id="STYLE-015",
                 message="在循环中访问数据库（包括 BusinessDataServiceHelper.loadSingle(...) 等），存在明显的 N+1 查询风险",
-                fix_hint="先看 skills/ok-cosmic/assets/snippets/query/BatchQuerySample.java，按“分组 key -> 批量查询 -> 本地映射”改写，避免循环里逐条查库",
+                fix_hint="先看 assets/snippets/query/BatchQuerySample.java，按“分组 key -> 批量查询 -> 本地映射”改写；有界分页需使用稳定游标、排序、页大小和游标推进",
                 source_line=line.strip(),
             ))
 

@@ -4,7 +4,7 @@
 
 **注意：仅限内部使用**
 
-面向金蝶云苍穹（Kingdee Cloud Cosmic）开发的自动登录工具，提供**自包含、零项目依赖**的登录能力，一行命令完成 RSA 加密认证，拿到可直接用于后续所有 OpenAPI / kapi / 元数据接口调用的 `Cookie` 与 `CSRF Token`。
+面向金蝶云苍穹（Kingdee Cloud Cosmic）开发的自动登录工具，提供**自包含、零项目依赖**的登录能力。CLI 完成 RSA 加密认证后只返回非敏感状态；同一 Python 进程可通过 `auto_login()` 取得供后续 OpenAPI / kapi / 元数据接口调用的 `Cookie` 与 `CSRF Token`。
 
 ---
 
@@ -21,7 +21,7 @@
 - `🔁` **会话有效性探活**：`--check` 模式发轻量请求验证现有 Cookie 是否仍可用，避免重复登录
 - `📦` **零项目依赖**：整个目录可独立拷贝到任何项目使用，仅需 `pip install requests pycryptodome`
 - `🧰` **双重 RSA 后端兜底**：优先 `pycryptodome`，失败回退 `rsa` 库，再失败尝试解 DER 重构密钥，最大化兼容性
-- `📤` **标准化 KEY=VALUE 输出**：脚本输出可被 shell / Python 直接 grep 解析，不需要 JSON parser
+- `📤` **标准化状态输出**：CLI 输出 `LOGIN_SUCCESS` 与 Cookie/CSRF 可用性，不回显会话原值
 - `🧩` **三种使用入口**：命令行 CLI、Python 模块 `import auto_login`、Shell 脚本管道
 
 ## 🧭 解决了什么问题
@@ -30,7 +30,7 @@
 |--------------|------------------------|
 | F12 复制 Cookie，过期就重抓 | `auto_login()` 一行拿到 Cookie，配 `check_session()` 失效自动重登 |
 | 各项目重复实现 RSA 加密 + 数据中心选择 | 单一脚本，复制即用，所有项目共享同一份维护代码 |
-| 每次写新工具都得绑定项目侧 `config.py` | 脚本不依赖任何项目结构，输出 KEY=VALUE 任你处置 |
+| 每次写新工具都得绑定项目侧 `config.py` | 脚本不依赖任何项目结构；下游可在同一 Python 进程直接复用返回值 |
 | 多数据中心环境用错 ID 静默登错租户 | 单 DC 自动选 / 多 DC 强制要求显式指定，避免误登 |
 | `pycryptodome` 装不上的内网机器无解 | 自动回退 `rsa` 库，仍能完成加密 |
 | Cookie 拿到了但 CSRF Token 找不到 | 三级回退提取（Cookie 字段 / 响应头 / index.html 正则） |
@@ -198,6 +198,8 @@ python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin <password> 1565
 python /path/to/cosmic_login.py --check http://127.0.0.1:8080/ierp "KERPSESSIONID=xxx; other=yyy"
 ```
 
+CLI 登录只输出是否取得 Cookie/CSRF，不输出原值。需要继续调用下游接口时，使用 4.2 的 Python API，让登录与业务请求处于同一进程。
+
 ### 4.2 Python 代码内 import
 
 ```python
@@ -216,17 +218,14 @@ if not check_session("http://127.0.0.1:8080/ierp", old_cookie):
     result = auto_login("http://127.0.0.1:8080/ierp", "admin", "<password>")
 ```
 
-### 4.3 Shell 脚本中解析输出
+### 4.3 Shell 脚本中解析状态
 
 ```bash
 #!/bin/bash
-OUTPUT=$(python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>)
-
-if echo "$OUTPUT" | grep -q "LOGIN_SUCCESS"; then
-    COOKIE=$(echo "$OUTPUT" | grep "^COOKIE=" | cut -d= -f2-)
-    CSRF=$(echo "$OUTPUT" | grep "^CSRF_TOKEN=" | cut -d= -f2-)
-    curl -H "Cookie: $COOKIE" -H "kd-csrf-token: $CSRF" \
-         http://127.0.0.1:8080/ierp/kapi/sys/user/getCurrentUser
+if python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>; then
+    echo "登录成功；需要下游会话材料时改用同进程 Python API"
+else
+    echo "登录失败" >&2
 fi
 ```
 
@@ -237,22 +236,21 @@ fi
 test:
   script:
     - pip install requests pycryptodome
-    - export COSMIC_COOKIE="$(python tools/cosmic_login.py "$COSMIC_BASE_URL" "$COSMIC_USERNAME" "$COSMIC_PASSWORD" | awk -F= '/^COOKIE=/{print substr($0, index($0,$2))}')"
-    - python tools/run_smoke_test.py
+    - python tools/run_smoke_test.py  # 脚本内部调用 auto_login()，不把会话材料写入 CI 输出
 ```
 
 ---
 
 ## 5. 输出格式
 
-脚本统一输出 KEY=VALUE 行，可被任意工具直接 grep 解析。
+CLI 统一输出可机读状态；Cookie 与 CSRF 原值只由 Python API 返回给当前进程。
 
 ### 5.1 登录成功
 
 ```
 LOGIN_SUCCESS
-COOKIE=KERPSESSIONIDxxx=yyy; other=zzz
-CSRF_TOKEN=abc123
+COOKIE_AVAILABLE=True
+CSRF_TOKEN_AVAILABLE=True
 ACCOUNT_ID=1565321489509515264
 USER_ID=12345
 ```
@@ -276,7 +274,7 @@ LOGIN_FAILED: 用户名或密码错误
 
 ## 6. 登录成功后
 
-拿到 Cookie 后，默认只在当前命令或当前任务内存中使用。不要默认写入项目文件、CI artifact、shell profile 或日志。三种常见做法按安全优先级排序：
+通过 Python API 拿到 Cookie 后，默认只在当前命令或当前任务内存中使用。不要默认写入项目文件、CI artifact、shell profile 或日志。三种常见做法按安全优先级排序：
 
 1. **直接传参** — 在后续 API 调用中 `headers={"Cookie": cookie, "kd-csrf-token": csrf_token}`
 2. **临时环境变量** — 只在当前 shell/session 中 `export COSMIC_COOKIE="<cookie>"`
@@ -412,12 +410,13 @@ kingdee-cosmic-login/
 - **v1.0** — 初版：3 步 RSA 加密登录、多数据中心识别、`--check` 探活、KEY=VALUE 输出
 - **v1.1** — 新增 `pycryptodome → rsa` 双后端兜底，DER 重构密钥兜底
 - **v1.2** — 完善 CSRF Token 三级回退提取策略
+- **v1.3** — CLI 改为只输出 Cookie/CSRF 可用性；原值仅由同进程 Python API 返回
 
 ---
 
 ## ⚠️ 安全提示
 
 - **不要把账号密码硬编码到脚本或仓库**，请用环境变量或 `.env`（且 `.env` 加入 `.gitignore`）
-- **Cookie 与 CSRF Token 等同账号密码**，输出后请避免持久化到日志、告警群、issue 评论等可被检索的地方
+- **Cookie 与 CSRF Token 等同账号密码**；CLI 不回显原值，Python API 调用方也不得把原值写入日志、告警群或 issue 评论
 - 多数据中心环境务必**显式指定 datacenter_id**，避免误登生产
 - 本 Skill **仅限内部测试与开发环境使用**，不要用来对生产环境做任何写操作前未经授权的调用

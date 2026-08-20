@@ -35,6 +35,8 @@ python cosmic_login.py <url> <user> <pwd> <dc_id>    # 指定数据中心
 python cosmic_login.py --check <url> <cookie>        # 检查会话
 ```
 
+登录成功时 CLI 输出 `LOGIN_SUCCESS`、`COOKIE_AVAILABLE`、`CSRF_TOKEN_AVAILABLE` 和 `ACCOUNT_ID`，不会输出 Cookie/CSRF 原值。下游需要原值时，应在同一 Python 进程中调用 `auto_login()` 并直接消费返回字典。
+
 ## RSA 加密细节
 
 密码使用 RSA PKCS1v1.5 加密:

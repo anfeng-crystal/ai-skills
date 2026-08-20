@@ -1,97 +1,49 @@
 ---
 name: kingdee-cosmic-login
-description: "Kingdee auth: test env login, list data centers, verify Cookie/CSRF."
+description: "金蝶云苍穹 dev/test/prod 登录、数据中心枚举与 Cookie/CSRF 会话校验；仅负责鉴权，业务调用返回原任务。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [kingdee, cosmic, login, authentication, cookie]
-  platforms:
-    claude-code:
-      argument-hint: "<base_url> [username] [password] [datacenter_id]"
-      allowed-tools: "Bash Read"
+  tags: "kingdee, cosmic, login, authentication, cookie"
 ---
 
-# Cosmic Login Skill
-Use this skill when a task needs to log in to a Kingdee Cloud Cosmic test environment before calling APIs, running probes, or validating automated test flows. The skill ships a self-contained Python helper, `cosmic_login.py`, that performs the browser-equivalent RSA login flow and prints machine-readable `KEY=VALUE` output.
+# Kingdee Cosmic Login
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
-## Routing Boundary
+## 触发与路由
+- 需要枚举数据中心、登录苍穹或校验 Cookie/CSRF 时使用。
+- 本 skill 只返回鉴权结果；API、元数据、测试、诊断或业务写入仍由发起任务负责。
 
-This is a tool subprocess for authentication only. After login, datacenter selection, or session validation, return the Cookie/CSRF outcome to the active API, metadata, or troubleshooting task. Do not use this skill as the owner for business implementation, metadata analysis, SDK lookup, or Java plugin repair.
-
-## Safety Rules
-
-1. Treat username, password, Cookie, CSRF token, and datacenter ids as sensitive session material.
-2. Do not persist credentials, Cookies, or tokens into `.env`, shell profiles, `cosmic.json`, CI artifacts, logs, project config, or other files unless the user explicitly names the destination and purpose.
-3. Do not print raw passwords in final answers. Redact Cookies and CSRF tokens in chat summaries unless the user explicitly requested the raw value.
-4. Prefer using the existing project Python environment. Do not install Python packages globally without user approval.
-5. Do not use production credentials or production URLs unless the user explicitly says the current task is production-safe login/session validation and no business write will be performed.
-6. Even if an editing tool is available in the host, this skill must not edit project files to save credentials or sessions.
-
-## Inputs
-
-Required and optional inputs:
-
-| Input | Required | Notes |
+## 契约
+| 模式 | 输入 | 输出 |
 | --- | --- | --- |
-| `base_url` | yes | Cosmic site root, usually ending with `/ierp`; trim trailing slash is handled by the script. |
-| `username` | login only | Omit when the user only wants to list datacenters. |
-| `password` | login only | Use only for the current command unless persistence is explicitly requested. |
-| `datacenter_id` | required for multi-datacenter sites | If omitted and multiple datacenters exist, the script lists available ids and stops. |
-| `cookie` | check only | Used with `--check` to verify an existing session. |
+| `list` | `base_url` | 数据中心 id 列表 |
+| `login` | `base_url`、用户名、密码；多数据中心时含 `datacenter_id` | CLI 返回登录状态和 Cookie/CSRF 可用性；Python API 在同进程返回原值 |
+| `check` | `base_url`、Cookie | `SESSION_VALID` |
 
-## Workflow
+- 环境由当前任务决定；目标是 prod 时可使用任务相关的生产凭据，鉴权本身不改变业务数据。
+- 优先复用当前任务已提供或已配置的凭据和登录态；只有关键值无法发现时才询问。
+- 密码、Cookie、CSRF 和数据中心信息只在当前进程与下游任务间传递，默认不输出、不落盘、不写项目配置。
+- 下游副作用由调用方的执行合同控制；本 skill 不额外禁止已获批的生产测试或写入。
 
-1. Identify the user intent:
-   - List datacenters: only `base_url` is available or requested.
-   - Login: `base_url`, `username`, and `password` are available.
-   - Check session: user provides a Cookie and asks whether it is still valid.
-2. Locate `cosmic_login.py` next to this `SKILL.md`. If the runtime exposes a skill directory variable, use that path. Otherwise search only the current skill directory or the project path the user provided.
-3. Check dependencies only when needed:
-   ```bash
-   python -c "import requests; import Crypto"
-   ```
-   If this fails, ask before installing dependencies. Recommended packages are `requests` and `pycryptodome`; `rsa` is a supported fallback for encryption only.
-4. Run the command that matches the intent:
-   ```bash
-   # List datacenters
-   python "$COSMIC_LOGIN_SCRIPT" "$BASE_URL"
-
-   # Login, auto-selecting only when exactly one datacenter exists
-   python "$COSMIC_LOGIN_SCRIPT" "$BASE_URL" "$USERNAME" "$PASSWORD"
-
-   # Login with explicit datacenter
-   python "$COSMIC_LOGIN_SCRIPT" "$BASE_URL" "$USERNAME" "$PASSWORD" "$DATACENTER_ID"
-
-   # Check existing Cookie
-   python "$COSMIC_LOGIN_SCRIPT" --check "$BASE_URL" "$COOKIE"
-   ```
-5. Parse output:
-   - Success starts with `LOGIN_SUCCESS`.
-   - `COOKIE=...` is the HTTP Cookie header value.
-   - `CSRF_TOKEN=...` is the `kd-csrf-token` header value when available.
-   - `ACCOUNT_ID=...` is the datacenter/account id used for the login.
-   - `SESSION_VALID=True` means an existing Cookie passed the lightweight check.
-6. Use the login state only for the requested downstream task and current task context. When passing it to a follow-up API call, include:
+## 工作流
+1. 从当前 skill 目录定位 `cosmic_login.py`；不要从业务仓库或用户 home 猜路径。
+2. 复用项目 Python 环境并检查 `requests` 与 `Crypto`；缺依赖时使用项目包管理方式，不做全局安装。
+3. 按模式运行。POSIX 使用 `python3`，Windows 使用 `py -3`：
    ```text
-   Cookie: <COOKIE>
-   kd-csrf-token: <CSRF_TOKEN>
+   <python> <skill-root>/cosmic_login.py <base_url>
+   <python> <skill-root>/cosmic_login.py <base_url> <username> <password> [datacenter_id]
+   <python> <skill-root>/cosmic_login.py --check <base_url> <cookie>
    ```
-   Do not write raw Cookie/CSRF to final answers, logs, env files, CI outputs, or project config unless the user explicitly asks for raw values and a destination.
-7. In the final response, report the outcome and next action. Redact session material by default:
-   ```text
-   登录成功：account_id=156..., cookie 已获取，csrf token 已获取。
-   ```
+4. CLI 解析 `LOGIN_SUCCESS`、`COOKIE_AVAILABLE`、`CSRF_TOKEN_AVAILABLE`、`ACCOUNT_ID`、`SESSION_VALID`，不再期待 `COOKIE=` 或 `CSRF_TOKEN=` 原值；下游需要会话材料时，在同一 Python 进程中调用 `auto_login()` 并直接传给下游工具。
+5. 下游收到 403 时区分会话失效和账号缺少接口权限；会话失效才重新登录。
 
-## Error Handling
+## 门禁与失败
+- 多数据中心且当前任务无法确定目标时，返回候选 id 后请求选择；不得默认选择可能改变租户范围的账号。
+- `RSA 加密库不可用` 是依赖失败；`获取数据中心失败` 是 URL/网络失败；`获取公钥失败`、`登录失败` 是账号或服务端失败；不得混写成凭据不存在。
+- 不从 memory、浏览器历史或无关项目文件搜集凭据，不记录认证请求头，不把 Cookie/CSRF 写入 CI、日志或异常栈。
+- 跨平台必需路径不得依赖 bash、固定盘符、`$HOME` 或 `~`。
 
-| Output or symptom | Likely cause | Action |
-| --- | --- | --- |
-| `RSA 加密库不可用` | Neither `pycryptodome` nor `rsa` is installed. | Ask before installing `requests pycryptodome`, or use the project package manager. |
-| `获取数据中心失败` | Base URL, network, proxy, or server availability issue. | Verify URL and connectivity before retrying. |
-| `检测到 N 个数据中心` | The environment has multiple datacenters. | Ask the user to choose one of the listed ids, then rerun with `datacenter_id`. |
-| `datacenter_id 看起来是占位符` | Placeholder config was passed as a real id. | Replace it with an actual datacenter id from the list command. |
-| `获取公钥失败` | Wrong datacenter id, incompatible account, or server-side login error. | Recheck datacenter id and username type. |
-| `登录失败` | Bad credentials, account restrictions, captcha, or server-side policy. | Ask the user to verify credentials or browser login state. |
-| `SESSION_VALID=False` | Cookie expired or lacks required permission. | Re-login and retry the downstream API call. |
-| HTTP 403 on downstream API | Login succeeded but the account lacks API/kapi permission. | Ask the user to confirm Cosmic permissions. |
+## 输出
+返回环境、模式、账号/数据中心的脱敏标识、会话是否有效和下游可执行状态；不返回秘密值。

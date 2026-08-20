@@ -5,10 +5,17 @@
   {"query": "苍穹的 KSQL 和标准 SQL 有什么区别", "should_trigger": true},
   {"query": "生成 DELETE INSERT 预置数据迁移脚本", "should_trigger": true},
   {"query": "检查一下项目里有没有把数据库密码提交到 Git", "should_trigger": true},
+  {"query": "根据苍穹实体物理元数据生成 PostgreSQL CREATE TABLE", "should_trigger": true},
+  {"query": "已授权只读核对生产库这张表的三条记录", "should_trigger": true},
+  {"query": "为已批准的数据库变更整理影响范围和回滚契约", "should_trigger": true},
+  {"query": "先查生产元数据，为组织映射修复创建 SQL 修改计划，我来审核", "should_trigger": true},
+  {"query": "把苍穹基础资料迁移到新环境，范围除了主表是否还要包含多语言表和分录关系表", "should_trigger": true},
+  {"query": "页面布局异常，能否直接把同状态的历史数据批量归一化", "should_trigger": true},
   {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
   {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
   {"query": "帮我写一个 KingScript 脚本", "should_trigger": false},
-  {"query": "对 dev 接口跑安全 POC 验证", "should_trigger": false}
+  {"query": "对 dev 接口跑安全 POC 验证", "should_trigger": false},
+  {"query": "把 UPDATE SQL 打包成 ISCB DTS 服务流程", "should_trigger": false}
 ]

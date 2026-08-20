@@ -1,7 +1,7 @@
 interface:
   display_name: "Kingdee Security Review"
-  short_description: "金蝶云苍穹安全审计、接口核查和受控 POC 验证"
-  default_prompt: "使用 $kingdee-security-review 审计金蝶云苍穹接口或漏洞验证任务。先选择 audit、verify 或 redteam-lite 模式；verify/redteam-lite 必须先做目标 scope 检查，默认禁止对 prod 或未知目标主动 POC。"
+  short_description: "苍穹安全审计、社区发现核验、生产只读与受控 POC"
+  default_prompt: "使用 $kingdee-security-review 先按证据来源选择 audit、audit-readonly、verify 或 redteam-lite；生产只读按完整契约执行，主动 POC 必须通过目标 scope 门禁。"
 
 policy:
   allow_implicit_invocation: true

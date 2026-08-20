@@ -38,6 +38,44 @@ _PC_SETVALUE_PATTERN = re.compile(
 _PC_GUARD_PATTERN = re.compile(r"getProperty\s*\(\s*\)|getChangeSet\s*\(\s*\)")
 
 
+def _query_matches(lang, query_source: str, root_node):
+    """执行 tree-sitter 查询，兼容 0.26 QueryCursor 与旧 Query.matches。"""
+    import tree_sitter
+
+    query = tree_sitter.Query(lang, query_source)
+    cursor_type = getattr(tree_sitter, "QueryCursor", None)
+    if cursor_type is not None:
+        try:
+            cursor = cursor_type(query)
+        except TypeError:
+            # 兼容少数将 Query 传给 matches() 的过渡版绑定。
+            cursor = cursor_type()
+            return cursor.matches(query, root_node)
+        return cursor.matches(root_node)
+
+    legacy_matches = getattr(query, "matches", None)
+    if legacy_matches is None:
+        raise RuntimeError("当前 tree-sitter 版本不支持查询 matches")
+    return legacy_matches(root_node)
+
+
+def _capture_map(match) -> dict:
+    """归一化 Query/QueryCursor.matches() 的捕获映射。"""
+    if isinstance(match, dict):
+        return match
+    if isinstance(match, tuple) and len(match) > 1 and isinstance(match[1], dict):
+        return match[1]
+    return {}
+
+
+def _first_capture(captures: dict, name: str):
+    """取得命名捕获的首个节点，兼容单节点与节点列表。"""
+    nodes = captures.get(name)
+    if isinstance(nodes, (list, tuple)):
+        return nodes[0] if nodes else None
+    return nodes
+
+
 def check(filepath: str, lines: List[str]) -> List[LintIssue]:
     """执行场景错配检查，返回问题列表。"""
     issues: List[LintIssue] = []
@@ -194,20 +232,25 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
             # 使用 AST 树精确定位 registerListener 方法体
             has_add_listener = False
             try:
-                import tree_sitter
-                q = tree_sitter.Query(lang, "(method_declaration name: (identifier) @name body: (block) @body)")
-                for match in q.matches(tree.root_node):
-                    if len(match) > 1 and isinstance(match[1], dict):
-                        match_dict = match[1]
-                        m_name_nodes = match_dict.get("name", [])
-                        m_body_nodes = match_dict.get("body", [])
-                        if m_name_nodes and m_body_nodes:
-                            if m_name_nodes[0].text.decode('utf-8') == "registerListener":
-                                raw_body_text = m_body_nodes[0].text.decode('utf-8')
-                                clean_body_lines = [code_for_structure(l) for l in raw_body_text.splitlines()]
-                                body_text = "\n".join(clean_body_lines)
-                                if re.search(r"add\w*Listener[s]?\s*\(", body_text):
-                                    has_add_listener = True
+                query_source = (
+                    "(method_declaration name: (identifier) @name "
+                    "body: (block) @body)"
+                )
+                for match in _query_matches(lang, query_source, tree.root_node):
+                    captures = _capture_map(match)
+                    name_node = _first_capture(captures, "name")
+                    body_node = _first_capture(captures, "body")
+                    if name_node is None or body_node is None:
+                        continue
+                    if name_node.text.decode("utf-8") == "registerListener":
+                        raw_body_text = body_node.text.decode("utf-8")
+                        clean_body_lines = [
+                            code_for_structure(body_line)
+                            for body_line in raw_body_text.splitlines()
+                        ]
+                        body_text = "\n".join(clean_body_lines)
+                        if re.search(r"add\w*Listener[s]?\s*\(", body_text):
+                            has_add_listener = True
             except Exception:
                 # 降级：如果 AST 失败，假设通过避免误报
                 has_add_listener = True
@@ -303,25 +346,21 @@ def _check_missing_super(filepath: str, lines: List[str],
                          tree=None, lang=None):
     """检测继承型插件中 @Override 生命周期方法是否遗漏 super 调用。"""
     try:
-        import tree_sitter
         if tree is None or lang is None:
             tree, lang = parse_java(lines)
 
-        q = tree_sitter.Query(lang, """
+        query_source = """
             (method_declaration
                 name: (identifier) @name
                 body: (block) @body
             ) @method
-        """)
+        """
 
-        for match in q.matches(tree.root_node):
-            if len(match) < 2 or not isinstance(match[1], dict):
+        for match in _query_matches(lang, query_source, tree.root_node):
+            captures = _capture_map(match)
+            method_node = _first_capture(captures, "method")
+            if method_node is None:
                 continue
-            match_dict = match[1]
-
-            method_nodes = match_dict.get("method", [])
-            if not method_nodes: continue
-            method_node = method_nodes[0]
 
             # Check @Override
             is_override = False
@@ -336,23 +375,25 @@ def _check_missing_super(filepath: str, lines: List[str],
 
 
             # Get Method Name
-            name_nodes = match_dict.get("name", [])
-            if not name_nodes: continue
-            method_name = name_nodes[0].text.decode('utf-8')
+            name_node = _first_capture(captures, "name")
+            if name_node is None:
+                continue
+            method_name = name_node.text.decode('utf-8')
 
             if method_name.lower() not in _LIFECYCLE_METHODS:
                 continue
 
             # Check Plugin Context for this method
             # Just take the context of the line where method name is
-            method_line = name_nodes[0].start_point[0]
+            method_line = name_node.start_point[0]
             if method_line < len(plugin_context) and plugin_context[method_line] not in {"op", "ui", "other"}:
                 continue
 
             # Check if super.methodName() exists in the body
-            body_nodes = match_dict.get("body", [])
-            if not body_nodes: continue
-            raw_body_text = body_nodes[0].text.decode('utf-8')
+            body_node = _first_capture(captures, "body")
+            if body_node is None:
+                continue
+            raw_body_text = body_node.text.decode('utf-8')
 
             clean_body_lines = [code_for_structure(l) for l in raw_body_text.splitlines()]
             body_text = "\n".join(clean_body_lines)

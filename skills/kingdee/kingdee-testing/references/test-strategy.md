@@ -9,6 +9,7 @@
 | Verify a plugin against dev runtime | Runtime probe | Explicit read-only HTTP probe and evidence collection |
 | Check existing tests | Test rot scan | Identify fake assertions, wildcard imports, and resource leaks |
 | Guard a refactor | Regression guard | Replay `regression-playbook.md` rules |
+| Diagnose a failing test or runtime check | Diagnose/fix/verify loop | Preserve failure evidence, apply an authorized minimal fix, rerun narrow then broad checks |
 
 ## Unit Test Rules
 
@@ -18,6 +19,7 @@
 - Assertions must inspect real output, side effects, thrown exceptions, or collaborator interactions.
 - Static mocks must be closed by try-with-resources or deterministic teardown.
 - Avoid `import static org.mockito.Mockito.*` and `import static org.mockito.ArgumentMatchers.*`; import only used methods.
+- Read `testcase-completeness.md` before generation; trace every required scenario to a source branch and meaningful assertion.
 
 ## Testability Refactor Checks
 

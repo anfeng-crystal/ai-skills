@@ -28,6 +28,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from datetime import datetime
 
+from db_connection import MetadataDbConnectionError, connect_with_retry
+
 # ── 常量 ─────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).parent
 SKILL_DIR = SCRIPT_DIR.parent
@@ -149,12 +151,23 @@ def get_conn(cfg):
     if not db.get("enabled", False):
         print("[ERROR] 数据库未启用，请在 config.json 中设置 database.enabled=true")
         sys.exit(1)
-    return psycopg2.connect(
-        host=db["host"], port=db.get("port", 5432),
-        dbname=db["dbname"], user=db["user"], password=db["password"],
-        connect_timeout=db.get("connect_timeout", 10),
-        options=f"-c search_path={db.get('schema', 'public')}"
-    )
+    try:
+        return connect_with_retry(
+            psycopg2.connect,
+            {
+                "host": db["host"],
+                "port": db.get("port", 5432),
+                "dbname": db["dbname"],
+                "user": db["user"],
+                "password": db["password"],
+                "connect_timeout": db.get("connect_timeout", 10),
+                "options": f"-c search_path={db.get('schema', 'public')}",
+            },
+            warn=lambda message: print(f"[WARNING] {message}", file=sys.stderr),
+        )
+    except MetadataDbConnectionError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 # ── XML 解析 ─────────────────────────────────────────────────────────────

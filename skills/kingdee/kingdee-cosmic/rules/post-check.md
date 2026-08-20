@@ -11,18 +11,27 @@
 
 ## 默认执行命令
 
+首次运行或新建隔离环境时，按锁定版本安装最小解析依赖：
+
+```bash
+python3 -m pip install -r <SKILL_ROOT>/requirements.txt
+```
+
 ```bash
 python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <生成的文件或目录> --fix-hint
 ```
 
 脚本自动判断：
 1. 从目标文件路径**向上查找** `build.gradle` + `settings.gradle` 共存的目录
-2. 找到 → Gradle 编译（解析 `settings.gradle` 确定模块，执行 `./gradlew :module:compileJava`）
-3. 未找到 → 回退到 `cosmic-post-lint.py --fix-hint` 静态校验
+2. 找到且 JDK 兼容 → Gradle 编译（解析 `settings.gradle` 确定模块，执行 `./gradlew :module:compileJava`）
+3. Gradle 成功 → 对同一目标继续执行 `cosmic-post-lint.py`
+4. 未找到 Gradle 项目或 JDK 不兼容 → 直接执行 `cosmic-post-lint.py`
+
+检查不会修改 `gradlew` 权限；POSIX 下 wrapper 不可执行时使用 `sh gradlew` 调用。
 
 JDK 兼容判断优先使用项目声明的 `systemProp.jdk.version`、`systemProp.jdk_version` 或 `sourceCompatibility`；金蝶苍穹 JDK8 项目应允许在 JDK8 下执行编译检查，不因 Gradle wrapper 版本被抬高到 JDK17。
 
-## 严格模式（仅 post-lint 回退时生效）
+## 严格模式（仅影响 post-lint 阶段）
 
 当用户明确要求"严格校验""模板升级治理""补事实来源留痕"时，再追加严格模式：
 
@@ -32,8 +41,12 @@ python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <生成的文件或目录> --f
 
 说明：
 
-- `--strict` 仅在非 Gradle 回退到 post-lint 时生效，额外检查 **C 层** 验证来源注释。
+- `--strict` 在 post-lint 阶段额外检查 **C 层** 验证来源注释；Gradle 成功后的串联 lint 同样生效。
 - Gradle 编译本身不区分严格/宽松——编译器检查的就是全部约束。
+
+## JSON 输出
+
+追加 `--json` 时，stdout 只输出一个可独立解析的 JSON 文档；Gradle 输出、阶段提示和 JDK 提示写入 stderr。Gradle 失败，或 Gradle 成功后 lint 发现 `ERROR`，都会返回非零状态。
 
 ## 校验流程
 
@@ -79,6 +92,8 @@ graph TB
 - SDK 类名、方法签名和 `@Override` 正确性改为**事前**通过 `cosmic-api-knowledge.py detail/search`、模板、cheat-sheet 或编译验证，不再由 post-lint 的 `API-*` 规则兜底。
 - `SCENE-*` 与 `RESOURCE-*` 中既有明显硬错误，也可能包含偏治理的 warning；解释结果时要结合上下文，不要机械套标签。
 - 需要按 A 层（ERROR）处理的 SCENE/STYLE/RESOURCE 规则 ID，统一定义在 [a-layer-rules.json](a-layer-rules.json)（单一可信源），`cosmic-post-lint.py` 在运行时自动加载。如需新增/移除 A 层规则，直接编辑该 JSON 文件即可，无需改脚本代码。
+- `RESOURCE-004` 认可直接 `close()`、`DataSet` try-with-resources、返回/后续 DataSet 消费，以及词法作用域覆盖声明的 `try (AlgoContext ... = Algo.newContext())`；把上下文创建放在别的方法里不作为静态豁免。
+- `STYLE-015` 仅对可证明的有界主键游标分页放行：同一方法内必须有 `id > cursor`、`id asc`、有限页大小，并从本页末行推进同一 cursor；普通循环查询仍是 ERROR。
 - `VERIFY-*` 默认不作为当前交付阻断项；只有在 `--strict` 或用户明确要求治理时，才应提高关注度。
 
 ## 修复示例
@@ -105,7 +120,8 @@ AI 应：
   - 适合本次顺手治理的低风险改动
 - 出现 `INFO` 时，默认按"后续治理建议"表述，不要阻断当前任务。
 
-## 重试上限
+## 证据驱动的停止条件
 
-- 单个文件最多执行 **3 轮** "修复 → 复检" 循环
-- 3 轮后仍有 `ERROR` 未消除，停止自动修复，向用户报告剩余问题清单并请求人工介入
+- 每轮修复后比较编译/lint findings、错误位置、失败类型和测试结果；只有产生可区分的新证据，且修复仍在当前任务契约内，才继续自动修复。
+- 出现以下任一情况立即停止并报告剩余 findings：同一错误重复且没有新的根因证据；错误/回归数量不降反升；修复需要猜 SDK/元数据事实；改动将越出批准范围；需要外部授权、破坏性动作或高风险契约变更。
+- 只剩无法由当前证据判定的 `ERROR` 时，报告已尝试动作、最后证据、阻塞项和最小人工决策；不按固定轮数假装完成或强行改写。

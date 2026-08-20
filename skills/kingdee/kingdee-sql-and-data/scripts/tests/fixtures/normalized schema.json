@@ -1,0 +1,13 @@
+{
+  "table": "T_DEMO_ENTITY",
+  "db_route": "SYS",
+  "columns": [
+    {"name": "FID", "type": "bigint", "nullable": false, "primary_key": true},
+    {"name": "FNUMBER", "type": "string", "length": 80, "nullable": false},
+    {"name": "FAMOUNT", "type": "decimal", "precision": 18, "scale": 2, "nullable": true},
+    {"name": "FCREATETIME", "type": "datetime", "nullable": false}
+  ],
+  "indexes": [
+    {"name": "IDX_DEMO_NUMBER", "columns": ["FNUMBER"], "unique": true}
+  ]
+}

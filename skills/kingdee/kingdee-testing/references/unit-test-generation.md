@@ -53,6 +53,21 @@
 | `anyString()` 不匹配 null | 默认不匹配 null | `nullable(String.class)` |
 | 内部 `new XxxBinder()` NPE | 内部 new 未拦截 | `mockConstruction(XxxBinder.class)` |
 
+补充经过静态核对、且不降低现有基类约束的陷阱：
+
+| 现象 | 根因 | 处理 |
+|---|---|---|
+| `RequestContext.get()` 已 mock，但静态便捷方法仍返回 0/null | 实例入口和静态入口是两条调用路径 | 按源码实际调用分别 stub，并在 teardown 关闭静态 mock |
+| 时间相关用例跨日或跨时区偶发失败 | 直接读取当前日期/时间 | 冻结源码实际使用的时钟入口；恢复真实方法并限定静态 mock 生命周期 |
+| JUnit 4 `@Test(timeout=...)` 下静态 mock 失效 | timeout 在另一线程运行测试 | 不在方法注解设置 timeout；交由 Gradle/测试任务控制 |
+| `DynamicObject` 空值断言与运行结果不符 | 类型 getter 可能转换为默认值，`getDate` 等仍可为 null | 先核对项目 SDK/现有测试，再分别覆盖缺字段、显式 null 和默认值 |
+| 分录只有一行时通过，多行时失败 | 测试只构造单对象或未验证集合 `size/isEmpty/顺序` | 覆盖 0/1/多行及重复/顺序分支，使用项目已有 DynamicObject 构造器 |
+| 私有方法靠反射单测后仍遗漏公共行为 | 测试绑定实现细节 | 经公共入口验证输出/副作用；不可达逻辑先提出可测试性重构 |
+| 测试 PASS 但断言未执行 | catch 后吞异常或提前 return | 让异常传播；每个测试必须到达有效 assert/verify |
+| 同一静态方法按不同参数返回不同对象 | 单一宽泛 stub 掩盖分支 | 使用精确 matcher 或 `thenAnswer`，并验证关键参数 |
+
+只从目标源码 import、现有 BaseTest 和项目既有通过用例推断平台 mock。不要凭通用表自动添加未使用的 Helper，也不要将候选材料中的 JUnit 4 生命周期覆盖到项目既有 JUnit 5/苍穹测试基类。
+
 ## 五、覆盖率门禁与红线
 
 - 行覆盖率 ≥ 90%,分支覆盖率 ≥ 80%。
@@ -65,3 +80,5 @@
   - Java 8 兼容:禁 `var`/`List.of()`/`Map.of()`/`String.isBlank()`/switch 表达式。
   - 断言用 AssertJ,禁 `assertTrue`/`assertEquals`。
   - 字段声明处禁初始化非常量对象(除 `private static final`)。
+
+生成前读取 `testcase-completeness.md`，先列出行为与分支矩阵，再生成代码；生成后逐项回填执行结果和阻塞原因。

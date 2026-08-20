@@ -6,9 +6,13 @@
   {"query": "前端页面脚本怎么用 fetchData 调服务端", "should_trigger": true},
   {"query": "给苍穹这个字段加个自定义 CSS 背景色", "should_trigger": true},
   {"query": "苍穹树控件节点点击事件怎么监听", "should_trigger": true},
+  {"query": "检查这个苍穹页面脚本有没有漏掉 willUnmount 清理", "should_trigger": true},
+  {"query": "校验这段苍穹自定义样式的 $ 选择器和 themeColor", "should_trigger": true},
+  {"query": "已授权只读验证生产页面脚本是否加载，不点业务按钮", "should_trigger": true},
   {"query": "帮我写一个苍穹 Java 表单插件", "should_trigger": false},
   {"query": "帮我写一个 KingScript 服务端脚本插件", "should_trigger": false},
   {"query": "帮我写一个苍穹报表取数插件", "should_trigger": false},
   {"query": "查一下这个实体的字段标识", "should_trigger": false},
+  {"query": "从零创建 KDApi 自定义控件并构建打包", "should_trigger": false},
   {"query": "苍穹 BOTP 转换规则怎么配", "should_trigger": false}
 ]

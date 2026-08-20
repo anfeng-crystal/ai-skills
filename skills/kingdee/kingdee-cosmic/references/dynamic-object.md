@@ -22,7 +22,7 @@
 
 ### 1. 安全取值与设置 (单对象)
 - `safeGetValue(DynamicObject dyn, String propKey)`: **最常用**。安全获取字段值，字段不存在时返回 null。
-- `safeSetValue(DynamicObject dyn, String propKey, Object value)`: 安全设置值，字段不存在时不抛异常。
+- `safeSetValue(DynamicObject dyn, String propKey, Object value)`: 在已确认的跨版本可选字段上安全设置；字段不存在时不抛异常。它不能把不存在的业务字段变成合法落点。
 - `nullSafeGet(DynamicObject dyn, String field)`: 空安全获取字段值。
 - `getPkValue(DynamicObject dyn)`: 获取主键。
 - `containsKey(DynamicObject dyn, String key)`: 判断是否包含某字段属性。
@@ -111,3 +111,4 @@ public void checkBillStatus(DynamicObject bill) {
 2. **脏数据未提交**: 手动修改 `DynamicObject` 的值后，如果不希望触发操作插件的变更逻辑，需通过 `clearDirty` 控制。
 3. **集合引用失效**: 对 `DynamicObjectCollection` 执行 `clear()` 后，之前获取的引用将变为空，操作前需确认状态。
 4. **克隆后主键**: `clone` 方法默认清除主键值，如需保留主键请手动设置。
+5. **用安全写掩盖虚构字段**: 元数据已证明字段不存在时，不得用 `safeSetValue`/`setIfPresent` 吞掉错误。只有明确的跨版本兼容需求，且至少一个受支持环境真实存在该字段时才可条件写；否则先确认外部值是查询参数还是持久化字段，并确认精确编码体系与真实 F7/业务字段。

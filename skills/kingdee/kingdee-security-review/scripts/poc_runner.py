@@ -22,6 +22,15 @@ SAFE_PAYLOADS = {
     "xxe": ["<!-- xxe marker only; no external entity -->"],
     "rce": ["echo-test"],
 }
+SENSITIVE_HEADERS = {"authorization", "proxy-authorization", "cookie", "set-cookie", "x-api-key"}
+
+
+def redact_headers(headers: dict) -> dict:
+    return {key: ("<redacted>" if key.lower() in SENSITIVE_HEADERS else value) for key, value in headers.items()}
+
+
+def redact_text(value: str) -> str:
+    return scope_check.redact_text(value)
 
 
 def load_poc(path: str) -> dict:
@@ -35,6 +44,9 @@ def load_poc(path: str) -> dict:
 def build_request(target_url: str, poc: dict) -> urllib.request.Request:
     base = target_url.rstrip("/") + "/"
     path = str(poc.get("path", "")).lstrip("/")
+    parsed_path = urllib.parse.urlparse(path)
+    if parsed_path.scheme or parsed_path.netloc:
+        raise ValueError("POC path must be relative to the approved target")
     url = urllib.parse.urljoin(base, path)
     params = poc.get("params") or {}
     if params:
@@ -64,20 +76,20 @@ def run_request(req: urllib.request.Request, timeout: float) -> dict:
             return {
                 "ok": True,
                 "status": resp.status,
-                "headers": dict(resp.headers.items()),
-                "body_preview": body.decode("utf-8", errors="replace"),
+                "headers": redact_headers(dict(resp.headers.items())),
+                "body_preview": redact_text(body.decode("utf-8", errors="replace")),
             }
     except urllib.error.HTTPError as exc:
         body = exc.read(4096)
         return {
             "ok": False,
             "status": exc.code,
-            "headers": dict(exc.headers.items()),
-            "body_preview": body.decode("utf-8", errors="replace"),
-            "error": str(exc),
+            "headers": redact_headers(dict(exc.headers.items())),
+            "body_preview": redact_text(body.decode("utf-8", errors="replace")),
+            "error": redact_text(str(exc)),
         }
     except Exception as exc:
-        return {"ok": False, "error": str(exc)}
+        return {"ok": False, "error": redact_text(str(exc))}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -116,8 +128,8 @@ def main(argv: list[str] | None = None) -> int:
         "dry_run": not args.execute,
         "request": {
             "method": req.get_method(),
-            "url": req.full_url,
-            "headers": dict(req.header_items()),
+            "url": scope_check.redact_url(req.full_url),
+            "headers": redact_headers(dict(req.header_items())),
             "body_bytes": len(req.data or b""),
             "poc_file": str(Path(args.poc_file).resolve()),
         },

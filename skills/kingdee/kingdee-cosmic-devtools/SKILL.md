@@ -1,11 +1,11 @@
 ---
 name: kingdee-cosmic-devtools
 description: "用于 KDDT 苍穹工程/模块骨架、插件或服务类骨架，以及本机 COSMIC_HOME 资源包的 inspect、staging、apply 和 rollback。不用于业务模块的 Gradle 编译测试、jarZip、uploadZipRestartAndWait、DEV/TEST/PROD 部署、服务重启或部署验收。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [kingdee, cosmic, kddt, scaffold, cosmic-home, resource-pack]
+  tags: "kingdee, cosmic, kddt, scaffold, cosmic-home, resource-pack"
 ---
 
 # Kingdee Cosmic DevTools
@@ -15,6 +15,7 @@ metadata:
 - **default**：仅因任务出现“Gradle”“插件”“部署”“DEV”“页面测试”不得加载本 skill。业务模块的 `compileJava`、`test`、`jarZip`、`uploadZipRestartAndWait`、服务重启和部署验收交给当前仓库任务，并由 `kingdee-cosmic`、`kingdee-testing` 或 `kingdee-kcs-ops` 按职责处理；同一任务明确包含工程骨架或 `COSMIC_HOME` 资源处理时，只为该子任务加载。
 - 本 skill 只负责工程骨架、模块模板、插件/服务类模板和 `COSMIC_HOME` 资源环境处理。
 - 业务插件逻辑、运行时诊断和最终改造收口交给 `kingdee-cosmic`；实体、字段、表单或插件挂载证据交给 `kingdee-metadata-analyzer`；SDK/API 签名查询交给 `kingdee-sdk-helper`。
+- KCS 控制面资源检查、变更计划、批准执行、验证或回滚交给 `kingdee-kcs-ops`；本 skill 不代发 KCS 运维请求。
 - 工具任务完成后，将工程、模块、文件路径、资源包 manifest、校验结果或 rollback 信息交回当前主控任务。
 
 ## 快速工作流
@@ -31,6 +32,7 @@ py -3 scripts\kddt_devtools.py --help
 ```
 
 1. 先用 `inspect --project <工程根目录>` 判断现有工程是否有 `project_flag`、`COSMIC_HOME`、资源 URL 和模板类型。
+   本地页面联调必须优先复用当前仓库的启动脚本、production/dev 配置和静态资源；不要为绕过当前启动错误自动另建隔离工程，导致运行上下文失真。
 2. 创建完整工程用 `create-project`；`project_flag` 可空，空值走旧模板，非空走新模板。
 3. 新增模块用 `add-module`；只解压 `*-sub.zip` 增量模板，并补 `settings.gradle` 与调试工程依赖，不创建完整工程。
 4. 生成插件或服务用 `create-plugin --kind inherit|extend|service`；默认不覆盖同名文件。
@@ -80,3 +82,8 @@ python scripts/kddt_devtools.py update-env rollback --cosmic-home <目标COSMIC_
 - 清理重复/低版本包只移动到 `.quarantine`，除非用户明确说“可以清理/删除”；平台扩展点包恢复或隔离后必须核验目标路径是否真的存在/不存在。
 - 输出、manifest 摘要和错误日志必须脱敏 token、Cookie、账号、租户、数据中心、内部 URL、下载签名参数和本地敏感路径。
 - 不把本次排查过程、实现取舍或临时路径写进生成的工程代码注释。
+
+## 输出
+- 工程/模块/生成文件的 task-relative 路径与未覆盖项。
+- 资源更新的 job 状态、manifest 摘要、校验结果、backup/quarantine/rollback 信息。
+- KCS 控制面请求不在本 skill 执行；命中时只返回转交 `kingdee-kcs-ops` 的路由结论。

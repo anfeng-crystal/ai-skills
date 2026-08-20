@@ -25,6 +25,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
+from db_connection import MetadataDbConnectionError, connect_with_retry
+
 # 确保 stdout/stderr 使用 UTF-8 编码
 if hasattr(sys.stdout, 'buffer'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -165,16 +167,20 @@ def get_conn(config: Dict[str, Any], config_path: Path):
         sys.exit(1)
 
     try:
-        return psycopg2.connect(
-            host=db.get("host", "localhost"),
-            port=db.get("port", 5432),
-            dbname=db.get("dbname", ""),
-            user=db.get("user", ""),
-            password=password,
-            connect_timeout=db.get("connectTimeoutSeconds", 10),
+        return connect_with_retry(
+            psycopg2.connect,
+            {
+                "host": db.get("host", "localhost"),
+                "port": db.get("port", 5432),
+                "dbname": db.get("dbname", ""),
+                "user": db.get("user", ""),
+                "password": password,
+                "connect_timeout": db.get("connectTimeoutSeconds", 10),
+            },
+            warn=lambda message: print(f"[WARNING] {message}", file=sys.stderr),
         )
-    except Exception as e:
-        print(f"[ERROR] 数据库连接失败: {e}", file=sys.stderr)
+    except MetadataDbConnectionError as exc:
+        print(f"[ERROR] {exc}", file=sys.stderr)
         sys.exit(1)
 
 

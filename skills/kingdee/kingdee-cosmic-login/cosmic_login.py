@@ -11,11 +11,14 @@ cosmic_login.py — 苍穹平台自动登录（完全自包含，零项目依赖
   python cosmic_login.py <base_url> <user> <password> <dc_id>    # 指定数据中心登录
   python cosmic_login.py --check <base_url> <cookie>             # 检查 Cookie 有效性
 
-输出格式（供上层脚本解析）:
+CLI 输出格式（供上层脚本解析，不包含会话秘密）:
   LOGIN_SUCCESS
-  COOKIE=<cookie_string>
-  CSRF_TOKEN=<token>
+  COOKIE_AVAILABLE=True
+  CSRF_TOKEN_AVAILABLE=True
   ACCOUNT_ID=<dc_id>
+
+需要在下游请求中使用 Cookie/CSRF 时，请在同一 Python 进程中调用
+auto_login()；CLI 不回显原值。
 """
 
 import json
@@ -408,6 +411,34 @@ def check_session(base_url: str, cookie: str, csrf_token: str = "",
 # CLI 入口
 # ═══════════════════════════════════════════════════════════════
 
+def _login_output_lines(result: dict) -> list[str]:
+    """Build machine-readable CLI output while keeping session material private."""
+    if result.get("success"):
+        lines = [
+            "LOGIN_SUCCESS",
+            f"COOKIE_AVAILABLE={bool(result.get('cookie'))}",
+            f"CSRF_TOKEN_AVAILABLE={bool(result.get('csrf_token'))}",
+            f"ACCOUNT_ID={result.get('account_id', '')}",
+        ]
+        if result.get("user_id"):
+            lines.append(f"USER_ID={result['user_id']}")
+        return lines
+
+    lines = [f"LOGIN_FAILED: {result.get('error', '登录失败')}"]
+    datacenters = result.get("datacenters") or []
+    if datacenters:
+        lines.append(f"DATACENTERS_COUNT={len(datacenters)}")
+        for dc in datacenters:
+            if isinstance(dc, dict):
+                dc_id = dc.get("id", dc.get("accountId", "?"))
+                dc_name = dc.get("name", dc.get("dcName", "?"))
+                line = f"  DC: id={dc_id}  name={dc_name}"
+            else:
+                line = f"  {dc}"
+            lines.append(line)
+    return lines
+
+
 def main():
     if len(sys.argv) < 2:
         print("苍穹平台自动登录工具 (自包含版)")
@@ -421,6 +452,8 @@ def main():
         print("示例:")
         print("  python cosmic_login.py http://127.0.0.1:8080/ierp")
         print("  python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>")
+        print()
+        print("CLI 不输出 Cookie 或 CSRF 原值；下游请在同一 Python 进程中调用 auto_login()。")
         sys.exit(1)
 
     # --check 模式
@@ -457,21 +490,9 @@ def main():
     dc_id = sys.argv[4] if len(sys.argv) >= 5 else ""
 
     result = auto_login(url, username, password, dc_id)
-    if result["success"]:
-        print("LOGIN_SUCCESS")
-        print(f"COOKIE={result['cookie']}")
-        print(f"CSRF_TOKEN={result['csrf_token']}")
-        print(f"ACCOUNT_ID={result['account_id']}")
-        if result.get("user_id"):
-            print(f"USER_ID={result['user_id']}")
-    else:
-        print(f"LOGIN_FAILED: {result['error']}")
-        if result.get("datacenters"):
-            print(f"DATACENTERS_COUNT={len(result['datacenters'])}")
-            for dc in result["datacenters"]:
-                dc_id = dc.get("id", dc.get("accountId", "?"))
-                dc_name = dc.get("name", dc.get("dcName", "?"))
-                print(f"  DC: id={dc_id}  name={dc_name}")
+    for line in _login_output_lines(result):
+        print(line)
+    if not result.get("success"):
         sys.exit(1)
 
 

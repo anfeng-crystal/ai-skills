@@ -122,31 +122,40 @@ public class SampleThreadPoolBatch {
      * @param pageSize 每页大小
      */
     public void batchProcessByPage(String formId, int pageSize) {
+        if (pageSize <= 0) {
+            log.warn("pageSize 必须大于 0，实际值：{}", pageSize);
+            return;
+        }
         ExecutorService pool = ThreadPools.newExecutorService(
                 "kdcd_paged_" + System.currentTimeMillis(), 50);
+        long lastId = 0L;
 
-        while (true) {
-            // 分页查询
-            DynamicObjectCollection page = QueryServiceHelper.query(
-                    formId, "id",
-                    new QFilter[]{new QFilter("kdcd_processed", QCP.equals, false)},
-                    "id asc", pageSize);
+        try {
+            while (true) {
+                // 每轮只做一次有上界的主键游标分页，不按业务行逐条查库。
+                QFilter pageFilter = new QFilter("kdcd_processed", QCP.equals, false)
+                        .and("id", QCP.large_than, lastId);
+                DynamicObjectCollection page = QueryServiceHelper.query(
+                        formId, "id", pageFilter.toArray(), "id asc", pageSize);
 
-            if (page.isEmpty()) {
-                break;
+                if (page.isEmpty()) {
+                    break;
+                }
+
+                for (DynamicObject row : page) {
+                    Object pk = row.get("id");
+                    pool.execute(() -> processSingleItem(formId, pk));
+                }
+                lastId = page.get(page.size() - 1).getLong("id");
+
+                if (page.size() < pageSize) {
+                    break; // 最后一页
+                }
             }
-
-            for (DynamicObject row : page) {
-                Object pk = row.get("id");
-                pool.execute(() -> processSingleItem(formId, pk));
-            }
-
-            if (page.size() < pageSize) {
-                break; // 最后一页
-            }
+        } finally {
+            ExecutorServiceUtils.shutdownAndAwaitTermination(pool, 2400);
         }
 
-        ExecutorServiceUtils.shutdownAndAwaitTermination(pool, 2400);
         log.info("分页批量处理完成");
     }
 

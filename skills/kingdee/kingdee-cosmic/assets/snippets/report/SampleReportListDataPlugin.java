@@ -1,6 +1,7 @@
 package kd.cd.common.snippets;
 
 import kd.bos.algo.Algo;
+import kd.bos.algo.AlgoContext;
 import kd.bos.algo.CustomAggFunction;
 import kd.bos.algo.DataSet;
 import kd.bos.algo.DataSetBuilder;
@@ -253,204 +254,225 @@ public class SampleReportListDataPlugin extends AbstractReportListDataPlugin {
 
     // ===================================================================
     //  DataSet 数据处理 Cookbook —— 各种场景用法示例
-    //  以下方法仅作为参考示例
+    //  以下方法仅作为参考示例；AlgoContext 会在正常/异常退出时关闭作用域内全部 DataSet。
     // ===================================================================
 
     // -------------------- 1. select 字段选择与表达式 --------------------
     private void selectExamples(DataSet ds) {
-        // 1.1 基本字段选择
-        DataSet ds1 = ds.select("id", "billno", "kdcd_amount");
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 1.1 基本字段选择
+            DataSet ds1 = ds.select("id", "billno", "kdcd_amount");
 
-        // 1.2 字段重命名（as 别名）
-        DataSet ds2 = ds.select("kdcd_project.name as project_name", "kdcd_amount as amt");
+            // 1.2 字段重命名（as 别名）
+            DataSet ds2 = ds.select("kdcd_project.name as project_name", "kdcd_amount as amt");
 
-        // 1.3 表达式计算新字段
-        DataSet ds3 = ds.select(
-                "billno",
-                "kdcd_amount * 1.13 as amount_with_tax",     // 乘以税率
-                "'固定值' as kdcd_type"                       // 常量字段
-        );
+            // 1.3 表达式计算新字段
+            DataSet ds3 = ds.select(
+                    "billno",
+                    "kdcd_amount * 1.13 as amount_with_tax",     // 乘以税率
+                    "'固定值' as kdcd_type"                       // 常量字段
+            );
 
-        // 1.4 字段拼接（字符串拼接用 +）
-        DataSet ds4 = ds.select(
-                "\"      \" + accountNumber + ' ' + accname as kdcd_budget_item",  // 缩进 + 编码 + 名称
-                "kdcd_init_budget",
-                "kdcd_actual_amt"
-        );
+            // 1.4 字段拼接（字符串拼接用 +）
+            DataSet ds4 = ds.select(
+                    "\"      \" + accountNumber + ' ' + accname as kdcd_budget_item",  // 缩进 + 编码 + 名称
+                    "kdcd_init_budget",
+                    "kdcd_actual_amt"
+            );
 
-        // 1.5 select 保留所有原字段 + 追加新字段（用 addField）
-        DataSet ds5 = ds.addField("budget_amt - actual_amt", "diff_amt")
-                        .addField("5", "sort_order");   // 添加常量排序字段
+            // 1.5 select 保留所有原字段 + 追加新字段（用 addField）
+            DataSet ds5 = ds.addField("budget_amt - actual_amt", "diff_amt")
+                            .addField("5", "sort_order");   // 添加常量排序字段
+
+        }
     }
 
     // -------------------- 2. filter 条件过滤 --------------------
     private void filterExamples(DataSet ds) {
-        // 2.1 字符串表达式过滤（类SQL语法）
-        DataSet ds1 = ds.filter("billstatus = 'C'");                          // 等于
-        DataSet ds2 = ds.filter("kdcd_amount > 0 and kdcd_amount < 10000");  // 范围
-        DataSet ds3 = ds.filter("kdcd_version_number = 1.0");                // 数值
-        DataSet ds4 = ds.filter("kdcd_type = 'er_expenseitemedit'");         // 字符串
-        DataSet ds5 = ds.filter("accountNumber != null");                     // 非空
-        DataSet ds6 = ds.filter("kdcd_item_sort != 0");                      // 非零
-        DataSet ds7 = ds.filter("billstatus = 'C' and kdcd_version_number = 1.0"); // 组合条件
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 2.1 字符串表达式过滤（类SQL语法）
+            DataSet ds1 = ds.filter("billstatus = 'C'");                          // 等于
+            DataSet ds2 = ds.filter("kdcd_amount > 0 and kdcd_amount < 10000");  // 范围
+            DataSet ds3 = ds.filter("kdcd_version_number = 1.0");                // 数值
+            DataSet ds4 = ds.filter("kdcd_type = 'er_expenseitemedit'");         // 字符串
+            DataSet ds5 = ds.filter("accountNumber != null");                     // 非空
+            DataSet ds6 = ds.filter("kdcd_item_sort != 0");                      // 非零
+            DataSet ds7 = ds.filter("billstatus = 'C' and kdcd_version_number = 1.0"); // 组合条件
 
-        // 2.2 过滤后保留有差异的行 —— 预警报表场景
-        DataSet ds8 = ds.filter("kdcd_actual_amt > kdcd_adj_budget"); // 实际发生数 > 调整后预算
+            // 2.2 过滤后保留有差异的行 —— 预警报表场景
+            DataSet ds8 = ds.filter("kdcd_actual_amt > kdcd_adj_budget"); // 实际发生数 > 调整后预算
 
-        // 2.3 null 值过滤
-        DataSet ds9 = ds.filter("predictdepre != null and predictdepre != 0");
+            // 2.3 null 值过滤
+            DataSet ds9 = ds.filter("predictdepre != null and predictdepre != 0");
 
-        // 2.4 自定义过滤逻辑（使用 AlgoUtils.filter 简化 FilterFunction 匿名类）
-        List<String> targetIds = new ArrayList<>(); // 假设已构建
-        targetIds.add("id_001");
-        targetIds.add("id_002");
-        DataSet ds10 = AlgoUtils.filter(ds, row -> {
-            String value = row.getString("assgrp_value");
-            if (value != null) {
-                for (String targetId : targetIds) {
-                    if (value.contains(targetId)) {
-                        return true; // 包含目标ID则保留
+            // 2.4 自定义过滤逻辑（使用 AlgoUtils.filter 简化 FilterFunction 匿名类）
+            List<String> targetIds = new ArrayList<>(); // 假设已构建
+            targetIds.add("id_001");
+            targetIds.add("id_002");
+            DataSet ds10 = AlgoUtils.filter(ds, row -> {
+                String value = row.getString("assgrp_value");
+                if (value != null) {
+                    for (String targetId : targetIds) {
+                        if (value.contains(targetId)) {
+                            return true; // 包含目标ID则保留
+                        }
                     }
                 }
-            }
-            return false; // 否则过滤掉
-        });
+                return false; // 否则过滤掉
+            });
+
+        }
     }
 
     // -------------------- 3. groupBy 分组聚合 --------------------
     private void groupByExamples(DataSet ds) {
-        // 3.1 单字段分组 + 单个求和
-        DataSet ds1 = ds.groupBy(new String[]{"kdcd_project"})
-                .sum("kdcd_amount")
-                .finish();
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 3.1 单字段分组 + 单个求和
+            DataSet ds1 = ds.groupBy(new String[]{"kdcd_project"})
+                    .sum("kdcd_amount")
+                    .finish();
 
-        // 3.2 多字段分组 + 多个求和
-        DataSet ds2 = ds.groupBy(new String[]{"kdcd_expense", "kdcd_expense_name", "kdcd_cost", "kdcd_cost_name"})
-                .sum("kdcd_init_budget")
-                .sum("kdcd_adj_budget")
-                .sum("kdcd_actual_amt")
-                .finish();
+            // 3.2 多字段分组 + 多个求和
+            DataSet ds2 = ds.groupBy(new String[]{"kdcd_expense", "kdcd_expense_name", "kdcd_cost", "kdcd_cost_name"})
+                    .sum("kdcd_init_budget")
+                    .sum("kdcd_adj_budget")
+                    .sum("kdcd_actual_amt")
+                    .finish();
 
-        // 3.3 全局聚合（不分组，求总计）—— 空数组表示不分组
-        DataSet ds3 = ds.groupBy()
-                .sum("kdcd_init_budget")
-                .sum("kdcd_adj_budget")
-                .sum("kdcd_actual_amt")
-                .finish();
+            // 3.3 全局聚合（不分组，求总计）—— 空数组表示不分组
+            DataSet ds3 = ds.groupBy()
+                    .sum("kdcd_init_budget")
+                    .sum("kdcd_adj_budget")
+                    .sum("kdcd_actual_amt")
+                    .finish();
 
-        // 3.4 分组 + 求和 + 指定别名（给聚合结果重命名）
-        // sum("原始值", "别名") —— 当需要把 0 作为初始值求和时
-        DataSet ds4 = ds.groupBy(new String[]{"kdcd_project"})
-                .sum("0", "kdcd_init_budget")    // 用0填充，别名为 kdcd_init_budget
-                .sum("kdcd_adj_budget")           // 保留原字段名
-                .sum("kdcd_actual_amt")
-                .finish();
+            // 3.4 分组 + 求和 + 指定别名（给聚合结果重命名）
+            // sum("原始值", "别名") —— 当需要把 0 作为初始值求和时
+            DataSet ds4 = ds.groupBy(new String[]{"kdcd_project"})
+                    .sum("0", "kdcd_init_budget")    // 用0填充，别名为 kdcd_init_budget
+                    .sum("kdcd_adj_budget")           // 保留原字段名
+                    .sum("kdcd_actual_amt")
+                    .finish();
 
-        // 3.5 分组 + 自定义聚合函数（agg）
-        // agg(自定义聚合函数, 参数字段, 输出别名)
-        DataSet ds5 = ds.groupBy(new String[]{"kdcd_project"})
-                .agg(new GroupMaxFunction(), "kdcd_version_number", "max_version")
-                .finish();
+            // 3.5 分组 + 自定义聚合函数（agg）
+            // agg(自定义聚合函数, 参数字段, 输出别名)
+            DataSet ds5 = ds.groupBy(new String[]{"kdcd_project"})
+                    .agg(new GroupMaxFunction(), "kdcd_version_number", "max_version")
+                    .finish();
+
+        }
     }
 
     // -------------------- 4. join 数据集关联 --------------------
     private void joinExamples(DataSet dsA, DataSet dsB) {
-        // 4.1 LEFT JOIN + 单条件关联
-        DataSet ds1 = dsA.leftJoin(dsB)
-                .on("kdcd_project", "kdcd_project")
-                .select("kdcd_project", "project_name", "budget_amt", "actual_amt")
-                .finish();
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 4.1 LEFT JOIN + 单条件关联
+            DataSet ds1 = dsA.leftJoin(dsB)
+                    .on("kdcd_project", "kdcd_project")
+                    .select("kdcd_project", "project_name", "budget_amt", "actual_amt")
+                    .finish();
 
-        // 4.2 LEFT JOIN + 多条件关联（链式 on）
-        DataSet ds2 = dsA.leftJoin(dsB)
-                .on("kdcd_project", "kdcd_project")
-                .on("max_version", "kdcd_version_number")   // 第二个关联条件
-                .select("kdcd_type", "kdcd_expense", "kdcd_init_budget", "kdcd_adj_budget")
-                .finish();
+            // 4.2 LEFT JOIN + 多条件关联（链式 on）
+            DataSet ds2 = dsA.leftJoin(dsB)
+                    .on("kdcd_project", "kdcd_project")
+                    .on("max_version", "kdcd_version_number")   // 第二个关联条件
+                    .select("kdcd_type", "kdcd_expense", "kdcd_init_budget", "kdcd_adj_budget")
+                    .finish();
 
-        // 4.3 INNER JOIN（join 而非 leftJoin）
-        DataSet ds3 = dsA.join(dsB)
-                .on("kdcd_project", "kdcd_project")
-                .on("max_version", "kdcd_version_number")
-                .select("kdcd_budget_item", "kdcd_init_budget", "kdcd_adj_budget", "kdcd_actual_amt")
-                .finish();
+            // 4.3 INNER JOIN（join 而非 leftJoin）
+            DataSet ds3 = dsA.join(dsB)
+                    .on("kdcd_project", "kdcd_project")
+                    .on("max_version", "kdcd_version_number")
+                    .select("kdcd_budget_item", "kdcd_init_budget", "kdcd_adj_budget", "kdcd_actual_amt")
+                    .finish();
 
-        // 4.4 JOIN 选择两边的字段：左表字段 + 右表字段
-        DataSet ds4 = dsA.leftJoin(dsB)
-                .on("realcard", "realcardid")
-                .on("period", "period")
-                .select(AlgoUtils.fieldsOf(dsA),                        // 左表所有字段
-                        new String[]{"kdcd_zhejiu", "kdcd_kuanian"})    // 右表指定字段
-                .finish();
+            // 4.4 JOIN 选择两边的字段：左表字段 + 右表字段
+            DataSet ds4 = dsA.leftJoin(dsB)
+                    .on("realcard", "realcardid")
+                    .on("period", "period")
+                    .select(AlgoUtils.fieldsOf(dsA),                        // 左表所有字段
+                            new String[]{"kdcd_zhejiu", "kdcd_kuanian"})    // 右表指定字段
+                    .finish();
 
-        // 4.5 JOIN 后再接其他操作
-        DataSet ds5 = dsA.leftJoin(dsB)
-                .on("kdcd_measureperiod", "kdcd_measureperiod")
-                .on("kdcd_contract.id", "kdcd_contract.id")
-                .select("kdcd_contract.id", "kdcd_sum", "kdcd_measureperiodnum")
-                .finish()
-                .distinct();  // JOIN 后去重
+            // 4.5 JOIN 后再接其他操作
+            DataSet ds5 = dsA.leftJoin(dsB)
+                    .on("kdcd_measureperiod", "kdcd_measureperiod")
+                    .on("kdcd_contract.id", "kdcd_contract.id")
+                    .select("kdcd_contract.id", "kdcd_sum", "kdcd_measureperiodnum")
+                    .finish()
+                    .distinct();  // JOIN 后去重
+
+        }
     }
 
     // -------------------- 5. union 数据集合并 --------------------
     private void unionExamples(DataSet ds1, DataSet ds2, DataSet ds3, DataSet ds4, DataSet ds5) {
-        // 5.1 两个 DataSet 合并
-        DataSet union1 = ds1.union(ds2);
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 5.1 两个 DataSet 合并
+            DataSet union1 = ds1.union(ds2);
 
-        // 5.2 多个 DataSet 一次性合并（可变参数）
-        DataSet union2 = ds1.union(ds2, ds3, ds4, ds5);
+            // 5.2 多个 DataSet 一次性合并（可变参数）
+            DataSet union2 = ds1.union(ds2, ds3, ds4, ds5);
 
-        // 5.3 链式合并
-        DataSet union3 = ds1.union(ds2).copy()   // 注意: union 后需 copy() 才能再次 union
-                .union(ds3).copy()
-                .union(ds4);
+            // 5.3 链式合并
+            DataSet union3 = ds1.union(ds2).copy()   // 注意: union 后需 copy() 才能再次 union
+                    .union(ds3).copy()
+                    .union(ds4);
 
-        // 5.4 合并后再聚合（先 union 再 groupBy）
-        DataSet union4 = ds1.union(ds2)
-                .groupBy(new String[]{"kdcd_budget_item"})
-                .sum("kdcd_init_budget")
-                .sum("kdcd_adj_budget")
-                .sum("kdcd_actual_amt")
-                .finish();
+            // 5.4 合并后再聚合（先 union 再 groupBy）
+            DataSet union4 = ds1.union(ds2)
+                    .groupBy(new String[]{"kdcd_budget_item"})
+                    .sum("kdcd_init_budget")
+                    .sum("kdcd_adj_budget")
+                    .sum("kdcd_actual_amt")
+                    .finish();
+
+        }
     }
 
     // -------------------- 6. addField / addNullField 添加字段 --------------------
     private void addFieldExamples(DataSet ds) {
-        // 6.1 添加常量字段（排序用）
-        DataSet ds1 = ds.addField("5", "kdcd_sort");
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 6.1 添加常量字段（排序用）
+            DataSet ds1 = ds.addField("5", "kdcd_sort");
 
-        // 6.2 添加表达式计算字段
-        DataSet ds2 = ds.addField("budget_amt - actual_amt", "diff_amt");
+            // 6.2 添加表达式计算字段
+            DataSet ds2 = ds.addField("budget_amt - actual_amt", "diff_amt");
 
-        // 6.3 添加字符串常量作为来源标记
-        DataSet ds3 = ds.addField("'计量明细'", "kdcd_source");
+            // 6.3 添加字符串常量作为来源标记
+            DataSet ds3 = ds.addField("'计量明细'", "kdcd_source");
 
-        // 6.4 添加空值字段（当某些分录缺少某字段时补 null）
-        DataSet ds4 = ds.addNullField("kdcd_item_sort")
-                        .addNullField("kdcd_item_content")
-                        .addField("'预付款'", "kdcd_source");
+            // 6.4 添加空值字段（当某些分录缺少某字段时补 null）
+            DataSet ds4 = ds.addNullField("kdcd_item_sort")
+                            .addNullField("kdcd_item_content")
+                            .addField("'预付款'", "kdcd_source");
 
-        // 6.5 链式添加多个字段
-        DataSet ds5 = ds.addField("1", "summarytype")
-                        .addNullField("currency");
+            // 6.5 链式添加多个字段
+            DataSet ds5 = ds.addField("1", "summarytype")
+                            .addNullField("currency");
+
+        }
     }
 
     // -------------------- 7. orderBy / distinct / removeFields --------------------
     private void orderDistinctExamples(DataSet ds) {
-        // 7.1 单字段排序
-        DataSet ds1 = ds.orderBy(new String[]{"project_name"});
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 7.1 单字段排序
+            DataSet ds1 = ds.orderBy(new String[]{"project_name"});
 
-        // 7.2 多字段排序
-        DataSet ds2 = ds.orderBy(new String[]{"kdcd_settleorg", "kdcd_billno", "kdcd_currentaccount", "kdcd_source"});
+            // 7.2 多字段排序
+            DataSet ds2 = ds.orderBy(new String[]{"kdcd_settleorg", "kdcd_billno", "kdcd_currentaccount", "kdcd_source"});
 
-        // 7.3 去重
-        DataSet ds3 = ds.distinct();
+            // 7.3 去重
+            DataSet ds3 = ds.distinct();
 
-        // 7.4 排序 + 去重组合
-        DataSet ds4 = ds.distinct().orderBy(new String[]{"kdcd_sort"});
+            // 7.4 排序 + 去重组合
+            DataSet ds4 = ds.distinct().orderBy(new String[]{"kdcd_sort"});
 
-        // 7.5 移除不需要的字段
-        DataSet ds5 = ds.removeFields("kdcd_measureperiodnum");
+            // 7.5 移除不需要的字段
+            DataSet ds5 = ds.removeFields("kdcd_measureperiodnum");
+
+        }
     }
 
     // -------------------- 8. map 自定义行映射 --------------------
@@ -483,93 +505,103 @@ public class SampleReportListDataPlugin extends AbstractReportListDataPlugin {
 
     // -------------------- 9. copy 克隆与复用 --------------------
     private void copyExamples(DataSet ds) {
-        // 重要：DataSet 被迭代器访问或循环遍历后会自动关闭，关闭后无法再做任何数据集操作！
-        // 典型场景：
-        //   for (Row row : ds) { ... }   ← 循环结束后 ds 已关闭
-        //   ds.select(...) / ds.filter(...) / ds.groupBy(...)  ← 全部报错
-        // 因此：如果迭代后还需要继续操作，必须在迭代前先 copy()。
-        // 同理：一个 DataSet 做多次不同处理时，也必须先 copy() 再分别操作。
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 重要：DataSet 被迭代器访问或循环遍历后会自动关闭，关闭后无法再做任何数据集操作！
+            // 典型场景：
+            //   for (Row row : ds) { ... }   ← 循环结束后 ds 已关闭
+            //   ds.select(...) / ds.filter(...) / ds.groupBy(...)  ← 全部报错
+            // 因此：如果迭代后还需要继续操作，必须在迭代前先 copy()。
+            // 同理：一个 DataSet 做多次不同处理时，也必须先 copy() 再分别操作。
 
-        // 9.1 同一数据集做不同过滤
-        DataSet version1 = ds.copy().filter("billstatus = 'C' and kdcd_version_number = 1.0");  // 第一版
-        DataSet latestVersion = ds.copy().groupBy(new String[]{"kdcd_project"})               // 最新版
-                .agg(new GroupMaxFunction(), "kdcd_version_number", "maxversion")
-                .finish();
+            // 9.1 同一数据集做不同过滤
+            DataSet version1 = ds.copy().filter("billstatus = 'C' and kdcd_version_number = 1.0");  // 第一版
+            DataSet latestVersion = ds.copy().groupBy(new String[]{"kdcd_project"})               // 最新版
+                    .agg(new GroupMaxFunction(), "kdcd_version_number", "maxversion")
+                    .finish();
 
-        // 9.2 copy 后做不同聚合
-        DataSet totalDirect = ds.copy().groupBy().sum("kdcd_init_budget").sum("kdcd_adj_budget").finish();
-        DataSet detailRows = ds.copy().select("kdcd_budget_item", "kdcd_init_budget", "kdcd_adj_budget");
+            // 9.2 copy 后做不同聚合
+            DataSet totalDirect = ds.copy().groupBy().sum("kdcd_init_budget").sum("kdcd_adj_budget").finish();
+            DataSet detailRows = ds.copy().select("kdcd_budget_item", "kdcd_init_budget", "kdcd_adj_budget");
 
-        // 9.3 union 后需要 copy 才能继续 union
-        DataSet result = ds.copy().union(version1).copy().union(latestVersion);
+            // 9.3 union 后需要 copy 才能继续 union
+            DataSet result = ds.copy().union(version1).copy().union(latestVersion);
+
+        }
     }
 
     // -------------------- 10. DataSet ↔ DynamicObject 互转 --------------------
     private void conversionExamples(DataSet ds) {
-        // 10.1 DataSet → DynamicObjectCollection（使用 DynamicObjectUtils.fromDataSet 封装）
-        DynamicObjectCollection dynColl = DynamicObjectUtils.fromDataSet(ds);
-        for (DynamicObject row : dynColl) {
-            String number = row.getString("accountNumber");
-            BigDecimal amount = row.getBigDecimal("kdcd_actual_amt");
-            // ... 做复杂的对象级操作
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 10.1 DataSet → DynamicObjectCollection（使用 DynamicObjectUtils.fromDataSet 封装）
+            DynamicObjectCollection dynColl = DynamicObjectUtils.fromDataSet(ds);
+            for (DynamicObject row : dynColl) {
+                String number = row.getString("accountNumber");
+                BigDecimal amount = row.getBigDecimal("kdcd_actual_amt");
+                // ... 做复杂的对象级操作
+            }
+
+            // 10.2 获取 DataSet 中某列的所有值 —— 使用 AlgoUtils 一行搞定
+            Set<Long> idSet = AlgoUtils.setOf(ds.copy(), "id");       // 提取为 Set
+            List<Long> idList = AlgoUtils.listOf(ds.copy(), "id");    // 提取为 List
+
+            // 10.3 DataSet Stream 支持 —— 使用 AlgoUtils.stream()
+            Set<String> numberSet = AlgoUtils.stream(ds.copy())
+                    .map(row -> row.getString("number"))
+                    .collect(Collectors.toSet());
+
+            // 10.4 DataSet 单列求和 —— 使用 AlgoUtils.sumOf()
+            BigDecimal totalAmt = AlgoUtils.sumOf(ds.copy(), "kdcd_amount");
+
+            // 10.5 DynamicObjectCollection → DataSet
+            DynamicObjectCollection sourceColl = new DynamicObjectCollection();
+            DataSet fromColl = DynamicObjectUtils.toDataSet(sourceColl);              // 全字段
+            DataSet fromCollPartial = DynamicObjectUtils.toDataSet(sourceColl, "id", "name"); // 选择字段
+
         }
-
-        // 10.2 获取 DataSet 中某列的所有值 —— 使用 AlgoUtils 一行搞定
-        Set<Long> idSet = AlgoUtils.setOf(ds.copy(), "id");       // 提取为 Set
-        List<Long> idList = AlgoUtils.listOf(ds.copy(), "id");    // 提取为 List
-
-        // 10.3 DataSet Stream 支持 —— 使用 AlgoUtils.stream()
-        Set<String> numberSet = AlgoUtils.stream(ds.copy())
-                .map(row -> row.getString("number"))
-                .collect(Collectors.toSet());
-
-        // 10.4 DataSet 单列求和 —— 使用 AlgoUtils.sumOf()
-        BigDecimal totalAmt = AlgoUtils.sumOf(ds.copy(), "kdcd_amount");
-
-        // 10.5 DynamicObjectCollection → DataSet
-        DynamicObjectCollection sourceColl = new DynamicObjectCollection();
-        DataSet fromColl = DynamicObjectUtils.toDataSet(sourceColl);              // 全字段
-        DataSet fromCollPartial = DynamicObjectUtils.toDataSet(sourceColl, "id", "name"); // 选择字段
     }
 
     // -------------------- 11. 原生 SQL 查询 --------------------
     private void rawSqlExamples() {
-        // 11.1 通过 DB.queryDataSet 执行原生SQL（复杂跨表场景）
-        String sql = "/*dialect*/ SELECT fnumber, fname FROM t_meta_formdesign_l WHERE flocaleid = 'zh_CN'";
-        DataSet ds1 = DB.queryDataSet(getClass().getName(), DBRoute.of("sys.meta"), sql);
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 11.1 通过 DB.queryDataSet 执行原生SQL（复杂跨表场景）
+            String sql = "/*dialect*/ SELECT fnumber, fname FROM t_meta_formdesign_l WHERE flocaleid = 'zh_CN'";
+            DataSet ds1 = DB.queryDataSet(getClass().getName(), DBRoute.of("sys.meta"), sql);
 
-        // 11.2 带参数的SQL（使用 SqlBuilder）
-        // SqlBuilder sqlBuilder = new SqlBuilder();
-        // sqlBuilder.append("select fentryid, frealcardid from t_fa_depredetailentry where forgid = ?", orgId);
-        // DataSet ds2 = DB.queryDataSet(getClass().getName(), DBRoute.of("fa"), sqlBuilder);
+            // 11.2 带参数的SQL（使用 SqlBuilder）
+            // SqlBuilder sqlBuilder = new SqlBuilder();
+            // sqlBuilder.append("select fentryid, frealcardid from t_fa_depredetailentry where forgid = ?", orgId);
+            // DataSet ds2 = DB.queryDataSet(getClass().getName(), DBRoute.of("fa"), sqlBuilder);
+        }
     }
 
     // -------------------- 12. getRowMeta 元数据操作 --------------------
     private void rowMetaExamples(DataSet ds) {
-        // 12.1 获取 DataSet 的所有字段名（使用 AlgoUtils.fieldsOf 封装）
-        String[] fieldNames = AlgoUtils.fieldsOf(ds);
+        try (AlgoContext ignored = Algo.newContext()) {
+            // 12.1 获取 DataSet 的所有字段名（使用 AlgoUtils.fieldsOf 封装）
+            String[] fieldNames = AlgoUtils.fieldsOf(ds);
 
-        // 12.2 获取字段详细信息
-        RowMeta rowMeta = ds.getRowMeta();
-        Field[] fields = rowMeta.getFields();
-        for (Field field : fields) {
-            String name = field.getName();       // 字段名
-            String alias = field.getAlias();     // 别名
-            DataType type = field.getDataType(); // 数据类型
-        }
-
-        // 12.3 基于现有 DataSet 的 RowMeta 动态添加空字段
-        DataSet sumDs = ds.copy().groupBy().sum("monthdepre").finish();
-        Set<String> allFields = new java.util.LinkedHashSet<>();
-        for (Field field : ds.getRowMeta().getFields()) {
-            allFields.add(field.getAlias().toLowerCase());
-        }
-        for (String field : allFields) {
-            if (!"monthdepre".equalsIgnoreCase(field)) {
-                sumDs = sumDs.addNullField(field);  // 汇总行补全其他字段为null
+            // 12.2 获取字段详细信息
+            RowMeta rowMeta = ds.getRowMeta();
+            Field[] fields = rowMeta.getFields();
+            for (Field field : fields) {
+                String name = field.getName();       // 字段名
+                String alias = field.getAlias();     // 别名
+                DataType type = field.getDataType(); // 数据类型
             }
+
+            // 12.3 基于现有 DataSet 的 RowMeta 动态添加空字段
+            DataSet sumDs = ds.copy().groupBy().sum("monthdepre").finish();
+            Set<String> allFields = new java.util.LinkedHashSet<>();
+            for (Field field : ds.getRowMeta().getFields()) {
+                allFields.add(field.getAlias().toLowerCase());
+            }
+            for (String field : allFields) {
+                if (!"monthdepre".equalsIgnoreCase(field)) {
+                    sumDs = sumDs.addNullField(field);  // 汇总行补全其他字段为null
+                }
+            }
+            sumDs = sumDs.select(allFields.toArray(new String[0]));  // 对齐字段顺序
         }
-        sumDs = sumDs.select(allFields.toArray(new String[0]));  // 对齐字段顺序
     }
 
     // ===================================================================

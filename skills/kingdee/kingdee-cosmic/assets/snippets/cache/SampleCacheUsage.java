@@ -2,7 +2,6 @@ package kd.cd.common.snippets;
 
 import kd.bos.cache.CacheFactory;
 import kd.bos.cache.DistributeSessionlessCache;
-import kd.bos.context.RequestContext;
 import kd.bos.dataentity.entity.DynamicObject;
 import kd.bos.dataentity.entity.DynamicObjectCollection;
 import kd.bos.entity.cache.AppCache;
@@ -14,6 +13,10 @@ import kd.bos.orm.query.QFilter;
 import kd.bos.servicehelper.BusinessDataServiceHelper;
 import kd.bos.servicehelper.QueryServiceHelper;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +38,8 @@ import java.util.Map;
  */
 public class SampleCacheUsage {
     private static final Log log = LogFactory.getLog(SampleCacheUsage.class);
+    private static final int APP_CACHE_TTL_SECONDS = 600;
+    private static final String MISSING_VALUE = "__MISSING__";
 
     // ===================================================================
     //  一、AppCache —— 应用级别缓存
@@ -44,26 +49,27 @@ public class SampleCacheUsage {
      * AppCache 是基于命名空间的应用级缓存。
      * 参数为命名空间名称，同一命名空间内共享 key 空间。
      */
-    private static final IAppCache APP_CACHE = AppCache.get("DEV");
+    private static final IAppCache APP_CACHE = AppCache.get("kdcd_sso_ticket");
 
     /**
      * 场景：单点登录票据缓存。
      * 票据只能使用一次，首次解析后缓存结果，后续直接取缓存。
      */
     public String getOrCacheTicket(String ticket) {
+        String cacheKey = cacheKeyForTicket(ticket);
         // 先查缓存
-        String cachedValue = APP_CACHE.get(ticket, String.class);
+        String cachedValue = APP_CACHE.get(cacheKey, String.class);
         if (cachedValue != null) {
-            log.info("缓存命中：{}", ticket);
+            log.info("票据解析缓存命中");
             return cachedValue;
         }
 
         // 缓存未命中，执行实际解析
         String resolvedValue = resolveTicket(ticket);
 
-        // 写入缓存（无 TTL，缓存随应用生命周期）
-        APP_CACHE.put(ticket, resolvedValue);
-        log.info("缓存写入：{}", ticket);
+        // 原始票据不进入 key 或日志；共享缓存显式设置 TTL。
+        APP_CACHE.put(cacheKey, resolvedValue, APP_CACHE_TTL_SECONDS);
+        log.info("票据解析结果已写入应用缓存");
 
         return resolvedValue;
     }
@@ -72,11 +78,11 @@ public class SampleCacheUsage {
      * 场景：存储临时状态（如异步操作的中间状态）。
      */
     public void cacheOperationStatus(String bizKey, String status) {
-        APP_CACHE.put(bizKey, status);
+        APP_CACHE.put("operation_status:" + bizKey, status, APP_CACHE_TTL_SECONDS);
     }
 
     public String getOperationStatus(String bizKey) {
-        return APP_CACHE.get(bizKey, String.class);
+        return APP_CACHE.get("operation_status:" + bizKey, String.class);
     }
 
     // ===================================================================
@@ -102,9 +108,10 @@ public class SampleCacheUsage {
      */
     public Map<String, String> getCachedModelData(
             String formId, String selectFields, String cacheKey, int ttlSeconds) {
+        String namespacedKey = "model_data:" + formId + ":" + cacheKey;
 
         // 1. 先查缓存
-        Map<String, String> cached = distCache.getAll(cacheKey);
+        Map<String, String> cached = distCache.getAll(namespacedKey);
         if (!cached.isEmpty()) {
             return cached;
         }
@@ -125,10 +132,10 @@ public class SampleCacheUsage {
         }
 
         // 4. 写入缓存（带 TTL）
-        distCache.put(cacheKey, dataMap, ttlSeconds);
-        log.info("分布式缓存写入：key={}, size={}, ttl={}s", cacheKey, dataMap.size(), ttlSeconds);
+        distCache.put(namespacedKey, dataMap, ttlSeconds);
+        log.info("分布式缓存写入：size={}, ttl={}s", dataMap.size(), ttlSeconds);
 
-        return distCache.getAll(cacheKey);
+        return distCache.getAll(namespacedKey);
     }
 
     /**
@@ -138,10 +145,13 @@ public class SampleCacheUsage {
      * @return 用户 ID
      */
     public Long getCachedUserId(String userNumber) {
-        String cacheKey = "bos_user_" + userNumber;
+        String cacheKey = "user_id_by_number:" + userNumber;
 
         // 先查缓存
         String userId = (String) distCache.get(cacheKey);
+        if (MISSING_VALUE.equals(userId)) {
+            return null;
+        }
         if (userId != null) {
             return Long.valueOf(userId);
         }
@@ -151,8 +161,9 @@ public class SampleCacheUsage {
                 "bos_user", "id", new QFilter[]{new QFilter("number", QCP.equals, userNumber)});
 
         if (userObj == null) {
-            // 兜底：返回当前用户 ID
-            userId = String.valueOf(RequestContext.get().getCurrUserId());
+            // 短 TTL 负缓存，避免不存在编码持续穿透；不能回退成当前用户。
+            distCache.put(cacheKey, MISSING_VALUE, 60);
+            return null;
         } else {
             userId = userObj.getString("id");
         }
@@ -195,7 +206,7 @@ public class SampleCacheUsage {
     //
     //  AppCache:
     //  - 应用级缓存，同一 JVM 实例内共享
-    //  - 无 TTL（生命周期随应用）
+    //  - 共享状态建议显式 TTL；无 TTL 只用于已有稳定失效机制的场景
     //  - 适合：配置项、票据、临时状态
     //  - 用法：AppCache.get("命名空间") → put/get
     //
@@ -214,5 +225,16 @@ public class SampleCacheUsage {
     private String resolveTicket(String ticket) {
         // 模拟票据解析
         return "resolved_" + ticket;
+    }
+
+    private String cacheKeyForTicket(String ticket) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(ticket.getBytes(StandardCharsets.UTF_8));
+            return "ticket:" + Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 是 Java 必须提供的算法；缺失表示运行时本身不符合平台前提，而非业务校验失败。
+            throw new AssertionError("SHA-256 is unavailable", e);
+        }
     }
 }

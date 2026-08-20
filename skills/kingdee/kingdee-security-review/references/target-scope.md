@@ -8,7 +8,7 @@
 | `dev` | development environment | allowed |
 | `test` | test or QA environment | allowed |
 | `staging` | pre-production with explicit testing permission | allowed |
-| `prod` | production, customer, or business live environment | blocked |
+| `prod` | production, customer, or business live environment | read-only allowed by contract; active POC blocked by default |
 | `unknown` | cannot prove scope | blocked |
 
 ## Required Checks
@@ -33,6 +33,8 @@ Production or unknown targets require explicit flags and a user-provided reason:
 ```bash
 python3 scripts/scope_check.py --mode verify --target-url <url> --scope prod --allow-prod --reason "<authorization>"
 ```
+
+For `audit-readonly`, collect the exact target, non-unknown declared scope, authorization reference, endpoint allowlist, request bound and timeout. Production read-only does not require `--allow-prod`; the authorization reference in `--reason` is required.
 
 ## Default Deny Rules
 

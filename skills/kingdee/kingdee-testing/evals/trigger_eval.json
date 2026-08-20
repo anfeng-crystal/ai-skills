@@ -10,5 +10,7 @@
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
   {"query": "校验 KSQL 语句兼容性", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "Gradle 显示 test NO-SOURCE，上传重启已返回，能否说明 DEV 测试部署完成", "should_trigger": true},
+  {"query": "本地启动 production 配置并打开首页，我来测试", "should_trigger": true},
   {"query": "对 dev 接口跑安全 POC 验证", "should_trigger": false}
 ]

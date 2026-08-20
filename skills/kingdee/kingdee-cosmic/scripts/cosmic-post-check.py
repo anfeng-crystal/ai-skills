@@ -6,7 +6,7 @@ cosmic-post-check.py — 苍穹代码生成后统一检查入口
 逻辑：
 1. 从目标文件/目录向上查找 Gradle 项目根目录（同时存在 build.gradle + settings.gradle）
 2. 若找到 → 执行 Gradle 编译 (./gradlew :module:compileJava)，利用真实编译器检查代码正确性
-3. 若未找到 → 回退到 cosmic-post-lint.py 静态校验
+3. 编译成功后继续执行 cosmic-post-lint.py；未找到 Gradle 项目时直接执行静态校验
 
 用法:
     python3 cosmic-post-check.py <file_or_directory> [--fix-hint] [--json] [--strict]
@@ -16,6 +16,7 @@ cosmic-post-check.py — 苍穹代码生成后统一检查入口
     python3 cosmic-post-check.py ./src/main/java/ --fix-hint
 """
 
+import json
 import os
 import re
 import subprocess
@@ -33,6 +34,32 @@ def _verbose(msg: str):
     """在 --verbose 模式下输出诊断信息到 stderr。"""
     if VERBOSE:
         print(f"  [verbose] {msg}", file=sys.stderr)
+
+
+def _status(msg: str = "", *, json_mode: bool = False, flush: bool = False):
+    """JSON 模式下把人类可读状态写到 stderr，保持 stdout 仅含 JSON。"""
+    print(msg, file=sys.stderr if json_mode else sys.stdout, flush=flush)
+
+
+def _print_json_failure(stage: str, exit_code: int, message: str):
+    """在子检查未生成报告时输出一个可独立解析的失败 JSON。"""
+    report = {
+        "summary": {
+            "total_files": 0,
+            "total_issues": 0,
+            "errors": 1,
+            "warnings": 0,
+            "infos": 0,
+            "passed": False,
+        },
+        "issues": [],
+        "post_check": {
+            "stage": stage,
+            "exit_code": exit_code,
+            "message": message,
+        },
+    }
+    print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
 # ══════════════════════════════════════════════
@@ -278,7 +305,8 @@ def check_java_home(gradle_root: Path) -> tuple:
 #  Gradle 编译
 # ══════════════════════════════════════════════
 
-def run_gradle(gradle_root: Path, module: Optional[str], java_home: str) -> int:
+def run_gradle(gradle_root: Path, module: Optional[str], java_home: str,
+               json_mode: bool = False) -> int:
     """执行 Gradle 编译，返回退出码。"""
     # 定位 gradlew
     wrapper_name = "gradlew.bat" if sys.platform == "win32" else "gradlew"
@@ -286,10 +314,10 @@ def run_gradle(gradle_root: Path, module: Optional[str], java_home: str) -> int:
     if not gradlew.exists():
         print("⚠️  gradlew 不存在，尝试使用系统 gradle", file=sys.stderr)
         cmd_prefix = ["gradle"]
+    elif sys.platform != "win32" and not os.access(gradlew, os.X_OK):
+        print("⚠️  gradlew 不可执行，使用 sh 调用且不修改文件权限", file=sys.stderr)
+        cmd_prefix = ["sh", str(gradlew)]
     else:
-        # 确保 gradlew 有可执行权限
-        if not os.access(gradlew, os.X_OK):
-            os.chmod(gradlew, 0o755)
         cmd_prefix = [str(gradlew)]
 
     task = f":{module}:compileJava" if module else "compileJava"
@@ -306,54 +334,85 @@ def run_gradle(gradle_root: Path, module: Optional[str], java_home: str) -> int:
         or ""
     ).strip()
 
-    print("══════════════════════════════════════════════")
-    print("  🔨 Gradle 编译检查")
-    print("══════════════════════════════════════════════")
-    print(f"  📁 项目根目录: {gradle_root}")
+    _status("══════════════════════════════════════════════", json_mode=json_mode)
+    _status("  🔨 Gradle 编译检查", json_mode=json_mode)
+    _status("══════════════════════════════════════════════", json_mode=json_mode)
+    _status(f"  📁 项目根目录: {gradle_root}", json_mode=json_mode)
     if module:
-        print(f"  📦 目标模块:   {module}")
+        _status(f"  📦 目标模块:   {module}", json_mode=json_mode)
     if project_jdk_str:
-        print(f"  📋 项目 JDK:   {project_jdk_str} (gradle.properties)")
-    print(f"  ☕ JAVA_HOME:  {java_home}")
-    print(f"  🛠️  编译命令:   {' '.join(cmd)}")
-    print("──────────────────────────────────────────────")
-    print(flush=True)
+        _status(
+            f"  📋 项目 JDK:   {project_jdk_str} (gradle.properties)",
+            json_mode=json_mode,
+        )
+    _status(f"  ☕ JAVA_HOME:  {java_home}", json_mode=json_mode)
+    _status(f"  🛠️  编译命令:   {' '.join(cmd)}", json_mode=json_mode)
+    _status("──────────────────────────────────────────────", json_mode=json_mode)
+    _status(json_mode=json_mode, flush=True)
 
-    result = subprocess.run(cmd, cwd=str(gradle_root), env=env)
+    result = subprocess.run(
+        cmd,
+        cwd=str(gradle_root),
+        env=env,
+        stdout=sys.stderr if json_mode else None,
+    )
 
-    print()
-    print("══════════════════════════════════════════════")
+    _status(json_mode=json_mode)
+    _status("══════════════════════════════════════════════", json_mode=json_mode)
     if result.returncode == 0:
-        print("  ✅ Gradle 编译成功，未发现编译错误。")
+        _status("  ✅ Gradle 编译成功，未发现编译错误。", json_mode=json_mode)
     else:
-        print(f"  ❌ Gradle 编译失败 (exit code {result.returncode})")
-        print("  请根据上述编译错误信息修复代码。")
-    print("══════════════════════════════════════════════")
+        _status(
+            f"  ❌ Gradle 编译失败 (exit code {result.returncode})",
+            json_mode=json_mode,
+        )
+        _status("  请根据上述编译错误信息修复代码。", json_mode=json_mode)
+    _status("══════════════════════════════════════════════", json_mode=json_mode)
 
     return result.returncode
 
 
 # ══════════════════════════════════════════════
-#  Post-Lint 回退
+#  Post-Lint
 # ══════════════════════════════════════════════
 
-def run_post_lint(args: list, jdk_hint: Optional[str] = None) -> int:
-    """回退到 cosmic-post-lint.py 静态校验。"""
+def run_post_lint(args: list, jdk_hint: Optional[str] = None,
+                  json_mode: bool = False) -> int:
+    """执行 cosmic-post-lint.py 静态校验。"""
     post_lint = SCRIPT_DIR / "cosmic-post-lint.py"
     if not post_lint.exists():
         print(f"❌ 未找到 {post_lint}", file=sys.stderr)
+        if json_mode:
+            _print_json_failure("post-lint", 1, "未找到 post-lint 脚本")
         return 1
 
-    print("📝 使用 post-lint 静态 + 知识库校验")
-    print(flush=True)
+    _status("📝 使用 post-lint 静态 + 知识库校验", json_mode=json_mode)
+    _status(json_mode=json_mode, flush=True)
 
     cmd = [sys.executable, str(post_lint)] + args
-    result = subprocess.run(cmd)
+    if json_mode:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr, end="")
+        try:
+            json.loads(result.stdout)
+        except (json.JSONDecodeError, TypeError):
+            if result.stdout:
+                print(result.stdout, file=sys.stderr, end="")
+            _print_json_failure(
+                "post-lint",
+                result.returncode or 1,
+                "post-lint 未生成有效 JSON",
+            )
+            return result.returncode or 1
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    else:
+        result = subprocess.run(cmd)
 
     # 在结果之后输出 JAVA_HOME 设置提示
     if jdk_hint:
-        print()
-        print(jdk_hint)
+        _status(json_mode=json_mode)
+        _status(jdk_hint, json_mode=json_mode)
 
     return result.returncode
 
@@ -378,6 +437,7 @@ def main():
 
     target = sys.argv[1]
     remaining_args = sys.argv[1:]
+    json_mode = "--json" in remaining_args
 
     # 1. 检测 Gradle 项目
     gradle_root = find_gradle_root(target)
@@ -385,7 +445,7 @@ def main():
 
     if not gradle_root:
         # 非 Gradle → 直接 post-lint
-        sys.exit(run_post_lint(remaining_args))
+        sys.exit(run_post_lint(remaining_args, json_mode=json_mode))
 
     # 2. 检查 JAVA_HOME
     ok, java_home, current_ver, required_ver = check_java_home(gradle_root)
@@ -394,7 +454,14 @@ def main():
         # JAVA_HOME 兼容 → Gradle 编译
         modules = parse_modules(gradle_root)
         module = find_module(gradle_root, target, modules)
-        sys.exit(run_gradle(gradle_root, module, java_home))
+        gradle_code = run_gradle(
+            gradle_root, module, java_home, json_mode=json_mode
+        )
+        if gradle_code != 0:
+            if json_mode:
+                _print_json_failure("gradle", gradle_code, "Gradle 编译失败")
+            sys.exit(gradle_code)
+        sys.exit(run_post_lint(remaining_args, json_mode=json_mode))
 
     # 3. JAVA_HOME 不兼容 → 回退 post-lint，并生成提示信息
     hint_lines = ["══════════════════════════════════════════════"]
@@ -419,10 +486,15 @@ def main():
     hint_lines.append("══════════════════════════════════════════════")
 
     jdk_hint = "\n".join(hint_lines)
-    print(f"⚠️  检测到 Gradle 项目 ({gradle_root.name})，但 JAVA_HOME 不满足要求，回退到静态校验")
-    print(flush=True)
+    _status(
+        f"⚠️  检测到 Gradle 项目 ({gradle_root.name})，但 JAVA_HOME 不满足要求，回退到静态校验",
+        json_mode=json_mode,
+    )
+    _status(json_mode=json_mode, flush=True)
 
-    sys.exit(run_post_lint(remaining_args, jdk_hint=jdk_hint))
+    sys.exit(run_post_lint(
+        remaining_args, jdk_hint=jdk_hint, json_mode=json_mode
+    ))
 
 
 if __name__ == "__main__":

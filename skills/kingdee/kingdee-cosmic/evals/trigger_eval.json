@@ -4,8 +4,12 @@
   {"query": "帮我配置苍穹工作流", "should_trigger": true},
   {"query": "苍穹 BOTP 转换规则怎么写", "should_trigger": true},
   {"query": "苍穹 OpenAPI 接口开发", "should_trigger": true},
+  {"query": "开发苍穹服务端 OpenAPI 接口", "should_trigger": true},
   {"query": "苍穹插件故障诊断", "should_trigger": true},
   {"query": "苍穹代码质量核查", "should_trigger": true},
+  {"query": "苍穹 DistributeSessionlessCache 怎么避免缓存击穿", "should_trigger": true},
+  {"query": "苍穹 MQ 消费者未知异常应该 ack、deny 还是 discard", "should_trigger": true},
+  {"query": "只读分析生产环境苍穹插件的错误日志和挂载链", "should_trigger": true},
   {"query": "帮我写一个 KingScript 脚本插件", "should_trigger": false},
   {"query": "帮我写一个 ISCB 数据集成脚本", "should_trigger": false},
   {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
@@ -13,5 +17,13 @@
   {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
   {"query": "帮我写一个苍穹报表取数插件", "should_trigger": false},
-  {"query": "报表里 DataSet 怎么 groupBy 聚合", "should_trigger": false}
+  {"query": "报表里 DataSet 怎么 groupBy 聚合", "should_trigger": false},
+  {"query": "调用外部苍穹 OpenAPI 接口", "should_trigger": false},
+  {"query": "开发苍穹报表插件取数", "should_trigger": false},
+  {"query": "用 KingScript 实现苍穹插件", "should_trigger": false},
+  {"query": "把 UPDATE SQL 生成成 ISCB 服务流程", "should_trigger": false},
+  {"query": "按当前 Scheme 修改审批节点字段可编辑规则，并保留原有单字段必录配置", "should_trigger": true},
+  {"query": "申请人过滤先报 bigint=varchar，改 Long 后又报 Long 不能转 String，继续怎么修", "should_trigger": true},
+  {"query": "目标实体不存在 opOrgCode，能否用 safeSetValue 跳过并改写相似的组织编码字段", "should_trigger": true},
+  {"query": "从实体元数据生成 PostgreSQL DDL", "should_trigger": false}
 ]

@@ -37,6 +37,10 @@ DATASET_VAR_DECL_PATTERN = re.compile(r"\bDataSet\s+([A-Za-z_]\w*)\s*=")
 DATASET_CLOSE_PATTERN = re.compile(r"\b([A-Za-z_]\w*)\s*\.\s*close\s*\(")
 DATASET_TRY_WITH_RESOURCE_PATTERN = re.compile(r"\btry\s*\(\s*DataSet\s+([A-Za-z_]\w*)\s*=")
 DATASET_RETURN_PATTERN = re.compile(r"\breturn\s+([A-Za-z_]\w*)\s*;")
+ALGO_CONTEXT_TRY_PATTERN = re.compile(
+    r"\btry\s*\(\s*AlgoContext\s+[A-Za-z_]\w*\s*=\s*"
+    r"Algo\s*\.\s*newContext\s*\(\s*\)\s*\)"
+)
 
 
 def _collect_method_ranges(
@@ -102,10 +106,15 @@ def _check_dataset_lifecycle(
     try_paren_depth = 0
     # 用于跨行消费检测：记录最近的 DataSet 声明变量名
     pending_dataset_decl: Optional[str] = None
+    active_algo_context_depths: List[int] = []
+    brace_depth = 0
 
     for i in range(m_start, m_end):
         lineno = i + 1
         code_line = code_for_structure(lines[i])
+        while active_algo_context_depths and brace_depth < active_algo_context_depths[-1]:
+            active_algo_context_depths.pop()
+        starts_algo_context = bool(ALGO_CONTEXT_TRY_PATTERN.search(code_line))
 
         # ── 声明检测 ──
         decl_match = DATASET_VAR_DECL_PATTERN.search(code_line)
@@ -114,6 +123,8 @@ def _check_dataset_lifecycle(
             # 同方法内同名变量取最新声明行
             dataset_vars[var_name] = lineno
             pending_dataset_decl = var_name
+            if active_algo_context_depths:
+                closed_vars.add(var_name)
 
             # 同行 RHS 消费检测：DataSet result = ds1.union(ds2)
             eq_idx = code_line.find("=", code_line.find(var_name))
@@ -160,6 +171,10 @@ def _check_dataset_lifecycle(
         return_match = DATASET_RETURN_PATTERN.search(code_line)
         if return_match and return_match.group(1) in dataset_vars:
             consumed_vars.add(return_match.group(1))
+
+        if starts_algo_context and "{" in code_line:
+            active_algo_context_depths.append(brace_depth + 1)
+        brace_depth += code_line.count("{") - code_line.count("}")
 
     # ── 汇总本方法的 RESOURCE-004 ──
     for var_name, decl_line in dataset_vars.items():

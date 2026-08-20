@@ -8,9 +8,13 @@
   {"query": "对比 dev 和 test 两个环境这个实体的元数据差异", "should_trigger": true},
   {"query": "检查这个单据的基础资料引用有没有失效的", "should_trigger": true},
   {"query": "把这个实体的字段和操作导出成 Excel", "should_trigger": true},
+  {"query": "从生产元数据库确认实体和分录映射，再只读定位业务表", "should_trigger": true},
+  {"query": "这个线上 bug 需要核对生产表单挂载和字段层级", "should_trigger": true},
   {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
+  {"query": "这几个实体共用同一物理表，核对各自表单、列表布局和当前流程 Scheme 是否一致", "should_trigger": true},
+  {"query": "以我人工确认的 MD 为准生成 117 行元数据对照 Excel，不要覆盖原文件", "should_trigger": true},
   {"query": "苍穹插件报错了帮我排查", "should_trigger": false},
   {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
   {"query": "帮我写一个 KingScript 脚本", "should_trigger": false}

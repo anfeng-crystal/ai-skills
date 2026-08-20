@@ -21,6 +21,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from db_connection import connect_with_retry
+
 
 ZH_LOCALE = "zh_CN"
 ENTITY_TABLE = "t_meta_entitydesign"
@@ -519,14 +521,18 @@ def connect_metadata_db(config: Dict[str, Any], config_path: Path):
     if not password:
         raise ConfigError(f"未找到数据库密码，已检查: {source}。")
 
-    return psycopg2.connect(
-        host=database["host"],
-        port=database.get("port", 5432),
-        dbname=database["dbname"],
-        user=database["user"],
-        password=password,
-        connect_timeout=database.get("connectTimeoutSeconds", 10),
-        options=f"-c search_path={database.get('schema', 'public')}",
+    return connect_with_retry(
+        psycopg2.connect,
+        {
+            "host": database["host"],
+            "port": database.get("port", 5432),
+            "dbname": database["dbname"],
+            "user": database["user"],
+            "password": password,
+            "connect_timeout": database.get("connectTimeoutSeconds", 10),
+            "options": f"-c search_path={database.get('schema', 'public')}",
+        },
+        warn=lambda message: print(f"[WARNING] {message}", file=sys.stderr),
     )
 
 

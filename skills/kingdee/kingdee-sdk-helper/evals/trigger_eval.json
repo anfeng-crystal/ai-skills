@@ -5,10 +5,13 @@
   {"query": "帮我查一下这个 API 属于哪个 SDK", "should_trigger": true},
   {"query": "苍穹的类定义在哪里", "should_trigger": true},
   {"query": "有没有现成的候选 SDK 可以用", "should_trigger": true},
+  {"query": "社区文章里的这个苍穹 API 在我们项目版本里真的存在吗", "should_trigger": true},
+  {"query": "核对这个项目片段里的方法签名和 SDK 来源", "should_trigger": true},
   {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
   {"query": "查一下这个苍穹实体的字段信息", "should_trigger": false},
   {"query": "登录苍穹测试环境", "should_trigger": false},
   {"query": "苍穹插件报错了帮我排查", "should_trigger": false},
   {"query": "用 KDDT 创建一个苍穹工程", "should_trigger": false},
-  {"query": "帮我写一个 KingScript 脚本", "should_trigger": false}
+  {"query": "帮我写一个 KingScript 脚本", "should_trigger": false},
+  {"query": "社区说这个 OpenAPI 有越权漏洞，帮我跑 POC", "should_trigger": false}
 ]

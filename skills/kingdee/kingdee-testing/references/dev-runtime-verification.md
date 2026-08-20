@@ -1,26 +1,21 @@
-# Dev Runtime Verification
+# Runtime Verification
 
-## Probe Policy
+Use this card after selecting a mode in `SKILL.md`; read `execution-contract.md` before sending a request.
 
-- Only probe explicit dev/test URLs or user-approved targets.
-- Default methods are read-only: `GET`, `HEAD`, or `OPTIONS`.
-- Mutating methods such as `POST`, `PUT`, `PATCH`, and `DELETE` require explicit user approval and should not be the default path.
-- Never change production or metadata configuration from this workflow.
+## Procedure
 
-## Minimal Probe Steps
+1. Record the mode, scope id, target alias, exact URL/method, expected evidence, and request limit.
+2. For `prod-readonly` or `approved-write`, record the approval reference. For writes, also record path prefix, payload source, rollback, and before/after assertions.
+3. Validate the request without network:
 
-1. Confirm target URL and environment label.
-2. Add only required headers, such as cookies or CSRF tokens supplied by the user or environment.
-3. Run `run_dev_probe.py` with a timeout and optional expected status.
-4. Save status, headers, elapsed time, and a capped response preview.
-5. If the response indicates auth, CSRF, or permission failure, report it as runtime evidence instead of retrying blindly.
-
-## Example
-
-```bash
-python3 <skill-root>/scripts/run_dev_probe.py \
-  --url "https://dev.example.com/ierp/api/ping" \
-  --method GET \
-  --expect-status 200 \
-  --output /tmp/dev-probe.json
+```text
+python scripts/run_dev_probe.py --mode MODE --scope-id SCOPE --target-alias TARGET --url URL --method METHOD --expected-evidence EXPECTATION --dry-run
 ```
+
+4. Supply configured credentials through `--header-env Header=ENV_NAME`; never place credential values in arguments.
+5. Execute once, inspect the redacted evidence, and stop on auth, CSRF, redirect, permission, scope, or assertion failure.
+6. Compare runtime evidence with local test results. Keep “local passed” and “runtime verified” as separate states.
+
+## Evidence
+
+Keep only the sanitized target, method, mode, scope id, status, elapsed time, selected response headers, capped redacted preview, expected assertion, and result. Do not persist request credentials or payloads.

@@ -40,18 +40,14 @@ if not check_session("http://127.0.0.1:8080/ierp", old_cookie):
     result = auto_login(...)  # 重新登录
 ```
 
-## 示例 4: 在 shell 脚本中解析输出
+## 示例 4: 在 shell 脚本中解析状态
 
 ```bash
 #!/bin/bash
-OUTPUT=$(python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>)
-
-if echo "$OUTPUT" | grep -q "LOGIN_SUCCESS"; then
-    COOKIE=$(echo "$OUTPUT" | grep "^COOKIE=" | cut -d= -f2-)
-    echo "Got cookie: $COOKIE"
-
-    # 用 cookie 调用 API
-    curl -H "Cookie: $COOKIE" http://127.0.0.1:8080/ierp/kapi/sys/user/getCurrentUser
+if python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>; then
+    echo "登录成功；下游需要 Cookie/CSRF 时使用同进程 Python API"
+else
+    echo "登录失败" >&2
 fi
 ```
 
@@ -68,7 +64,7 @@ DATACENTERS_COUNT=3
 # 指定数据中心 ID 登录
 $ python cosmic_login.py https://cosmic.example.com/ierp admin pwd 100002
 LOGIN_SUCCESS
-COOKIE=...
-CSRF_TOKEN=...
+COOKIE_AVAILABLE=True
+CSRF_TOKEN_AVAILABLE=True
 ACCOUNT_ID=100002
 ```

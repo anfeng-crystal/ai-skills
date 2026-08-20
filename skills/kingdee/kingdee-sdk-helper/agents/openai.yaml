@@ -1,0 +1,7 @@
+interface:
+  display_name: "Kingdee SDK Helper"
+  short_description: "苍穹 SDK 类、精确签名、Javadoc 与来源版本核验"
+  default_prompt: "使用 $kingdee-sdk-helper 查询苍穹 SDK 类或方法，并按目标项目 JAR、本地 SDK 索引、官方版本资料、社区候选的顺序给出证据状态。"
+
+policy:
+  allow_implicit_invocation: true

@@ -39,3 +39,13 @@ Limited active validation inside a specific boundary. This is not broad red team
 | "在测试环境做轻量攻击面验证" | `redteam-lite` |
 
 If the user gives a live target but no mode, choose `verify` only when the target is clearly dev/test/staging/local; otherwise ask for scope confirmation before any active request.
+
+## `audit-readonly`
+
+Bounded target read-only evidence collection.
+
+- Required inputs: exact target URL, declared non-unknown scope, authorization reference, endpoint allowlist, maximum request count and timeout.
+- Allowed: HEAD/GET, metadata/status reads and other operations whose read-only semantics are confirmed for the target.
+- Production is allowed when the complete read-only contract is present; do not repeat confirmation after the contract passes.
+- Not allowed: payload mutation, login-state changes, form/operation execution, fuzzing or writes.
+- Output verification state: `readonly confirmed`, `not reproduced`, or `blocked by scope`.

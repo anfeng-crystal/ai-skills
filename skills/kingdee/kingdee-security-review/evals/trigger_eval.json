@@ -5,6 +5,8 @@
   {"query": "苍穹接口有没有越权风险", "should_trigger": true},
   {"query": "对苍穹接口做 redteam-lite 检查", "should_trigger": true},
   {"query": "写一个苍穹安全审计报告", "should_trigger": true},
+  {"query": "社区文章说这个苍穹接口越权，先核对目标版本证据", "should_trigger": true},
+  {"query": "已授权，只读检查生产苍穹接口的安全响应头", "should_trigger": true},
   {"query": "帮我写一个苍穹表单插件", "should_trigger": false},
   {"query": "查一下苍穹实体的字段信息", "should_trigger": false},
   {"query": "查一下苍穹 SDK 的方法签名", "should_trigger": false},
