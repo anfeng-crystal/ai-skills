@@ -1,5 +1,7 @@
 # GitHub Skills 吸收分析报告
 
+> **状态（2026-08-08）**：本报告是历史分析。`multi-agent-collab` 经 with-skill / no-skill 对照评测后未证明对默认模型有明显能力增量，相关集成路线已终止，该 skill 已从 active skills 移除；下文相关内容仅保留为历史记录，不再作为实施计划。
+
 **分析日期**: 2026-04-29  
 **分析对象**: loci, mbti-personality, next-slide, hermes-skill-atlas  
 **目标**: 评估吸收价值，制定集成路线图

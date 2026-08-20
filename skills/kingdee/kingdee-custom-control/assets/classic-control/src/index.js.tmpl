@@ -1,0 +1,129 @@
+(function (KDApi) {
+  'use strict';
+
+  function __CONTROL_CLASS__(model) {
+    this.model = model;
+    this._action = null;
+    this._actionHandler = null;
+    this._disposed = false;
+    this._renderGeneration = 0;
+    this._latestData = undefined;
+  }
+
+  __CONTROL_CLASS__.prototype = {
+    init: function (props) {
+      this._renderGeneration += 1;
+      this._disposed = false;
+      this._latestData = props && props.data;
+      this._unmount();
+      this._render(this._renderGeneration);
+    },
+
+    update: function (props) {
+      this._setData(props && props.data);
+    },
+
+    handleDirective: function (customProps, methodName, arg) {
+      if (methodName === 'setData') {
+        this._setData(arg && Object.prototype.hasOwnProperty.call(arg, 'data') ? arg.data : arg);
+        return true;
+      }
+      if (methodName === 'focus') {
+        var action = this.model.dom.querySelector('[data-role="action"]');
+        if (action && typeof action.focus === 'function') {
+          action.focus();
+          return true;
+        }
+      }
+      return false;
+    },
+
+    // Older and newer profiles have used different spellings. Keep cleanup idempotent.
+    destoryed: function () {
+      this._dispose();
+    },
+
+    destroyed: function () {
+      this._dispose();
+    },
+
+    _render: function (renderGeneration) {
+      var self = this;
+      KDApi.loadFile('./css/control.css', this.model, function () {
+        if (self._disposed || renderGeneration !== self._renderGeneration) {
+          return;
+        }
+        KDApi.getTemplateStringByFilePath('./html/control.html', self.model, {
+          title: __DISPLAY_NAME_JS__
+        }).then(function (markup) {
+          // A generation token prevents an earlier async render from reviving a rebuilt instance.
+          if (self._disposed || renderGeneration !== self._renderGeneration) {
+            return;
+          }
+          self.model.dom.innerHTML = markup;
+          self._bind();
+          self._applyData(self._latestData);
+        });
+      });
+    },
+
+    _bind: function () {
+      var self = this;
+      this._action = this.model.dom.querySelector('[data-role="action"]');
+      if (!this._action) {
+        return;
+      }
+      this._actionHandler = function () {
+        var payload = { controlId: '__CONTROL_ID__', action: 'primary' };
+        if (typeof self.model.invoke === 'function') {
+          self.model.invoke('primaryAction', payload);
+        }
+        if (typeof self.model.triggerCustomMsgEvent === 'function') {
+          self.model.triggerCustomMsgEvent('action', payload);
+        }
+      };
+      this._action.addEventListener('click', this._actionHandler);
+    },
+
+    _setData: function (data) {
+      this._latestData = data;
+      if (!this._disposed) {
+        this._applyData(data);
+      }
+    },
+
+    _applyData: function (data) {
+      var status = this.model.dom.querySelector('[data-role="status"]');
+      if (!status) {
+        return;
+      }
+      if (data === null || typeof data === 'undefined') {
+        status.textContent = '';
+      } else if (typeof data === 'string') {
+        status.textContent = data;
+      } else {
+        status.textContent = JSON.stringify(data);
+      }
+    },
+
+    _dispose: function () {
+      if (this._disposed) {
+        return;
+      }
+      this._disposed = true;
+      this._renderGeneration += 1;
+      this._unmount();
+    },
+
+    _unmount: function () {
+      if (this._action && this._actionHandler) {
+        this._action.removeEventListener('click', this._actionHandler);
+      }
+      this._action = null;
+      this._actionHandler = null;
+      this.model.dom.innerHTML = '';
+    }
+  };
+
+  KDApi.register('__CONTROL_ID__', __CONTROL_CLASS__);
+})(window.KDApi);

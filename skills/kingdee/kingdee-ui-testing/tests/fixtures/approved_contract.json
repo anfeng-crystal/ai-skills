@@ -1,0 +1,16 @@
+{
+  "taskId": "task-ui-001",
+  "mode": "approved-crud",
+  "environmentClass": "dev-test",
+  "targetRef": "dev-a",
+  "caseIds": ["UI-CRUD-001"],
+  "allowedActions": ["navigate", "input", "save", "delete", "cleanup", "rollback", "assert", "screenshot"],
+  "maxCases": 1,
+  "maxWrites": 3,
+  "approvalRef": "approval-ui-001",
+  "testDataPrefix": "TST_UI_",
+  "beforeAssertions": ["同前缀记录数为 0"],
+  "afterAssertions": ["保存后记录存在", "清理后同前缀记录数为 0"],
+  "cleanup": {"strategy": "delete-recorded-identifiers", "steps": ["删除本任务记录的标识"]},
+  "rollback": {"strategy": "restore-before-state", "steps": ["按 before 快照恢复本任务字段"]}
+}

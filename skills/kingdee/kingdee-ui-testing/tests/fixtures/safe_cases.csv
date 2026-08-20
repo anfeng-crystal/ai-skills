@@ -1,0 +1,4 @@
+case_id,case_name,priority,requirements,preconditions,step_id,step_order,action,target,data,expected,mutates,effect
+UI-001,项目列表只读冒烟,P0,REQ-1|REQ-2,已进入应用,step-1,1,navigate,项目列表,,页面可见,false,navigation
+UI-001,项目列表只读冒烟,P0,REQ-1|REQ-2,已进入应用,step-2,2,inspect,列表字段,,名称和状态列可见,false,inspect
+UI-001,项目列表只读冒烟,P0,REQ-1|REQ-2,已进入应用,step-3,3,screenshot,项目列表,,截图已记录,false,inspect

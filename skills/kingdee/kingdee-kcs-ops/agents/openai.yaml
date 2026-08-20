@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kingdee KCS Ops"
+  short_description: "审计式检查、计划、批准执行、验证与回滚 KCS 运维变更"
+  default_prompt: "使用 $kingdee-kcs-ops 检查 KCS 状态，生成可审核计划，并按已批准契约执行、验证或回滚。"

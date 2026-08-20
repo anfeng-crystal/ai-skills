@@ -38,7 +38,7 @@ More install controls / 更多安装控制：
 ```bash
 node install.mjs --dry-run          # preview first / 先预览
 node install.mjs --tool claude       # Claude Code only / 仅安装到 Claude Code
-node install.mjs --skill fix-bug     # one skill / 只安装一个技能
+node install.mjs --skill web-access  # one skill / 只安装一个技能
 node install.mjs --list              # list available skills / 列出可用技能
 ```
 

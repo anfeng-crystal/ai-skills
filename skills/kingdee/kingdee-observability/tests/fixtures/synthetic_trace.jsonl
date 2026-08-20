@@ -1,0 +1,7 @@
+{"timestamp":"2026-01-02T03:04:05Z","traceId":"trace-demo","spanId":"root","service":"order-service","operation":"request","level":"INFO","message":"request started tenantId=tenant-demo userId=1001 clientIp=192.0.2.10"}
+{"timestamp":"2026-01-02T03:04:06Z","traceId":"trace-demo","spanId":"sql-1","parentSpanId":"root","service":"order-service","level":"INFO","durationMs":1200,"sql":"select * from t_order where id = 101 and name = 'Alice'","params":[101,"Alice"]}
+{"timestamp":"2026-01-02T03:04:07Z","traceId":"trace-demo","spanId":"sql-2","parentSpanId":"root","service":"order-service","level":"INFO","durationMs":40,"sql":"select * from t_order where id = 102 and name = 'Bob'","params":[102,"Bob"]}
+{"timestamp":"2026-01-02T03:04:08Z","traceId":"trace-demo","spanId":"sql-3","parentSpanId":"root","service":"order-service","level":"INFO","durationMs":45,"sql":"select * from t_order where id = 103 and name = 'Carol'","params":[103,"Carol"]}
+{"timestamp":"2026-01-02T03:04:09Z","traceId":"trace-demo","spanId":"error","parentSpanId":"root","service":"order-service","level":"ERROR","message":"IllegalStateException accountId=account-demo password=not-a-real-secret at 198.51.100.8"}
+{"timestamp":"2026-01-02T03:04:10Z","traceId":"trace-demo","spanId":"thread","parentSpanId":"root","service":"order-service","level":"WARN","thread":"worker-7","message":"thread pool blocked and queue full"}
+{"timestamp":"2026-01-02T03:04:11Z","traceId":"trace-demo","spanId":"gc","parentSpanId":"root","service":"order-service","level":"WARN","message":"Full GC pause cost=2s"}

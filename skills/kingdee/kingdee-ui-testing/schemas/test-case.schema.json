@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/kingdee-ui-testing/test-case.schema.json",
+  "title": "Kingdee UI normalized test cases",
+  "type": "object",
+  "required": ["schemaVersion", "mode", "cases"],
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "mode": {
+      "enum": ["generate", "safe-smoke", "approved-crud", "prod-safe-smoke", "approved-prod-e2e"]
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["caseId", "name", "priority", "requirements", "preconditions", "steps"],
+        "properties": {
+          "caseId": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "priority": {"enum": ["P0", "P1", "P2", "P3"]},
+          "requirements": {"type": "array", "items": {"type": "string"}},
+          "preconditions": {"type": "array", "items": {"type": "string"}},
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["stepId", "order", "action", "target", "data", "expected", "mutates", "effect"],
+              "properties": {
+                "stepId": {"type": "string", "minLength": 1},
+                "order": {"type": "integer", "minimum": 1},
+                "action": {"type": "string", "minLength": 1},
+                "target": {"type": "string"},
+                "data": {},
+                "expected": {"type": "string"},
+                "mutates": {"type": "boolean"},
+                "effect": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

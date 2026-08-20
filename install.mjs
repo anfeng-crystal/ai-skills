@@ -8,7 +8,7 @@
  *   node <checkout-dir>/install.mjs                    # install all skills
  *   node <checkout-dir>/install.mjs --dry-run          # preview only
  *   node <checkout-dir>/install.mjs --tool claude       # install for Claude Code only
- *   node <checkout-dir>/install.mjs --skill fix-bug     # install one skill
+ *   node <checkout-dir>/install.mjs --skill web-access  # install one skill
  *   node <checkout-dir>/install.mjs --list              # list available skills
  */
 
@@ -110,7 +110,7 @@ Examples:
   node install.mjs --dry-run                # preview only
   node install.mjs --tool claude            # Claude Code only
   node install.mjs --tool antigravity-cli   # Antigravity CLI only
-  node install.mjs --skill fix-bug          # one skill
-  node install.mjs --skill fix-bug --skill explain-code  # two skills
+  node install.mjs --skill web-access       # one skill
+  node install.mjs --skill web-access --skill playwright  # two skills
 `);
 }

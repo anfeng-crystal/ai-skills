@@ -1,5 +1,7 @@
 # Waza Skill Optimization Absorption Plan
 
+> Historical record: superseded by the 2026-08-08 with-skill/no-skill audit. The low-increment generic skills named below were removed from the active set; this document is retained only to explain their origin.
+
 Date: 2026-05-26
 
 ## Goal

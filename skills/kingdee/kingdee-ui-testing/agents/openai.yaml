@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kingdee UI Testing"
+  short_description: "金蝶云苍穹需求驱动 UI 冒烟、E2E 编排与证据报告"
+  default_prompt: "使用 $kingdee-ui-testing 生成或执行金蝶云苍穹 UI 测试并输出步骤级证据。"

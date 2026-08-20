@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kingdee Observability"
+  short_description: "金蝶云苍穹日志、Trace、慢 SQL 与运行时证据分析"
+  default_prompt: "使用 $kingdee-observability 对金蝶云苍穹日志或已授权只读查询结果进行脱敏诊断。"

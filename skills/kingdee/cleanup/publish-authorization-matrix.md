@@ -24,7 +24,7 @@
 | 条目 | 处置 | 说明 |
 |---|---|---|
 | rpt-gen 65 实战报表源码 | `exclude` 原文 | 仅 `publish` 已脱敏的模式/签名(已落入 kingdee-report,无业务字段) |
-| ISC 90+ 错误库文本 | 逐条核实 | 已在 kingdee-isc-service 中以路由表/目录形式重写,未搬运受版权内容原文;深挖文档发布前逐条核来源 |
+| ISC 90+ 错误库文本 | `exclude` | 低增量诊断 skill 及其两张路由表已移除，发布集不含该错误库原文或改写目录 |
 | Algo/SDK 方法签名 | `publish` | 已在 kingdee-report/算子文档中以手写签名表呈现,非 sdk.json 原文搬运 |
 
 ## 失败条件(发布门禁)

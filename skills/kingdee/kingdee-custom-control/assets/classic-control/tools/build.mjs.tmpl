@@ -1,0 +1,28 @@
+import { cp, mkdir, readFile, rm } from 'node:fs/promises';
+import path from 'node:path';
+import process from 'node:process';
+
+const project = process.cwd();
+const config = JSON.parse(await readFile(path.join(project, 'cosmic-control.json'), 'utf8'));
+
+function insideProject(rawPath, label) {
+  if (typeof rawPath !== 'string' || path.isAbsolute(rawPath)) {
+    throw new Error(`${label} must be project-relative`);
+  }
+  const resolved = path.resolve(project, rawPath);
+  const relative = path.relative(project, resolved);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`${label} escapes the project`);
+  }
+  return resolved;
+}
+
+const source = insideProject(config.sourceDir, 'sourceDir');
+const output = insideProject(config.build?.outputDir, 'build.outputDir');
+if (path.relative(project, output).split(path.sep).length < 2) {
+  throw new Error('build.outputDir must be nested below a project directory');
+}
+await rm(output, { recursive: true, force: true });
+await mkdir(path.dirname(output), { recursive: true });
+await cp(source, output, { recursive: true, errorOnExist: true, force: false });
+console.log(`Built ${path.relative(project, output)}`);

@@ -1,0 +1,187 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import test from 'node:test';
+import vm from 'node:vm';
+
+class FakeElement {
+  constructor() {
+    this.listeners = new Map();
+    this.textContent = '';
+    this.focused = false;
+  }
+
+  addEventListener(type, listener) {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, new Set());
+    }
+    this.listeners.get(type).add(listener);
+  }
+
+  removeEventListener(type, listener) {
+    const listeners = this.listeners.get(type);
+    if (!listeners) return;
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      this.listeners.delete(type);
+    }
+  }
+
+  emit(type) {
+    for (const listener of this.listeners.get(type) || []) {
+      listener();
+    }
+  }
+
+  listenerCount(type) {
+    return this.listeners.get(type)?.size || 0;
+  }
+
+  focus() {
+    this.focused = true;
+  }
+}
+
+async function createHarness({ deferTemplates = false } = {}) {
+  const source = await readFile(new URL('../src/index.js', import.meta.url), 'utf8');
+  const action = new FakeElement();
+  const status = new FakeElement();
+  const calls = { files: [], invokes: [], messages: [], removed: 0 };
+  const pendingTemplates = [];
+  let registeredId;
+  let Control;
+  let markup = '';
+  const dom = {
+    get innerHTML() {
+      return markup;
+    },
+    set innerHTML(value) {
+      markup = value;
+    },
+    querySelector(selector) {
+      if (!markup) return null;
+      if (selector === '[data-role="action"]') return action;
+      if (selector === '[data-role="status"]') return status;
+      return null;
+    }
+  };
+  const KDApi = {
+    register(id, constructor) {
+      registeredId = id;
+      Control = constructor;
+    },
+    loadFile(path, model, callback) {
+      calls.files.push(path);
+      callback();
+    },
+    getTemplateStringByFilePath(path) {
+      calls.files.push(path);
+      if (deferTemplates) {
+        return new Promise((resolve, reject) => pendingTemplates.push({ reject, resolve }));
+      }
+      return Promise.resolve('<section data-role="root"></section>');
+    }
+  };
+  vm.runInNewContext(source, { window: { KDApi }, console, JSON, Object });
+  const model = {
+    dom,
+    invoke(name, payload) {
+      calls.invokes.push({ name, payload });
+    },
+    triggerCustomMsgEvent(type, payload) {
+      calls.messages.push({ type, payload });
+    }
+  };
+  return { action, calls, Control, dom, model, pendingTemplates, registeredId, status };
+}
+
+function flushPromises() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+test('registers, initializes and updates the configured control', async () => {
+  const harness = await createHarness();
+  assert.equal(harness.registeredId, '__CONTROL_ID__');
+  const control = new harness.Control(harness.model);
+  control.init({ data: { state: 'ready' } });
+  await flushPromises();
+  assert.deepEqual(harness.calls.files, ['./css/control.css', './html/control.html']);
+  assert.equal(harness.status.textContent, JSON.stringify({ state: 'ready' }));
+  control.update({ data: 'updated' });
+  assert.equal(harness.status.textContent, 'updated');
+});
+
+test('supports page directives and both outbound channels', async () => {
+  const harness = await createHarness();
+  const control = new harness.Control(harness.model);
+  control.init({});
+  await flushPromises();
+  assert.equal(control.handleDirective({}, 'setData', { data: 'from-page' }), true);
+  assert.equal(harness.status.textContent, 'from-page');
+  assert.equal(control.handleDirective({}, 'focus', {}), true);
+  assert.equal(harness.action.focused, true);
+  assert.equal(control.handleDirective({}, 'unknown', {}), false);
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes[0].name, 'primaryAction');
+  assert.equal(harness.calls.messages[0].type, 'action');
+});
+
+test('cleans listeners idempotently across lifecycle spellings', async () => {
+  const harness = await createHarness();
+  const control = new harness.Control(harness.model);
+  control.init({});
+  await flushPromises();
+  assert.equal(harness.action.listeners.has('click'), true);
+  control.destoryed();
+  control.destroyed();
+  assert.equal(harness.action.listeners.has('click'), false);
+  assert.equal(harness.dom.innerHTML, '');
+});
+
+test('applies the latest update received before async rendering completes', async () => {
+  const harness = await createHarness({ deferTemplates: true });
+  const control = new harness.Control(harness.model);
+  control.init({ data: 'initial' });
+  control.update({ data: 'latest' });
+  assert.equal(harness.status.textContent, '');
+
+  harness.pendingTemplates[0].resolve('<section data-role="root"></section>');
+  await flushPromises();
+  assert.equal(harness.status.textContent, 'latest');
+});
+
+test('ignores a stale render after destroy and re-init', async () => {
+  const harness = await createHarness({ deferTemplates: true });
+  const control = new harness.Control(harness.model);
+  control.init({ data: 'stale' });
+  control.destroyed();
+  control.init({ data: 'current' });
+
+  harness.pendingTemplates[0].resolve('<section data-render="stale"></section>');
+  await flushPromises();
+  assert.equal(harness.dom.innerHTML, '');
+
+  harness.pendingTemplates[1].resolve('<section data-render="current"></section>');
+  await flushPromises();
+  assert.equal(harness.dom.innerHTML, '<section data-render="current"></section>');
+  assert.equal(harness.status.textContent, 'current');
+});
+
+test('unmounts the previous binding before rebuilding', async () => {
+  const harness = await createHarness({ deferTemplates: true });
+  const control = new harness.Control(harness.model);
+  control.init({ data: 'first' });
+  harness.pendingTemplates[0].resolve('<section data-render="first"></section>');
+  await flushPromises();
+  assert.equal(harness.action.listenerCount('click'), 1);
+
+  control.init({ data: 'second' });
+  assert.equal(harness.action.listenerCount('click'), 0);
+  assert.equal(harness.dom.innerHTML, '');
+  harness.pendingTemplates[1].resolve('<section data-render="second"></section>');
+  await flushPromises();
+  assert.equal(harness.action.listenerCount('click'), 1);
+
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes.length, 1);
+  assert.equal(harness.calls.messages.length, 1);
+});

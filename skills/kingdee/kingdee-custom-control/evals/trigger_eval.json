@@ -1,0 +1,13 @@
+[
+  {"query": "从零开发一个苍穹前端自定义控件，验证后打包成可交付 ZIP", "should_trigger": true},
+  {"query": "帮我创建 KDApi.register 自定义控件工程，并补 init update 销毁测试", "should_trigger": true},
+  {"query": "这个苍穹自定义控件的 handleDirective 和 triggerCustomMsgEvent 协议需要修复", "should_trigger": true},
+  {"query": "把现有自定义控件做跨平台构建、单元测试、SHA256 和发布清单", "should_trigger": true},
+  {"query": "开发 PC 和移动端都要用的苍穹独立自定义控件并在测试环境验收", "should_trigger": true},
+  {"query": "检查控件方案 ID、KDApi 注册 ID 和上传包是否一致", "should_trigger": true},
+  {"query": "页面脚本怎么调用一个已经存在的自定义控件", "should_trigger": false},
+  {"query": "写一个苍穹 Java 表单插件处理 customEvent", "should_trigger": false},
+  {"query": "给苍穹字段写自定义 CSS", "should_trigger": false},
+  {"query": "查一下表单里的自定义控件字段标识", "should_trigger": false},
+  {"query": "写一个 KingScript 服务端插件", "should_trigger": false}
+]

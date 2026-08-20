@@ -1,0 +1,2 @@
+{"caseId":"UI-001","stepId":"step-1","status":"passed","actual":"navigated to https://internal.example.invalid/list userId=1001","screenshot":"screenshots/list step 1.png"}
+{"caseId":"UI-001","stepId":"step-2","status":"failed","actual":"clientIp=192.0.2.10 accountId=demo-account","error":"expected 状态 column"}

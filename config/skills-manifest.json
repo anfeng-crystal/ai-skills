@@ -9,50 +9,10 @@
   },
   "skills": [
     {
-      "name": "agent-health",
-      "runtime": [
-        "markdown"
-      ],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
       "name": "darwin-skill",
       "runtime": ["node", "playwright"],
       "requiresKnowledge": false,
       "optional": true
-    },
-    {
-      "name": "data-analyst",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "delivery-check",
-      "runtime": [
-        "markdown"
-      ],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "explain-code",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "fix-bug",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "implement-feature",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
     },
     {
       "name": "kingdee-cosmic",
@@ -63,6 +23,12 @@
     {
       "name": "kingdee-cosmic-devtools",
       "runtime": ["python3"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
+      "name": "kingdee-custom-control",
+      "runtime": ["python3", "node"],
       "requiresKnowledge": false,
       "optional": true
     },
@@ -91,13 +57,13 @@
       "optional": true
     },
     {
-      "name": "kingdee-openapi-client",
-      "runtime": ["markdown"],
+      "name": "kingdee-kcs-ops",
+      "runtime": ["python3"],
       "requiresKnowledge": false,
       "optional": true
     },
     {
-      "name": "kingdee-isc-service",
+      "name": "kingdee-openapi-client",
       "runtime": ["markdown"],
       "requiresKnowledge": false,
       "optional": true
@@ -109,30 +75,16 @@
       "optional": true
     },
     {
-      "name": "multi-agent-collab",
-      "runtime": ["markdown"],
+      "name": "kingdee-observability",
+      "runtime": ["python3"],
       "requiresKnowledge": false,
-      "optional": false
+      "optional": true
     },
     {
       "name": "playwright",
       "runtime": ["npx", "@playwright/cli"],
       "requiresKnowledge": false,
       "optional": true
-    },
-    {
-      "name": "plan-decision",
-      "runtime": [
-        "markdown"
-      ],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "review-code",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
     },
     {
       "name": "skill-installer",
@@ -160,24 +112,6 @@
       "optional": false
     },
     {
-      "name": "design-review",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "frontend-design",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "frontend-design-principles",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": true
-    },
-    {
       "name": "kingdee-cosmic-login",
       "runtime": ["python3", "browser"],
       "requiresKnowledge": false,
@@ -196,6 +130,12 @@
       "optional": true
     },
     {
+      "name": "kingdee-ui-testing",
+      "runtime": ["python3", "npx", "@playwright/cli"],
+      "requiresKnowledge": false,
+      "optional": true
+    },
+    {
       "name": "kingdee-sql-and-data",
       "runtime": ["python3"],
       "requiresKnowledge": false,
@@ -208,20 +148,8 @@
       "optional": true
     },
     {
-      "name": "cleanup-guard",
-      "runtime": ["markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
       "name": "html-output-quality",
       "runtime": ["node", "markdown"],
-      "requiresKnowledge": false,
-      "optional": false
-    },
-    {
-      "name": "neat-freak",
-      "runtime": ["markdown"],
       "requiresKnowledge": false,
       "optional": false
     }

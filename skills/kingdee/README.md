@@ -12,8 +12,8 @@
 | `kingdee-sdk-helper` | SDK 类定义、方法签名、Javadoc、API 归属查询 | "SaveServiceHelper 怎么用""这个方法在哪个包" |
 | `kingdee-kingscript` | KingScript 脚本插件:SDK 声明、语法、运行错误、风险审查 | "写 KingScript 脚本""KingScript 基类×事件" |
 | `kingdee-frontend-script` | 前端页面脚本/扩展 JS(index.js/index_m.js)/表格树自定义渲染/前后端通信/自定义 CSS | "页面脚本字段联动""扩展 JS 移动端入口""给字段加自定义样式" |
+| `kingdee-custom-control` | 苍穹独立前端自定义控件:从零创建、修复、测试、构建、确定性打包和目标环境交付 | "开发 KDApi 自定义控件""验证并打包控件 ZIP" |
 | `kingdee-openapi-client` | 调用苍穹/星瀚 OpenAPI:OAuth2 取 token、queryOpenApi、参数探测、Java/Python 调用代码 | "调用 OpenAPI 提交单据""getToken 怎么刷新""生成 Java 调用代码" |
-| `kingdee-isc-service` | 集成服务云(ISC)报错离线诊断:值转换/事件触发/字段映射/数据库/EAS/连接/OpenAPI/性能 | 提供 DC 错误日志或报错关键词即诊断;纯离线只读 |
 | `kingdee-cosmic-devtools` | KDDT 工程创建、插件类生成、资源包 staging/apply/rollback | "用 KDDT 建工程""拉取/更新资源包" |
 | `kingdee-cosmic-login` | 测试环境登录、数据中心列表、Cookie/CSRF 验证 | "登录苍穹测试环境""列数据中心" |
 | `kingdee-sql-and-data` | KSQL 兼容性校验、预置数据脚本生成、项目级 SQL 配置、只读数据核对 | "校验这段 KSQL""生成预置数据脚本" |
@@ -47,4 +47,4 @@ node skills/meta/skill-installer/bin/skill-installer.mjs --tool claude-code --to
 - 部分技能依赖大文件/二进制(如 SDK 索引、反编译器 jar、ISCB 运行时 jar)。再分发已获授权(2026-06-13),随仓库 `publish`;第三方开源 jar(CFR、JavaParser)按其自身 license 保留并在 NOTICE 标注。详见 `cleanup/publish-authorization-matrix.md`。
 
 ## 协作边界(避免重复/误触发)
-查询(metadata-analyzer / sdk-helper)与实现(cosmic / report / frontend-script)、脚本(kingscript)、集成(openapi-client / isc-service)、工程(devtools)、登录(login)、数据(sql-and-data)、测试(testing)、安全(security-review)各司其职;每个 skill 的 `evals/trigger_eval.json` 含正负例界定边界。
+查询(metadata-analyzer / sdk-helper)与实现(cosmic / report / frontend-script / custom-control)、脚本(kingscript)、集成(openapi-client / iscb-script)、运行证据(observability)、工程(devtools)、登录(login)、数据(sql-and-data)、测试(testing)、安全(security-review)各司其职;每个 skill 的 `evals/trigger_eval.json` 含正负例界定边界。
