@@ -3,4 +3,4 @@ interface:
   short_description: "Automate real browsers from the terminal"
   icon_small: "./assets/playwright-small.svg"
   icon_large: "./assets/playwright.png"
-  default_prompt: "Automate this browser workflow with Playwright and produce reliable CLI steps. If the user explicitly asks for test/spec/helper code, inspect existing playwright.config, fixtures, auth setup, wrappers, page objects, and test utils before adding new helpers. Include stable comments for intent, selector assumptions, async waits, cleanup, and fixture side effects. Attribution must not use AI; use anfeng when attribution is required."
+  default_prompt: "Use $playwright to execute the requested browser workflow; reuse current page/auth state, honor any task-level execution contract, and report assertions, artifacts, cleanup, and unverified steps."

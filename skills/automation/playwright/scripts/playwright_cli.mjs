@@ -16,10 +16,12 @@ const isShortLivedCommand = args.some((arg) => arg === "--help" || arg === "-h" 
 const timeoutMs = Number(process.env.PLAYWRIGHT_CLI_TIMEOUT_MS || (isShortLivedCommand ? 30_000 : 0));
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, "../../../..");
+const PLAYWRIGHT_CLI_VERSION = "0.1.17";
+const PLAYWRIGHT_CLI_PACKAGE = `@playwright/cli@${PLAYWRIGHT_CLI_VERSION}`;
 const localCliScript = path.join(REPO_ROOT, "node_modules", "@playwright", "cli", "playwright-cli.js");
 const hasLocalCli = fs.existsSync(localCliScript);
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
-const npxArgs = ["--yes", "--package", "@playwright/cli", "playwright-cli"];
+const npxArgs = ["--yes", "--package", PLAYWRIGHT_CLI_PACKAGE, "playwright-cli"];
 const localArgs = hasLocalCli ? [localCliScript] : [];
 const childEnv = {
   ...process.env,

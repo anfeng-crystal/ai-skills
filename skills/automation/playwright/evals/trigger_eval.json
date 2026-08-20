@@ -3,12 +3,17 @@
   {"query": "帮我写 Playwright 脚本自动化填表单", "should_trigger": true},
   {"query": "用 Playwright 点击页面上的按钮", "should_trigger": true},
   {"query": "Playwright 浏览器自动化测试", "should_trigger": true},
-  {"query": "帮我用 Playwright 抓取网页内容", "should_trigger": true},
+  {"query": "用已登录的后台页面只截一张当前页面截图", "should_trigger": true},
   {"query": "写一个 Playwright 的页面操作脚本", "should_trigger": true},
   {"query": "帮我用 curl 抓取网页内容", "should_trigger": false},
   {"query": "帮我查一下这个网页的最新信息", "should_trigger": false},
+  {"query": "帮我用 Playwright 抓取网页内容", "should_trigger": false},
+  {"query": "帮我核验这个 URL 当前是否可访问", "should_trigger": false},
   {"query": "帮我写一个前端页面", "should_trigger": false},
   {"query": "review 一下这个测试脚本的代码", "should_trigger": false},
   {"query": "帮我实现一个浏览器扩展", "should_trigger": false},
-  {"query": "帮我分析一下这个网页的性能", "should_trigger": false}
+  {"query": "帮我分析一下这个网页的性能", "should_trigger": false},
+  {"query": "用 Playwright 截图，完成后不要关闭浏览器或删除 trace", "should_trigger": true},
+  {"query": "按已审核的十条用例连续填写、保存并清理测试数据", "should_trigger": true},
+  {"query": "使用现有生产登录态执行已批准的只读页面巡检", "should_trigger": true}
 ]

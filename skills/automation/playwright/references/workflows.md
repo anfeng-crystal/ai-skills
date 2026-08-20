@@ -1,7 +1,24 @@
 # Playwright CLI Workflows
 
-Use the wrapper script and snapshot often.
-Assume `PWCLI` is set and `pwcli` is an alias for `"$PWCLI"`.
+Use the cross-platform `pwcli` function from `cli.md`, or call the complete
+Node wrapper directly:
+
+```text
+node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs <command> [args]
+```
+
+POSIX:
+
+```sh
+pwcli() { node "<active-root>/skills/automation/playwright/scripts/playwright_cli.mjs" "$@"; }
+```
+
+PowerShell:
+
+```powershell
+function pwcli { node "<active-root>\skills\automation\playwright\scripts\playwright_cli.mjs" @args }
+```
+
 In this repo, run commands from `output/playwright/<label>/` to keep artifacts contained.
 
 ## Standard interaction loop
@@ -15,23 +32,55 @@ pwcli snapshot
 
 ## Form submission
 
+Only click the final submit control after the user has confirmed the final
+submission, target, and scope. Filling fields is allowed when it does not
+trigger that final write.
+
 ```bash
 pwcli open https://example.com/form --headed
 pwcli snapshot
 pwcli fill e1 "user@example.com"
 pwcli fill e2 "password123"
+# User confirmation required before this final business action:
 pwcli click e3
 pwcli snapshot
-pwcli screenshot
+pwcli screenshot  # confirm local path/privacy before saving
 ```
 
 ## Data extraction
+
+For a known interactive page, use this CLI workflow. Pure content retrieval,
+latest facts, or URL verification still routes to `web-access`.
 
 ```bash
 pwcli open https://example.com
 pwcli snapshot
 pwcli eval "document.title"
 pwcli eval "el => el.textContent" e12
+```
+
+## Multiple tabs
+
+Keep the session and selected tab explicit, and snapshot after switching:
+
+```bash
+pwcli --session research open https://example.com/app
+pwcli tab-new https://example.com/help
+pwcli tab-list
+pwcli tab-select 1
+pwcli snapshot
+pwcli tab-select 0
+pwcli snapshot
+```
+
+## Wait for an element
+
+Use the current CLI's `run-code` with Playwright's locator API:
+
+```bash
+pwcli open https://example.com/results
+pwcli run-code "await page.locator('[data-testid=results]').waitFor({ state: 'visible', timeout: 10000 })"
+pwcli snapshot
 ```
 
 ## Debugging and inspection
@@ -48,8 +97,8 @@ Record a trace around a suspicious flow:
 ```bash
 pwcli tracing-start
 # reproduce the issue
-pwcli tracing-stop
-pwcli screenshot
+pwcli tracing-stop  # confirm local path/privacy and sensitive data scope
+pwcli screenshot    # confirm local path/privacy before saving
 ```
 
 ## Sessions
@@ -64,10 +113,19 @@ pwcli --session checkout open https://example.com/checkout
 
 Or set the session once:
 
-```bash
+```sh
 export PLAYWRIGHT_CLI_SESSION=checkout
 pwcli open https://example.com/checkout
 ```
+
+```powershell
+$env:PLAYWRIGHT_CLI_SESSION = "checkout"
+pwcli open https://example.com/checkout
+```
+
+Prefer `--session checkout` when the shell environment differs across
+platforms; Windows usage must not depend on bash, `export`, `rm`, `find`, or a
+POSIX alias.
 
 ## Reuse existing repo assets
 

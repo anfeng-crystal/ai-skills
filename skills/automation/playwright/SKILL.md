@@ -1,11 +1,11 @@
 ---
 name: playwright
-description: "Playwright browser automation: screenshots, clicks, form filling, web actions."
+description: "已知页面的 Playwright 交互、截图和表单操作；内容获取、最新事实或 URL 核验转 web-access。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [playwright, browser, automation, screenshot, scraping]
+  tags: "playwright, browser, automation, screenshot, scraping"
 ---
 
 # Playwright CLI
@@ -13,6 +13,19 @@ metadata:
 
 
 终端驱动浏览器，用跨平台 Node wrapper 优先调用 `npx --package @playwright/cli`。如果 npm registry、网络或 npm cache 出现解析层错误，并且本地已安装依赖，则自动回退到本地 `node_modules/.bin/playwright-cli`。
+
+## 触发与副作用边界
+- 已知页面的导航和 snapshot 是只读操作。
+- 截图、trace、PDF 是安全的本地写入；执行前确认本地路径和隐私范围，不能表述为零副作用。
+- 用户明确要求的普通 `click`/`type`/`fill` 可直接执行，前提是不触发最终业务写入。
+- 提交、发送、删除、购买、上传、批量写入或改变业务数据的最终动作，需要任务级执行合同；合同已明确目标、范围和允许动作时连续执行，不逐步重复确认。
+- 不默认关闭浏览器或 tab，不默认删除 trace；只清理本轮明确生成且用户已授权的产物。含登录态或个人隐私的截图/trace 仅保存到用户指定的本地路径。
+- 仅内容抓取、最新信息查询或 URL 核验不触发本 skill，转 `web-access`。
+
+## 执行合同
+- 合同至少包含环境/站点、目标对象、允许动作、数量或记录范围、认证来源类型、证据产物和清理/回滚方式。
+- 当前用户请求、已审核测试计划或上游领域 skill 传入的合同都可作为授权来源；只有目标扩张或副作用等级上升时重新确认。
+- 当前任务的既有登录态可直接复用；不得把 Cookie、token、storage state 或账号信息复制到报告、fixture、项目配置或无关任务。
 
 ## 先决条件
 
@@ -36,63 +49,25 @@ node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs scree
 
 **什么时候重刷 snapshot**：导航后、点开 modal/menu 后、tab 切换后、元素引用失效时报错后。
 
-**引用失效恢复**：`snapshot` 重刷后仍找不到 → 检查页面是否跳转到新域名/登录态过期 → 必要时重新 `open`。
+**引用失效恢复**：`snapshot` 重刷后仍找不到 → 检查页面是否跳转到新域名或登录态过期 → 确认任一条件后重新 `open`。
 
 ## 常用模式
 
-```bash
-# 填表单
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs open https://example.com/form
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs snapshot
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs fill e1 "user@example.com"
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs fill e2 "password123"
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs click e3
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs snapshot
-
-# 带 trace 调试
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs open https://example.com --headed
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs tracing-start
-# ...交互...
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs tracing-stop
-
-# 多 tab
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs tab-new https://example.com
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs tab-list
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs tab-select 0
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs snapshot
-
-# 批量/循环（同一页面重复操作）
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs open https://example.com/list
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs snapshot
-
-# 等待元素出现（异步加载）
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs wait-for e5 --timeout 5000
-```
+任务涉及填表、trace、多 tab、等待元素或 fixture/POM/auth 复用时，读取 `references/workflows.md`；上述 Node wrapper 入口保持可直接执行。
 
 ## 排障速查
 
 | 现象 | 排查步骤 |
 |------|---------|
-| snapshot 无输出 | 页面是否加载完成 → 加 `--wait-for-timeout 5000` → 检查 URL 是否 404 |
+| snapshot 无输出 | 页面是否加载完成 → 用当前 CLI 的 `run-code` 等待页面条件 → 检查 URL 是否 404 |
 | click 后无反应 | 元素是否被遮挡 → 先 snapshot 确认引用有效 → 尝试 `press Enter` 替代 |
 | 截图空白 | 页面是否白屏/未加载 → 加 `--full-page` → 检查 headed 模式是否正常 |
 | 登录态失效 | 检查 cookie/session 是否过期 → 重新 `open` 登录页 → 更新 storage state |
 | npx 命令找不到 | 检查 Node.js/npm 是否安装并在 PATH 中；如网络不稳，先执行 `node <active-root>/scripts/npm-deps.mjs install` 预取本地依赖 |
 
-## 结束与清理
+## 产物与收尾
 
-```bash
-# 1. 验证产物存在
-ls output/playwright/*.png
-
-# 2. 关闭当前 tab 或浏览器
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs tab-close 0
-# 或退出浏览器进程
-node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs close
-
-# 3. 清理临时 trace 文件（如开启了 tracing）
-rm -f trace.zip
-```
+截图、trace 等产物保存前确认路径和隐私范围；仅按用户明确授权清理本轮生成的文件。浏览器和 tab 保持现状，除非用户明确要求关闭。
 
 macOS/Linux 也可以使用 `scripts/playwright_cli.sh`，它会转调同目录下的 Node wrapper。
 
@@ -100,20 +75,20 @@ macOS/Linux 也可以使用 `scripts/playwright_cli.sh`，它会转调同目录�
 
 | 操作 | 确认内容 |
 |------|---------|
-| 点击/填表/提交表单 | 会改变页面状态或涉及用户数据 |
-| 批量操作（循环点击/填表） | 操作数量和范围已确认，不会误触 |
-| 截图/抓取含个人隐私内容 | 只保存到本地 output/playwright/，不上传 |
-| 开启 trace 或录制 | 是否涉及敏感操作，trace 文件路径已确认 |
-| 执行非 `--dry-run` | 已在 tab 上执行 snapshot，引用有效 |
+| 导航 / snapshot | 只读；导航后或页面状态变化后重刷 snapshot |
+| 截图 / PDF / trace | 本地目标路径和隐私范围；这是安全本地写入 |
+| 普通 click / type / fill | 用户已明确要求，且不会触发最终业务写入 |
+| 提交 / 发送 / 删除 / 购买 / 上传 / 批量写入 | 执行合同覆盖目标、范围、动作和恢复方式 |
+| 批量操作（循环点击/填表） | 合同覆盖数量、记录筛选和停止条件 |
+
+当前 CLI 没有统一的 dry-run 模式；按上述动作分类执行门禁。
 
 ## 复用现有资产（不重复造轮子）
 
 用户要 Playwright 代码时，按此顺序检查：
-1. `find . -name "playwright.config.*"` — 确认配置和项目结构
-2. `find . -path "*/fixtures/*" -o -name "*fixture*"` — 复用 fixtures
-3. `find . -path "*/pages/*" -o -path "*/pom/*"` — 复用 page objects
-4. `find . -name "auth.setup.*"` — 复用登录态
-5. 以上都覆盖不了，才新增最小 helper
+1. 查找 `playwright.config.*` — 确认配置和项目结构
+2. 查找 `fixtures`、`pages`/`pom`、`auth.setup.*` — 复用 fixtures、POM 和登录态
+3. 以上都覆盖不了，才新增最小 helper
 
 ## 门禁
 
@@ -121,6 +96,9 @@ macOS/Linux 也可以使用 `scripts/playwright_cli.sh`，它会转调同目录�
 - 引用失效就重刷，不绕过引用直接 `run-code`。
 - 抓产物放 `output/playwright/`，不新增顶层目录；截图后检查文件是否生成。
 - 默认 CLI 工作流，用户明确要测试文件才切到 `@playwright/test`。
+- Node wrapper 为跨平台主入口；shell 仅作可选 POSIX 辅助，Windows 不依赖 bash、`rm` 或 `find`。
+- 未建立执行合同时只做只读导航、snapshot 和明确的无业务写入交互；合同建立后按合同连续完成操作、断言和清理。
+- 页面状态或数据与合同前置条件不一致时停止当前序列并保留证据，不扩大选择器、记录或操作范围猜测执行。
 - 代码/注释/提交署名用 `anfeng`。
 
 ## References
@@ -128,3 +106,7 @@ macOS/Linux 也可以使用 `scripts/playwright_cli.sh`，它会转调同目录�
 - CLI 命令：`references/cli.md`
 - 工作流和排障：`references/workflows.md`
 - 注释策略：`references/comment-policy.md`
+
+## 输出
+
+报告执行合同、已完成动作、断言结果、产物路径、清理/回滚状态和未验证步骤；敏感会话材料保持脱敏。

@@ -1,11 +1,11 @@
 ---
 name: web-access
 description: "需要联网查最新事实、官方文档、URL 内容、登录态页面、动态页面或多来源核验时使用。"
+license: MIT
 metadata:
-  author: anfeng
+  author: "anfeng"
   version: "1.0.0"
-  license: MIT
-  tags: [web, search, browser, cdp, curl, scraping, verification]
+  tags: "web, search, browser, cdp, curl, scraping, verification"
 ---
 
 # Web Access
