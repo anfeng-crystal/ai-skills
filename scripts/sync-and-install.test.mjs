@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { test } from "node:test";
 
 import { buildPlan, parseArgs } from "./sync-and-install.mjs";
@@ -19,8 +20,8 @@ test("parseArgs captures host and install filters", () => {
     "--no-pull",
   ]);
 
-  assert.equal(options.home, "/tmp/host-home");
-  assert.equal(options.sourceRoot, "/tmp/skills root");
+  assert.equal(options.home, path.resolve("/tmp/host-home"));
+  assert.equal(options.sourceRoot, path.resolve("/tmp/skills root"));
   assert.deepEqual(options.tools, ["codex", "claude"]);
   assert.deepEqual(options.skills, ["web-access"]);
   assert.equal(options.runDoctor, false);
@@ -52,7 +53,7 @@ test("buildPlan runs git pull, install, and doctor in order", () => {
   });
   assert.equal(plan.commands[1].command, process.execPath);
   assert.deepEqual(plan.commands[1].args, [
-    "/repo/skills/active/install.mjs",
+    path.join("/repo/skills/active", "install.mjs"),
     "--source-root",
     "/repo/skills",
     "--home",
@@ -65,7 +66,7 @@ test("buildPlan runs git pull, install, and doctor in order", () => {
   assert.equal(plan.commands[1].cwd, "/repo/skills/active");
   assert.equal(plan.commands[2].command, process.execPath);
   assert.deepEqual(plan.commands[2].args, [
-    "/repo/skills/active/scripts/doctor.mjs",
+    path.join("/repo/skills/active", "scripts/doctor.mjs"),
     "--source-root",
     "/repo/skills/active",
     "--home",
