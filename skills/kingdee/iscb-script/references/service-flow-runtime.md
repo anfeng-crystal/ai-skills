@@ -31,9 +31,12 @@ python3 scripts/analyze_service_flow.py <flow.dts-or-zip> --flow <exact-number> 
 经验驱动的改包使用独立工具，分析器继续保持只读：
 
 ```bash
+python3 scripts/patch_service_flow.py snapshot --baseline <current.dts> --flow <exact-flow-number>
 python3 scripts/patch_service_flow.py inspect --baseline <current.dts> --manifest <patch.json>
 python3 scripts/patch_service_flow.py generate --baseline <current.dts> --manifest <patch.json> --output <review.dts>
 ```
+
+`snapshot` 只读输出 `manifest_snapshot`：其中 version 保留 DTS 中的 JSON 原生类型，comment 只输出 SHA-256、不输出正文，Script 输出 `scope_path + node_id + expected_script_sha256`。构造 manifest 时复制这些快照值，不用 `sed/jq/read` 手工拆多行 comment，也不把数字 version 改成字符串或反向转换。
 
 最小 manifest 形态如下；脚本正文只放在同目录或子目录的 replacement 文件中：
 
@@ -43,7 +46,7 @@ python3 scripts/patch_service_flow.py generate --baseline <current.dts> --manife
   "input_sha256": "<baseline-64-hex>",
   "flow_number": "<exact-flow-number>",
   "metadata": {
-    "expected_version": "12",
+    "expected_version": 12,
     "expected_modifytime": "2026-08-01 10:00:00.000",
     "expected_comment_sha256": "<old-comment-64-hex>",
     "new_modifytime": "2026-08-12 09:30:00.000",
@@ -66,6 +69,8 @@ python3 scripts/patch_service_flow.py generate --baseline <current.dts> --manife
 ```
 
 - manifest 必须固定 `schema_version`、输入 SHA-256、唯一 `flow_number`、元数据旧值、旧 comment 哈希，以及每个 `scope_path + node_id` 的旧脚本 SHA、replacement 文件 SHA、经验规则 ID 和声明证据等级。manifest 的 `scope_path` 直接取只读 analyzer Script 元数据中的 `scope_node_ids`；路径项和 `node_id` 都使用节点对象 `id`，不是 `nodes` 字典 key，工具会唯一映射到真实 JSON key。
+- `expected_version` 必须逐类型等于 `snapshot` 输出：数字仍为数字，字符串仍为字符串。`expected_comment_sha256` 必须直接复制快照值；多行 comment 不通过 shell 行读取重算。
+- 同一 DTS 需要修改多个流程时，先基于同一份已批准合同列全目标，再按流程在私有临时目录串联 review copy；每一阶段都重新 `snapshot -> inspect -> generate`，最终文件联合验证后才对外交付。仍被下一阶段引用的 baseline/staging 不得提前移入废纸篓。
 - replacement 只能是 manifest 目录内的 UTF-8 本地文件；不内联脚本正文。凭据字面量阻断，endpoint/connection 字面量只有 manifest 明确列入允许类别才继续。
 - `comment_separator` 只允许空串、空格、` | `、一至两个换行或中文分号变体；摘要仍须通过控制字符与敏感字面量门禁。
 - 工具只支持平台导出的一行一个 object record 的 plain DTS；ZIP、顶层 array、多行记录、重复 JSON key、同号流程、非 Script 节点、任一快照哈希漂移、version 非整数/数字字符串或输出目录项已存在均停止，不猜测。change 数量、单个/累计 replacement 和最终输出都有资源上限。

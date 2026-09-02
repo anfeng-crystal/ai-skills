@@ -1,0 +1,466 @@
+{
+  "schema_version": 2,
+  "source": {
+    "table": "t_meta_mainentityinfo",
+    "scope": "fistemplate='1'"
+  },
+  "records": 966,
+  "columns": {
+    "fappid": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 12,
+        "text": 954
+      }
+    },
+    "fbilltype": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fbizappid": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "hex-identifier": 56,
+        "identifier-like": 910
+      }
+    },
+    "fbotp": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fcodenumber": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fdentityid": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "hex-identifier": 51,
+        "identifier-like": 915
+      }
+    },
+    "fenableimport": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fenablenameversion": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fid": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 965,
+        "text": 1
+      }
+    },
+    "fisprint": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fisqinganalysis": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fistemplate": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fmainorgfieldkey": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 111,
+        "text": 855
+      }
+    },
+    "fmodeltype": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 960,
+        "text": 6
+      }
+    },
+    "fnamefieldkey": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 9,
+        "text": 957
+      }
+    },
+    "fnameislocale": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fnosearchenabled": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fnumberfieldkey": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 17,
+        "text": 949
+      }
+    },
+    "fpkfieldname": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 9,
+        "text": 957
+      }
+    },
+    "fpkfieldtype": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "ftablename": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 302,
+        "text": 664
+      }
+    },
+    "fvoucher": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "fworkflow": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "integer": 966
+      }
+    },
+    "scope": {
+      "present": 966,
+      "nonempty": 966,
+      "value_shapes": {
+        "identifier-like": 966
+      }
+    }
+  },
+  "models": {
+    "BalanceModel": {
+      "rows": 4,
+      "observed_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ],
+      "nonempty_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ]
+    },
+    "BaseFormModel": {
+      "rows": 677,
+      "observed_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ],
+      "nonempty_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ]
+    },
+    "BillFormModel": {
+      "rows": 276,
+      "observed_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ],
+      "nonempty_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ]
+    },
+    "KMModel": {
+      "rows": 6,
+      "observed_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ],
+      "nonempty_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ]
+    },
+    "LogBillFormModel": {
+      "rows": 3,
+      "observed_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ],
+      "nonempty_columns": [
+        "fappid",
+        "fbilltype",
+        "fbizappid",
+        "fbotp",
+        "fcodenumber",
+        "fdentityid",
+        "fenableimport",
+        "fenablenameversion",
+        "fid",
+        "fisprint",
+        "fisqinganalysis",
+        "fistemplate",
+        "fmainorgfieldkey",
+        "fmodeltype",
+        "fnamefieldkey",
+        "fnameislocale",
+        "fnosearchenabled",
+        "fnumberfieldkey",
+        "fpkfieldname",
+        "fpkfieldtype",
+        "ftablename",
+        "fvoucher",
+        "fworkflow",
+        "scope"
+      ]
+    }
+  },
+  "authoring": "observed-not-roundtrip-verified"
+}

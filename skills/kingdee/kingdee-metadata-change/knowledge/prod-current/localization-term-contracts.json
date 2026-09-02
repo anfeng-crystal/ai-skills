@@ -1,0 +1,237 @@
+{
+  "schema_version": 2,
+  "source": {
+    "tables": [
+      "t_meta_entitydesign_l",
+      "t_meta_entitydesign_term",
+      "t_meta_formdesign_l",
+      "t_meta_formdesign_term"
+    ],
+    "scope": "rows belonging to fistemplate='1' design records"
+  },
+  "contracts": {
+    "entity_l": {
+      "kind": "entity",
+      "collection": "locales",
+      "table": "t_meta_entitydesign_l",
+      "rows": 1376,
+      "columns": {
+        "fdata": {
+          "present": 1376,
+          "nonempty": 1376,
+          "value_shapes": {
+            "text": 1376
+          }
+        },
+        "fid": {
+          "present": 1376,
+          "nonempty": 1376,
+          "value_shapes": {
+            "hex-identifier": 82,
+            "identifier-like": 1294
+          }
+        },
+        "flocaleid": {
+          "present": 1376,
+          "nonempty": 1376,
+          "value_shapes": {
+            "text": 1376
+          }
+        },
+        "fname": {
+          "present": 1376,
+          "nonempty": 1376,
+          "value_shapes": {
+            "text": 1376
+          }
+        },
+        "fnumber": {
+          "present": 1376,
+          "nonempty": 1376,
+          "value_shapes": {
+            "identifier-like": 1375,
+            "text": 1
+          }
+        },
+        "fpkid": {
+          "present": 1376,
+          "nonempty": 1376,
+          "value_shapes": {
+            "identifier-like": 1376
+          }
+        }
+      },
+      "locale_ids": [
+        "JA",
+        "KO",
+        "en",
+        "zh_CN",
+        "zh_TW"
+      ],
+      "authoring": {
+        "modify_existing": "observed",
+        "add_or_delete_row": "observed-not-roundtrip-verified",
+        "serialization": "baseline-node-only"
+      }
+    },
+    "entity_term": {
+      "kind": "entity",
+      "collection": "terms",
+      "table": "t_meta_entitydesign_term",
+      "rows": 22,
+      "columns": {
+        "fdata": {
+          "present": 22,
+          "nonempty": 22,
+          "value_shapes": {
+            "text": 22
+          }
+        },
+        "fid": {
+          "present": 22,
+          "nonempty": 22,
+          "value_shapes": {
+            "identifier-like": 22
+          }
+        },
+        "flocaleid": {
+          "present": 22,
+          "nonempty": 22,
+          "value_shapes": {
+            "text": 22
+          }
+        },
+        "fpkid": {
+          "present": 22,
+          "nonempty": 22,
+          "value_shapes": {
+            "identifier-like": 22
+          }
+        }
+      },
+      "locale_ids": [
+        "zh_CN"
+      ],
+      "authoring": {
+        "modify_existing": "observed",
+        "add_or_delete_row": "observed-not-roundtrip-verified",
+        "serialization": "baseline-node-only"
+      }
+    },
+    "form_l": {
+      "kind": "form",
+      "collection": "locales",
+      "table": "t_meta_formdesign_l",
+      "rows": 1372,
+      "columns": {
+        "fdata": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "text": 1372
+          }
+        },
+        "fid": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "hex-identifier": 81,
+            "identifier-like": 1291
+          }
+        },
+        "flocaleid": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "text": 1372
+          }
+        },
+        "fname": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "text": 1372
+          }
+        },
+        "fnumber": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "identifier-like": 1371,
+            "text": 1
+          }
+        },
+        "fpkid": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "identifier-like": 1372
+          }
+        },
+        "fversion": {
+          "present": 1372,
+          "nonempty": 1372,
+          "value_shapes": {
+            "integer": 1372
+          }
+        }
+      },
+      "locale_ids": [
+        "JA",
+        "KO",
+        "en",
+        "zh_CN",
+        "zh_TW"
+      ],
+      "authoring": {
+        "modify_existing": "observed",
+        "add_or_delete_row": "observed-not-roundtrip-verified",
+        "serialization": "baseline-node-only"
+      }
+    },
+    "form_term": {
+      "kind": "form",
+      "collection": "terms",
+      "table": "t_meta_formdesign_term",
+      "rows": 26,
+      "columns": {
+        "fdata": {
+          "present": 26,
+          "nonempty": 26,
+          "value_shapes": {
+            "text": 26
+          }
+        },
+        "fid": {
+          "present": 26,
+          "nonempty": 26,
+          "value_shapes": {
+            "identifier-like": 26
+          }
+        },
+        "flocaleid": {
+          "present": 26,
+          "nonempty": 26,
+          "value_shapes": {
+            "text": 26
+          }
+        },
+        "fpkid": {
+          "present": 26,
+          "nonempty": 26,
+          "value_shapes": {
+            "identifier-like": 26
+          }
+        }
+      },
+      "locale_ids": [
+        "zh_CN"
+      ],
+      "authoring": {
+        "modify_existing": "observed",
+        "add_or_delete_row": "observed-not-roundtrip-verified",
+        "serialization": "baseline-node-only"
+      }
+    }
+  }
+}

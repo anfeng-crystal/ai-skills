@@ -9,6 +9,7 @@
 | `kingdee-cosmic` | 苍穹 Java 二开主控:插件、工作流、BOTP、OpenAPI 服务端、DynamicObject、诊断、代码质量 | 描述 Java 二开/插件/诊断需求即触发;字段证据自动转 metadata-analyzer,SDK 签名转 sdk-helper,报表转 kingdee-report |
 | `kingdee-report` | 报表插件取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、Algo API 精确签名 | "写报表取数插件""DataSet 怎么 JOIN/聚合""Algo leftJoin 签名" |
 | `kingdee-metadata-analyzer` | 元数据取证:实体/字段/插件挂载点/字段读写/依赖;跨环境 diff、基础资料引用检查、导出 | "查实体字段""分析插件挂载""对比 dev/test 元数据差异""检查基础资料引用" |
+| `kingdee-metadata-change` | 元数据变更：按同环境实际模型新增、修改、移动、删除或恢复继承，并生成候选、验证和回滚 | "新增元数据字段/控件""修复列表按钮绑定""恢复继承覆盖" |
 | `kingdee-sdk-helper` | SDK 类定义、方法签名、Javadoc、API 归属查询 | "SaveServiceHelper 怎么用""这个方法在哪个包" |
 | `kingdee-kingscript` | KingScript 脚本插件:SDK 声明、语法、运行错误、风险审查 | "写 KingScript 脚本""KingScript 基类×事件" |
 | `kingdee-frontend-script` | 前端页面脚本/扩展 JS(index.js/index_m.js)/表格树自定义渲染/前后端通信/自定义 CSS | "页面脚本字段联动""扩展 JS 移动端入口""给字段加自定义样式" |

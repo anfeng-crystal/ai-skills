@@ -164,6 +164,81 @@ class PatchServiceFlowTests(unittest.TestCase):
         )
         baseline.write_bytes("".join(lines).encode("utf-8"))
 
+    def test_snapshot_preserves_numeric_version_and_hashes_multiline_comment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            baseline, manifest_path, manifest, _ = self.create_case(
+                directory,
+                version=5,
+            )
+            expected_comment = "第一行\n第二行"
+
+            def use_multiline_comment(flow):
+                flow["comment"] = expected_comment
+
+            self.rewrite_selected_flow(baseline, use_multiline_comment)
+            result, stdout, stderr = self.run_main(
+                [
+                    "snapshot",
+                    "--baseline", str(baseline),
+                    "--flow", "flow_main",
+                ]
+            )
+            self.assertEqual(result, 0, stderr)
+            self.assertEqual(stderr, "")
+            report = json.loads(stdout)
+            snapshot = report["manifest_snapshot"]
+            self.assertEqual(report["status"], "baseline_snapshot_only")
+            self.assertFalse(report["input_modified"])
+            self.assertFalse(report["comment_content_emitted"])
+            self.assertEqual(snapshot["metadata"]["expected_version"], 5)
+            self.assertEqual(
+                snapshot["metadata_json_types"]["expected_version"],
+                "integer",
+            )
+            self.assertEqual(
+                snapshot["metadata"]["expected_comment_sha256"],
+                MODULE.sha256_text(expected_comment),
+            )
+            self.assertNotIn(expected_comment, stdout)
+            self.assertEqual(
+                [
+                    (item["scope_path"], item["node_id"])
+                    for item in snapshot["changes"]
+                ],
+                [([], "3"), (["4"], "q")],
+            )
+            self.assertEqual(
+                [item["expected_script_sha256"] for item in snapshot["changes"]],
+                [
+                    MODULE.sha256_text("return 1;"),
+                    MODULE.sha256_text("return 2;"),
+                ],
+            )
+            manifest["input_sha256"] = snapshot["input_sha256"]
+            manifest["metadata"].update(snapshot["metadata"])
+            for change, node_snapshot in zip(
+                manifest["changes"],
+                snapshot["changes"],
+            ):
+                self.assertEqual(change["scope_path"], node_snapshot["scope_path"])
+                self.assertEqual(change["node_id"], node_snapshot["node_id"])
+                change["expected_script_sha256"] = node_snapshot[
+                    "expected_script_sha256"
+                ]
+            self.write_manifest(manifest_path, manifest)
+            result, stdout, stderr = self.run_main(
+                [
+                    "inspect",
+                    "--baseline", str(baseline),
+                    "--manifest", str(manifest_path),
+                ]
+            )
+            self.assertEqual(result, 0, stderr)
+            self.assertEqual(
+                json.loads(stdout)["status"],
+                "validated_patch_plan_not_generated",
+            )
+
     def test_generate_patches_main_and_nested_scripts_with_preservation_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             baseline, manifest_path, _, original_lines = self.create_case(directory)

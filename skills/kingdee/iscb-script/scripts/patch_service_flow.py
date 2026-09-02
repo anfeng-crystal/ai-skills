@@ -1014,6 +1014,132 @@ def build_review_copy(
     return output_raw, report, snapshots
 
 
+def json_type_name(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, int):
+        return "integer"
+    if isinstance(value, float):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    return type(value).__name__
+
+
+def collect_script_snapshots(
+    container: dict[str, Any],
+    scope_path: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    current_scope = list(scope_path or [])
+    snapshots: list[dict[str, Any]] = []
+    for node_id, (_, node) in node_index(container).items():
+        if scalar_text(node.get("type")).lower() == "script":
+            script = node.get("script")
+            if not isinstance(script, str):
+                raise PatchRefused("snapshot target Script node has no string script content")
+            flags = script_flags(script)
+            snapshots.append(
+                {
+                    "scope_path": current_scope,
+                    "node_id": node_id,
+                    "expected_script_sha256": sha256_text(script),
+                    "script_lines": script.count("\n") + 1,
+                    "sensitive_flags": flags,
+                    "manifest_allow_sensitive_flags": sorted(
+                        set(flags) & ALLOWED_SENSITIVE_FLAGS
+                    ),
+                    "requires_manual_sensitive_review": bool(
+                        set(flags) - ALLOWED_SENSITIVE_FLAGS
+                    ),
+                }
+            )
+        sub_node = node.get("subNode")
+        if isinstance(sub_node, dict):
+            snapshots.extend(
+                collect_script_snapshots(sub_node, current_scope + [node_id])
+            )
+    return snapshots
+
+
+def build_baseline_snapshot(
+    baseline_path: Path,
+    flow_number: str,
+    max_input_bytes: int,
+) -> dict[str, Any]:
+    if zipfile.is_zipfile(baseline_path):
+        raise PatchRefused(
+            "ZIP snapshot is not supported in v1; analyze ZIP read-only and select a plain DTS"
+        )
+    try:
+        if not baseline_path.exists() or not baseline_path.is_file():
+            raise PatchRefused("baseline does not exist or is not a file")
+        with baseline_path.open("rb") as handle:
+            baseline_raw = read_limited(handle, max_input_bytes, "baseline")
+    except PatchRefused:
+        raise
+    except (OSError, ValueError):
+        raise PatchRefused("baseline path is unavailable or unsupported") from None
+
+    input_sha256 = sha256_bytes(baseline_raw)
+    _, _, records = parse_plain_dts(
+        baseline_raw,
+        scalar_text(baseline_path.name, "baseline.dts"),
+    )
+    matches = [
+        record
+        for record in records
+        if record["value"].get("$entityname") == "isc_service_flow"
+        and scalar_text(record["value"].get("number")) == flow_number
+    ]
+    if len(matches) != 1:
+        raise PatchRefused("flow_number must match exactly one isc_service_flow record")
+    flow = matches[0]["value"]
+    definition_field = (
+        "define_json_tag" if flow.get("define_json_tag") is not None else "define_json"
+    )
+    if definition_field not in flow:
+        raise PatchRefused("selected flow has no define_json_tag/define_json")
+    definition, _ = unwrap_definition(flow[definition_field], f"flow.{definition_field}")
+    expand_subflows(definition)
+
+    version = flow.get("version")
+    increment_version(version)
+    modifytime = flow.get("modifytime")
+    if modifytime is not None and not isinstance(modifytime, str):
+        raise PatchRefused("selected flow modifytime must be string or null")
+    comment = flow.get("comment", "")
+    if not isinstance(comment, str):
+        raise PatchRefused("selected flow comment must be a string or absent")
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "status": "baseline_snapshot_only",
+        "platform_execution": False,
+        "input_modified": False,
+        "input": scalar_text(baseline_path.name, "baseline.dts"),
+        "input_sha256": input_sha256,
+        "flow_number": scalar_text(flow_number, "<redacted>"),
+        "definition_field": definition_field,
+        "manifest_snapshot": {
+            "input_sha256": input_sha256,
+            "flow_number": scalar_text(flow_number, "<redacted>"),
+            "metadata": {
+                "expected_version": version,
+                "expected_modifytime": modifytime,
+                "expected_comment_sha256": sha256_text(comment),
+            },
+            "metadata_json_types": {
+                "expected_version": json_type_name(version),
+            },
+            "changes": collect_script_snapshots(definition),
+        },
+        "comment_content_emitted": False,
+        "requires_replacement_and_manifest_completion": True,
+    }
+
+
 def positive_int(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
@@ -1024,6 +1150,14 @@ def positive_int(value: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+    snapshot = subparsers.add_parser("snapshot")
+    snapshot.add_argument("--baseline", required=True, type=Path)
+    snapshot.add_argument("--flow", required=True)
+    snapshot.add_argument(
+        "--max-input-bytes",
+        type=positive_int,
+        default=DEFAULT_MAX_INPUT_BYTES,
+    )
     for name in ("inspect", "generate"):
         command = subparsers.add_parser(name)
         command.add_argument("--baseline", required=True, type=Path)
@@ -1047,6 +1181,14 @@ def emit_error(status: str, message: str, code: int) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
+        if args.command == "snapshot":
+            report = build_baseline_snapshot(
+                args.baseline,
+                args.flow,
+                args.max_input_bytes,
+            )
+            print(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False))
+            return 0
         output_raw, report, snapshots = build_review_copy(
             args.baseline,
             args.manifest,

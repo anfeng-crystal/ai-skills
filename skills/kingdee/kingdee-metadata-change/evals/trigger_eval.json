@@ -1,0 +1,14 @@
+[
+  {"query": "给苍穹单据元数据新增一个字段并补列表列，要求按实际标准控件和字段绑定生成候选", "should_trigger": true},
+  {"query": "修复苍穹列表工具栏提交按钮的元数据绑定，保留可回滚包", "should_trigger": true},
+  {"query": "把苍穹表单控件移动到正确容器并验证 ModelType 和父容器兼容性", "should_trigger": true},
+  {"query": "恢复这个苍穹继承控件的标准属性，不要复制父节点", "should_trigger": true},
+  {"query": "修改苍穹实体的多语言和术语元数据", "should_trigger": true},
+  {"query": "从只读元数据库刷新苍穹标准模板模型知识，然后生成字段变更候选", "should_trigger": true},
+  {"query": "给苍穹表单挂载一个插件并按现有页面和操作证据生成平台候选验证", "should_trigger": true},
+  {"query": "查一下这个苍穹实体有什么字段和插件挂载点", "should_trigger": false},
+  {"query": "给苍穹页面写 index.js 字段联动和 CSS", "should_trigger": false},
+  {"query": "从零开发一个苍穹 KDApi 自定义控件", "should_trigger": false},
+  {"query": "写一段苍穹 Java 表单插件", "should_trigger": false},
+  {"query": "生成苍穹报表 DataSet 取数代码", "should_trigger": false}
+]

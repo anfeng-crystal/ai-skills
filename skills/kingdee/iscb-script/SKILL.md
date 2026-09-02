@@ -4,7 +4,7 @@ description: "ISCB 集成云 DSL、DTS 服务流程与数据映射助手:只读�
 license: MIT
 metadata:
   author: "anfeng"
-  version: "1.3.1"
+  version: "1.3.2"
   tags: "kingdee, ISCB, integration, DSL, script"
 ---
 
@@ -89,9 +89,10 @@ metadata:
 - 精确流程号命中多条时必须报告歧义，不能按文件顺序、修改时间或版本号擅自选择；解析失败不能伪造节点、连线、成功率或优化结论。
 - 只有用户明确要求本地提取原始脚本时才使用 `--extract-scripts`；原文可能含敏感值，禁止把提取内容回显到对话、日志或报告。
 - 服务流程优化、现场语法经验或自动改包必须读 `references/service-flow-experience.md`。经验结论要保留规则 ID 和证据等级；`experience_hypothesis` 可形成 review copy，但不能冒充当前平台事实。
-- 自动改包先运行 `scripts/patch_service_flow.py inspect` 校验 baseline/manifest/replacement 快照哈希、analyzer 可见的精确 scope/node id 和元数据旧值，再用 `generate` 以 no-clobber 方式生成原包之外的 atomic review copy；v1 只接受一行一个 object record 的 plain DTS，不回包 ZIP，不导入、不发布。
+- 自动改包先运行 `scripts/patch_service_flow.py snapshot` 取得保留原生类型的 version、modifytime、comment SHA 和 Script 节点哈希，再用 `inspect` 校验 baseline/manifest/replacement 快照，最后用 `generate` 以 no-clobber 方式生成原包之外的 atomic review copy；禁止手工解析多行 comment 或猜 version 类型。v1 只接受一行一个 object record 的 plain DTS，不回包 ZIP，不导入、不发布。
+- 同一字段合同涉及多个主流程时，先锁定全部目标和完整 diff，再在一个交付批次完成并联合验证；工具所需的逐流程 staging 只是私有实现步骤，不能提前交付半成品或清理仍被后续阶段引用的基线。
 - 服务流程 DML 另读 `references/database-dml-contract.md`；生成不等于导入、发布或执行。
-- 外发接口报文另读 `references/outbound-field-contract.md`；DTS 与测试 payload 共用最新字段契约，真实数据不能用占位值。
+- 外发接口报文另读 `references/outbound-field-contract.md`；DTS 与测试 payload 共用最新字段契约，真实数据不能用占位值。用户给出成功报文或同类字段错误时，先完成两个主出站流程的全量字段/类型/语义/空值策略对账，再实施修复，不按单个异常逐字段补丁。
 - 静态通过不能写成平台运行通过；至少覆盖一个不变样本、一个变化样本和合同要求的边界样本。
 
 ### 单据 DataLoader 与平台生成编号

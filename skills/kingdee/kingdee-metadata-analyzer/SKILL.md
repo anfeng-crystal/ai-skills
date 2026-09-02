@@ -13,6 +13,8 @@ metadata:
 
 ## 触发与路由
 - 实体字段、表单/操作、插件挂载、页面链路、上下游关系、跨环境差异或元数据导出需要真实证据时使用。
+- 元数据修改、评审包、导入发布和回滚交 `kingdee-metadata-change`；本 skill 只提供只读基线和挂载证据。
+- 基对象模板无法导出、需要刷新同环境实际模型知识时交 `kingdee-metadata-change` 的只读知识刷新；本 skill继续负责目标业务对象本身的实体、页面与挂载取证。
 - SDK 签名交 `kingdee-sdk-helper`；Java 实现和运行诊断交 `kingdee-cosmic`；报表交 `kingdee-report`；KingScript 交 `kingdee-kingscript`。
 - 本地源码或编译证据足以回答且元数据不影响结论时不触发；混合任务先产出证据，再返回原实现或修复任务。
 

@@ -1,0 +1,51 @@
+{
+  "knowledge_version": 2,
+  "source": {
+    "environment": "prod",
+    "snapshot_manifest_sha256": "bd7bb0e427200642edf4ea67a805135b9270157500d46aa096dcd3147772f8ff",
+    "snapshot_captured_at_utc": "2026-08-29T04:49:22.870171+00:00",
+    "template_filter": "fistemplate='1'"
+  },
+  "status": "observed",
+  "authoring_verified_contracts": 0,
+  "counts": {
+    "entity_node_types": 175,
+    "form_node_types": 218,
+    "control_types": 142,
+    "models": 17,
+    "binding_combinations": 678,
+    "operation_binding_combinations": 43,
+    "form_action_binding_combinations": 133,
+    "identity_contracts": 393,
+    "localization_term_contracts": 4,
+    "mainentity_columns": 24
+  },
+  "payload_sha256": {
+    "entity-types.json": "27683066b79f8c2d114750f9945dccb3cf8a4dd8ab671bb0bf04669c54ea46ba",
+    "form-types.json": "91db588c954e4be3ffa8483173b6e53b551390457bbcb9b6b613305cfe37a533",
+    "control-types.json": "79e1952f9f301fc3496d768a8137e39fe92c5d65efeb9d8775e89f4f52418aff",
+    "model-matrix.json": "a47bf1439ec18e70053272f9e45212c5b6c1ff3f2e978f80b42d3600b331334d",
+    "binding-matrix.json": "1de142b5aa24c00bb2ed9e43536d8036f3e55c51a2694a3cad6725ddbde538ad",
+    "identity-contracts.json": "a1a38ecde67029d23ab99fbdcbe9d49e6cbc3a929ab590bb6a0a3bd7d1012c65",
+    "localization-term-contracts.json": "5d4f5becd399983fee669887359e0d36f3370f984f02dda6114e0b9124127f2d",
+    "mainentity-contract.json": "df2907434bc8b9602b3456cc4a869e29d4c7435081d5657b5059a233529777b4"
+  },
+  "standard_record_files": {
+    "standard-entity.jsonl.gz": {
+      "sha256": "3e5d1cb3adc27dcd93d19484ed3a9768e5ee81e08d03da6865f6dfbc5be64e32",
+      "bytes": 2403045
+    },
+    "standard-form.jsonl.gz": {
+      "sha256": "10c18fb80611be4b65dd24c4ea25c1822970678acb982de16b1f6ed718397422",
+      "bytes": 3422087
+    },
+    "standard-mainentity.jsonl.gz": {
+      "sha256": "077c36d70eb090b519b58a8bb07eb08ce3931ada58a00cbb6a3f4ddaf0d560d8",
+      "bytes": 23797
+    },
+    "standard-reference-registry.jsonl.gz": {
+      "sha256": "1fabc8d90bcb4879fc9ae1376d24b31f71aea89d11b6c1ad3ab8205a6ed70d00",
+      "bytes": 214
+    }
+  }
+}

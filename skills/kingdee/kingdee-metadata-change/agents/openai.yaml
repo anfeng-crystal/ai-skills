@@ -1,0 +1,4 @@
+interface:
+  display_name: "苍穹元数据新增修改"
+  short_description: "按目标环境实际模型安全变更苍穹元数据"
+  default_prompt: "使用 $kingdee-metadata-change 从可信基线自动识别目标节点，按同环境固化的实际类型、父容器、字段和操作绑定合同生成可审查候选、验证与回滚。"

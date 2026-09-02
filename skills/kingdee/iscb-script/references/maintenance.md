@@ -21,6 +21,7 @@ python3 scripts/iscb_skill_validator.py check-script --mode platform --stdin
 python3 scripts/check_dts_multiselect_cache.py <dts-or-zip> ...
 python3 scripts/check_dts_sql_dialect.py --dialect sqlserver-legacy <dts-or-zip> ...
 python3 scripts/analyze_service_flow.py <dts-or-zip> --flow <exact-number> --format json
+python3 scripts/patch_service_flow.py snapshot --baseline <dts> --flow <exact-number>
 python3 scripts/patch_service_flow.py inspect --baseline <dts> --manifest <patch.json>
 python3 scripts/validate_outbound_contract.py --contract <contract.json> --payload <payload.json> --provenance <provenance.json> --require-real-provenance
 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
