@@ -4,8 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const inspector = new URL("./inspect-skill.mjs", import.meta.url);
+const inspector = fileURLToPath(new URL("./inspect-skill.mjs", import.meta.url));
 
 test("detects Python standard-library HTTP clients", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "skill-vetter-network-"));
@@ -20,7 +21,7 @@ test("detects Python standard-library HTTP clients", () => {
     "utf8",
   );
 
-  const result = spawnSync(process.execPath, [inspector.pathname, "--path", root, "--json"], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [inspector, "--path", root, "--json"], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stdout + result.stderr);
   const report = JSON.parse(result.stdout);
   assert.equal(report.recommendation, "review_needed");
