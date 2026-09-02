@@ -9,6 +9,7 @@ metadata:
 ---
 
 # 苍穹元数据变更
+> Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
 ## 触发与路由
 
