@@ -4,7 +4,7 @@ description: "ISCB 集成云 DSL、DTS 服务流程与数据映射助手:只读�
 license: MIT
 metadata:
   author: "anfeng"
-  version: "1.3.2"
+  version: "1.3.3"
   tags: "kingdee, ISCB, integration, DSL, script"
 ---
 
@@ -65,7 +65,7 @@ metadata:
 | 普通引擎脚本 | 用户只说“写个脚本 / 改个脚本 / 解释脚本” | 无预置变量；直接沿用用户给定变量名 | `src`、`tar`、`param`、`cn`、`$process`、`#request` | `references/patterns.md`、`references/conventions.md` |
 | 数据映射表达式 | 用户明确说直接赋值、过滤条件固定值、聚合运算或字段映射表达式 | `#{...}` 宏、`::` 聚合链、分录选择器 | `return`、分号、engine 函数外壳、平台资源变量 | `references/data-mapping-expressions.md` |
 | 数据集成方案 | 用户明确说是来源数据处理、转换脚本或目标数据处理 | `src`、`tar`，以及对应连接资源（通常 `$src`、`$tar`） | 其他平台对象结构和连接别名 | `references/context-routing.md`、`references/resources.md`、平台函数 reference |
-| 值转换规则 | 用户明确说是脚本类型值转换规则 | `param`；如用户已说明可使用 `$src`、`$tar`、`$this` | `src` / `tar` 默认存在 | `references/context-routing.md`、`references/conventions.md` |
+| 值转换规则 | 用户明确说是 SQL 或脚本类型值转换规则 | SQL 型使用 `#{param}` 和已核实的 `use $tar;`；脚本型使用 `param` 及当前上下文连接 | 查询连接、实体路由或规则类型可互换 | `references/context-routing.md`、`references/resources.md`、`references/database-platform-rules.md` |
 | 服务流程脚本节点 | 用户明确说脚本运行在服务流程节点 | `$process`；流程里引入的资源别名 | 连接别名固定写成 `cn` | `references/context-routing.md`、`references/resources.md`；数据库/DML 另读 `references/database-dml-contract.md` |
 | 自定义 API / WebAPI | 用户明确说脚本写在自定义 API、脚本 API 或 WebAPI | 业务参数名取决于 API 定义；仅当用户明确说是开放平台调用时才补充 `#request` | `src` / `tar` 默认存在；请求/响应对象结构 | `references/context-routing.md`、相关平台 reference |
 
@@ -76,6 +76,7 @@ metadata:
 - 只有用户明确说明节点、资源或 API 形态时，才切换到对应预置变量和平台 reference。
 - 平台层脚本缺少连接别名、API 参数定义、对象结构、WebAPI 变量或资源信息时，只能输出参考脚本。
 - 看到平台函数或 SQL 资源操作时，要先确认上下文和资源是否充分；不充分就降级，不要假装“可直接运行”。
+- SQL 类型值转换跨源/目标系统查库时，先确认 SQL 应在哪个连接执行；查询目标系统时优先保留 SQL 类型并以 `use $tar;` 开头，再使用目标环境核实的 `@ROUTE`。出现 `SQLRule` 后接源 JDBC 驱动的“对象名 `...@ROUTE` 无效”时，先查连接切换，不因该错误直接去掉路由或改脚本类型。
 
 ### 多选基础资料缓存
 

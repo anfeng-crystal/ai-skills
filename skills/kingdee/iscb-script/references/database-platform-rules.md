@@ -12,6 +12,20 @@
 
 这只确认 route 标签拼写，不确认某实体属于哪个库；实体到 route 的映射必须读取目标环境证据。
 
+## SQL 值转换的连接与路由
+
+- SQL 类型值转换先选连接、再解析路由。查询目标系统时使用 `use $tar;`，后续 `@ROUTE` 由目标苍穹连接解析；不能把带路由的 SQL 直接交给外部 JDBC 源库。
+- `use $tar;` 是 SQL 编辑器的连接选择指令；脚本类型中的 `$tar` / `$this` 是 `ConnectionWrapper`，两者不能混写。
+- 同一段 SQL 不同时访问苍穹的多个业务库路由；需要跨路由时，用 `#{临时变量}` 串联多段查询。
+- `SQLRule` 堆栈后接源库 JDBC 驱动，且错误对象含 `@ROUTE`，优先判定为连接未切换；核实 `use $tar;`、源/目标系统和实际路由后再修改，不直接删路由或改脚本类型。
+
+最小模式：
+
+```sql
+use $tar;
+SELECT fid AS result FROM target_table@ROUTE WHERE fnumber = #{param};
+```
+
 ## 查询结果
 
 | 函数 | 官方平台语义 |
