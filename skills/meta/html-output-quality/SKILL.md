@@ -1,6 +1,6 @@
 ---
 name: html-output-quality
-description: "Quality gate for local HTML artifacts: review cards, dashboards, comparison charts. Not for quick answers."
+description: "需要检查本地离线 HTML 报告的数据一致性、敏感信息和视觉结果时使用；不作为普通回答或所有网页的强制生成流程。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -9,69 +9,32 @@ metadata:
 ---
 
 # HTML Output Quality
-> Cross-platform Agent Skill: use host-neutral paths and current project commands.
-> 控制 HTML 产物的触发、模板、自动检查和设计复核，不替代原有 Markdown 交付。
 
-## 触发边界
+> Cross-platform Agent Skill: 对需要导出/复核的本地 HTML 提供检查器，不决定用户是否需要 HTML，也不强制模板或交互。
 
-允许生成 HTML 的场景：
-- 截图评审、视觉问题标注、设计审查结果。
-- 扫描 dashboard、矩阵、可筛选列表、超过 20 条的结构化结果。
-- 实体/字段/插件/依赖关系图、多维对比、评分卡片。
-- 需要转交审核、长期保存或反复查看的报告。
+## 使用范围
 
-禁止生成 HTML 的场景：
-- 短结论、命令速查、SDK 方法签名、普通代码解释。
-- 低风险一次性回答，或 Markdown 已足够表达的少量表格。
-- 需要把完整 HTML 粘进聊天上下文的交付方式。
+- 用户要求检查本地 HTML，或交付需要离线报告、数据条数核对与桌面/移动截图时使用。普通问答、代码解释和少量 Markdown 表格不触发。
+- 已有项目构建、测试和视觉验收足够时直接复用，不另加整套产物流程。用户要求特定框架、布局或产物路径时遵循需求。
 
-## 工作流
+## 执行
 
-1. 产出方 skill 生成稳定 source data（JSON/TSV/Markdown 摘要）。
-2. 用固定模板或脚本渲染本地 HTML；不要让模型每次自由重写大段 HTML。
-3. 运行自动检查：
+1. 确定 HTML、可用 source data 和输出目录；优先现有文件，不为检查再复制原始敏感数据。
+2. 本 Skill `templates/` 可作本地报告起点，不强制重写现有页面。搜索、筛选、排序等交互仅在内容需要时增加；已有控件要可键盘操作并反馈状态。
+3. 使用真实 Skill 路径运行：
    ```bash
-   node skills/meta/html-output-quality/scripts/check-html.mjs \
-     --html <path-to-report.html> \
-     --source <optional-json-or-tsv> \
-     --out <output-dir>
+   node <skill-root>/scripts/check-html.mjs --html <file> --out <dir>
    ```
-4. 对可视化或审核型 HTML，基于实际桌面/移动截图直接做视觉复核。
-5. 聊天只交付结论、路径、High/Medium 问题和验证结果；不粘贴完整 HTML。
+   有 JSON/TSV/CSV source 时增加 `--source <file>`。输出 JSON/Markdown 报告；环境支持时生成 desktop/mobile 截图。
+4. 对实际截图检查内容、溢出和可读性；自动结果不代替视觉复核。截图失败或未运行要准确说明。
 
-## 产物约定
+## 检查范围与结果
 
-- HTML：`output/html/<skill-name>/<timestamp>/index.html`
-- 检查报告：`output/html/<skill-name>/<timestamp>/quality-report.md`
-- 截图：`output/html/<skill-name>/<timestamp>/desktop.png`、`mobile.png`
-- 原始数据保留在同目录或引用原路径；不要把大 JSON 内嵌进聊天。
+- 检查器针对自包含的离线数据报告：标题、主内容、来源、生成时间、条数、外链资源、敏感字段和截图。报告应声明可用的来源与时间，不能伪造数据计数。
+- High 不直接称通过：确认是真实内容/隐私/数量错误还是检查器适用范围冲突。适用范围不符时使用项目等价检查并说明，不为过关删除用户要求的内容。
+- 无 source/count、无交互或缺 Playwright 属于检查限制；静态报告无需为了消除交互 Warning 增加无用控件。敏感字段命中须核实，不能把凭据写入交付。
+- 不强制新建顶层目录、框架或过程文档；默认保持离线，外链需求单独核对数据外发和授权。
 
-## 模板约束
+## 输出
 
-- 使用 `templates/report.html`、`templates/dashboard.html`、`templates/result-card.html` 作为基础。
-- 单文件 HTML，内联 CSS/JS，无 React、无构建步骤、默认不访问外网。
-- 必须包含 `<title>`、`<main>`、生成时间、来源说明；建议在 `<main>` 写 `data-generated-at`、`data-source`、`data-source-count`。
-- 外链脚本、字体、图片默认禁止；确需外链时必须在报告中列出并说明来源。
-- 审核型 HTML 必须提供有用的本地交互：搜索/筛选、分组跳转、折叠展开、排序、复制摘要或视图切换中至少一种。
-- 交互控件必须可键盘聚焦，有 hover/focus/active 状态；状态变化要反馈到页面，例如可见条数、当前筛选、展开状态或复制结果。
-- 不使用装饰性动效；动画只用于状态切换反馈，时长控制在 150-200ms。
-
-## 契约与质量门禁
-
-`check-html.mjs` 会输出 JSON 和 Markdown 摘要。出现 High 时不得直接交付为通过：
-- HTML 缺少标题或主内容区。
-- 页面主体为空或关键文本过少。
-- 存在外链脚本、字体或图片。
-- 命中常见敏感字段：password、cookie、token、secret、authorization、数据库密码形态。
-- source 条数与 HTML 声明条数不一致。
-- Playwright 截图失败、截图为空，或桌面/移动主内容不可见。
-
-Warning 可以交付但必须说明边界：
-- 未提供 source，无法校验条数。
-- HTML 未声明 source count。
-- 页面缺少可操作控件，或交互控件未能在 Playwright 中完成基础操作验证。
-- 当前环境缺 Playwright，只完成静态检查。
-
-## Output
-
-使用简体中文，先给结论：HTML 路径 → 检查状态 → High/Medium 问题 → 截图路径 → 限制与下一步。
+交付实际产物路径、检查结论、影响使用的问题、截图及未验证项；不粘贴完整 HTML 或完整原始数据。

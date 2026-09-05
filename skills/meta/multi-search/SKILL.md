@@ -1,6 +1,6 @@
 ---
 name: multi-search
-description: "需要跨多个平台搜索、对比来源、过滤结果、搜图/下载图片，或优先使用无 API key 搜索路径时使用。"
+description: "需要指定平台组合、社交站点或图片源聚合，且宿主单次搜索不能满足时使用；普通网页与事实核验使用 web-access。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -30,7 +30,7 @@ metadata:
 - 交叉验证：先广搜，再交 `web-access` 抓原文核验。
 - 图片：`scripts/union_image_search/multi_platform_image_search.py`
 - URL 转 Markdown：`defuddle <URL> --json`
-- 视频/音频下载：用户确认后才走 downloader。
+- 视频/音频下载：当前请求已明确目标、范围和保存授权时才走 downloader，不重复询问。
 
 ## 平台组
 - `dev`：GitHub、Reddit。
@@ -54,15 +54,15 @@ python scripts/union_image_search/multi_platform_image_search.py "query" --limit
 
 ## 工作流
 1. 判断关键词、平台范围、时效、语言和输出形式。
-2. 检查本 skill 目录 `.env`；需要 API key 的平台缺配置时，先降级到无 API 组。
-3. 默认优先无 API/免费组；只有用户要求或凭据已配置时用付费/API 平台。
+2. 仅检查选定后端所需配置项是否存在，不输出 `.env` 或凭据；缺配置时先降级到无 API 组。
+3. 默认优先无 API/免费组；只有任务授权覆盖费用/配额且配置可用时使用付费 API；凭据存在不构成付费授权。
 4. 平台范围不明确时，用最小有效默认值 `search --preset small`，并说明假设。
 5. 执行搜索；结果少或噪音大时，调整平台组、关键词、时效或 limit。
 6. 对关键事实抓原文核验；当单平台脚本无法读取原文、URL 重定向或动态内容时转 `web-access`。
 7. 只输出有用字段；不要粘贴大段原始 JSON。若生成 raw 文件，只给路径和用途。
 
 ## 门禁
-- 付费 API 配额、cookie/登录态、视频/音频下载、超过 50 张图片下载前必须停住确认。
+- 付费配额、登录态、下载和批量规模必须在现有授权内；仅新增费用、隐私或超出约定范围时确认。禁止凭据外泄，不绕过访问控制。
 - 不绕过平台访问控制或验证码。
 - 缺 API key 时，先降级到 `no_api_key_fast` 或 `no_api_key`，不要先要求用户补凭据。
 - 超过 5 个平台的广搜需要简短说明范围；用户明确要求广搜时可直接执行。
@@ -78,7 +78,7 @@ python scripts/union_image_search/multi_platform_image_search.py "query" --limit
 - GitHub / Reddit / YouTube / Twitter / Zhihu / WeChat 见 `scripts/<platform>/README.md`。
 - 图片搜索见 `scripts/union_image_search/UNION_IMAGE_SEARCH_README.md`。
 - RSS 搜索见 `scripts/rss_search/RSS_SEARCH_README.md`。
-- 登录态或 Cookie 复用优先走 `../automation/web-access/scripts/` 的 CDP 能力。
+- 登录态或 Cookie 复用优先走 `../../automation/web-access/scripts/` 的 CDP 能力。
 
 ## 输出
 简体中文：

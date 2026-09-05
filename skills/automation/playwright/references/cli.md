@@ -1,9 +1,9 @@
 # Playwright CLI Reference
 
-Use this complete Node wrapper entry on Windows, macOS, and Linux. It resolves `@playwright/cli` through `npx` and falls back to the local install when npm package resolution fails:
+Use this complete Node wrapper entry on Windows, macOS, and Linux. It uses the installed CLI first and only uses `npx` when no local executable exists. A command failure is returned without replaying the action through a second backend:
 
 ```bash
-node <active-root>/scripts/npm-deps.mjs install
+node <active-root>/scripts/npm-deps.mjs check
 node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs --help
 node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs open https://example.com
 node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs snapshot

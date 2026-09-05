@@ -38,7 +38,7 @@ Read `references/modes.md` when the user asks for verification, active testing, 
 3. Production read-only checks may run in `audit-readonly`; active production POC remains default-deny and only continues when the command records target URL, scope, time window, allowed payload types, forbidden actions and explicit production authorization.
 4. Use `scripts/poc_runner.py` in dry-run mode first. Add `--execute` only after scope is allowed and the request spec is reviewed.
 5. Use `scripts/network_probe.py` only for bounded reachability checks; default is dry-run.
-6. Redact credentials, cookies, tokens, tenant ids, and session identifiers in chat summaries and reports unless the user explicitly requests raw values.
+6. Always redact credentials, cookies, tokens, tenant ids, session identifiers, and sensitive response headers in chat summaries and reports. Raw evidence may only be written to an explicitly approved destination under the report contract.
 7. Do not read browser state, shell history, env, or project config for Cookie/token/account material unless the user explicitly names that source and purpose.
 8. Never print credentials or sensitive response headers; dry-run plans and execution summaries must redact Authorization, Cookie, Set-Cookie, tokens and password-like values.
 

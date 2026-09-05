@@ -11,7 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
-const hasSessionFlag = args.some((arg) => arg === "--session" || arg.startsWith("--session="));
+const hasSessionFlag = args.some((arg) => arg === "--session" || arg.startsWith("--session=") || arg === "-s" || arg.startsWith("-s="));
 const isShortLivedCommand = args.some((arg) => arg === "--help" || arg === "-h" || arg === "help");
 const timeoutMs = Number(process.env.PLAYWRIGHT_CLI_TIMEOUT_MS || (isShortLivedCommand ? 30_000 : 0));
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +27,7 @@ const childEnv = {
   ...process.env,
   npm_config_cache: process.env.npm_config_cache || path.join(REPO_ROOT, ".npm-cache"),
   npm_config_update_notifier: process.env.npm_config_update_notifier || "false",
+  NO_UPDATE_NOTIFIER: process.env.NO_UPDATE_NOTIFIER || "1",
 };
 
 if (!hasSessionFlag && process.env.PLAYWRIGHT_CLI_SESSION) {
@@ -36,22 +37,16 @@ if (!hasSessionFlag && process.env.PLAYWRIGHT_CLI_SESSION) {
 npxArgs.push(...args);
 localArgs.push(...args);
 
-const npxResult = await runCli(npxCommand, npxArgs, { captureStderr: hasLocalCli, timeoutMs });
-if (npxResult.ok) {
-  process.exit(npxResult.code ?? 0);
+// Prefer the installed executable and never replay a command after a runtime failure.
+const result = await runCli(
+  hasLocalCli ? process.execPath : npxCommand,
+  hasLocalCli ? localArgs : npxArgs,
+  { captureStderr: !hasLocalCli, timeoutMs },
+);
+if (!hasLocalCli && !result.ok && isResolutionFailure(result)) {
+  console.error('Error: Playwright CLI unavailable. Run "node scripts/npm-deps.mjs install" while online, then retry after checking whether the command had side effects.');
 }
-
-if (hasLocalCli && shouldFallbackToLocal(npxResult)) {
-  console.error("Warning: npx failed to resolve Playwright CLI; falling back to local node_modules.");
-  const localResult = await runCli(process.execPath, localArgs, { captureStderr: false, timeoutMs });
-  process.exit(localResult.code ?? (localResult.ok ? 0 : 1));
-}
-
-if (!hasLocalCli && shouldFallbackToLocal(npxResult)) {
-  console.error('Error: no local Playwright CLI found. Run "node scripts/npm-deps.mjs install" while online, then retry.');
-}
-
-process.exit(npxResult.code ?? 1);
+process.exit(result.code ?? (result.ok ? 0 : 1));
 
 function runCli(command, cliArgs, options) {
   return new Promise((resolve) => {
@@ -100,12 +95,12 @@ function runCli(command, cliArgs, options) {
   });
 }
 
-function shouldFallbackToLocal(result) {
+function isResolutionFailure(result) {
   if (result.timedOut && isShortLivedCommand) {
     return true;
   }
   if (result.error) {
     return true;
   }
-  return /\bnpm error\b|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|EACCES|EPERM|network|registry\.npmjs\.org|cache folder|could not determine executable/i.test(result.stderr || "");
+  return /^npm (?:error|ERR!)(?:\s|$)/im.test(result.stderr || "");
 }

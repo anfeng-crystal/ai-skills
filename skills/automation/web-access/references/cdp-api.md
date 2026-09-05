@@ -140,7 +140,7 @@ node scripts/cdp-proxy.mjs send --ws-url ws://127.0.0.1:9222/devtools/page/xxx -
 1. 先 `check-deps`
 2. 再 `cdp-proxy doctor` 或 `probe`
 3. 需要找 tab 时用 `find-url`
-4. 真正发送 CDP 命令前先 `--dry-run`
+4. 首次构造不熟悉或有副作用的请求时可用 `--dry-run` 核对结构；已有验证且范围未变的只读调用无需逐次预演。dry-run 不是授权，也不能证明业务执行成功。
 5. 只有在 DOM/快照不够用时，才显式升级到 `--allow-unsafe`
 6. 如果页面上高层封装命令持续超时，但 `/json/list` 与页面级 websocket 可达，回退到原始 WebSocket CDP 调用，不要误判为页面或登录态不可用
 

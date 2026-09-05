@@ -8,13 +8,13 @@ metadata:
   tags: "skills, symlink, sync, distribution"
 ---
 
-# Skill Installer
+# Local Skill Distribution
 
 > Cross-platform Agent Skill: 审计显式 dry-run；安装与同步按入口语义执行授权范围内动作，不覆盖冲突目标。
 
 ## 触发
 - 安装、同步、迁移、分发审计、缺失软链接检查、宿主 skill 目录漂移时使用。
-- 只改 skill 内容时不用。
+- 只改 skill 内容时不用。本入口负责统一源和跨宿主分发；系统同名 `skill-installer` 负责 curated/GitHub 下载，先区分任务，不能向错误入口试参数。
 - 第三方 skill 安全审查先用 `skill-vetter`。
 
 ## 契约
@@ -35,7 +35,7 @@ metadata:
 
 active checkout 下有四个相关入口。`sync-and-install.mjs` 是同步安装主入口；根 `install.mjs` 默认 `apply`/安装，审计必须显式 `--dry-run`；内部 CLI 位于 skills source root 下的 `meta/skill-installer/bin/skill-installer.mjs`，其 `install` 子命令用 plan/apply 分离预览、source tree 写入和宿主链接同步。
 
-命令中的 `<skills-root>` 必须解析为包含分类目录（如 `core/`、`meta/`）的 skills source root；`<active-root>` 是它的父目录，包含 `install.mjs` 和 `scripts/`。二者都不是当前已安装 skill 目录（例如 `~/.codex/skills/skill-installer`）。优先使用 `AI_SKILLS_HOME` 作为 `<skills-root>`；没有环境变量时，从当前 `SKILL.md` 的安装路径不能可靠反推出源目录，应让用户显式提供 `--source-root`，不要猜测。
+命令中的 `<skills-root>` 必须解析为包含分类目录（如 `core/`、`meta/`）的 skills source root；`<active-root>` 是它的父目录，包含 `install.mjs` 和 `scripts/`。二者都不是当前已安装 skill 目录（例如 `~/.codex/skills/skill-installer`）。优先使用 `AI_SKILLS_HOME` 作为 `<skills-root>`；无明确配置时可解析安装入口的真实软链接目标，并核对分类目录、`install.mjs` 与 `scripts/doctor.mjs`；不能唯一确定时才询问 `--source-root`，不按目录名猜测。
 
 | 脚本 | 用途 | 执行顺序 |
 |------|------|----------|
@@ -91,7 +91,7 @@ node "$SKILLS_ROOT/meta/skill-installer/bin/skill-installer.mjs" install /path/t
 node "$ACTIVE_ROOT/scripts/doctor.mjs" --source-root "$SKILLS_ROOT" --home "$HOME"
 ```
 
-审计命令必须带 `--dry-run`。真实安装、同步或 pull 只有用户明确要求或已批准方案点名时才执行；执行前确认范围，执行后再次 dry-run 或检查链接。
+安装/同步入口用于审计时必须带 `--dry-run`；doctor 本身是只读诊断，无须不存在的参数。真实安装、同步或 pull 只有用户明确要求或已批准方案点名时才执行；执行前确认范围，执行后再次 dry-run 或检查链接。
 
 ## 安装分类
 - `--category` 省略时默认 `auto`。
@@ -104,7 +104,7 @@ node "$ACTIVE_ROOT/scripts/doctor.mjs" --source-root "$SKILLS_ROOT" --home "$HOM
 ## 工作流与状态处理
 - `already_linked`、`managed_via_external_dir`：通过。
 - `optional_host_unavailable`：默认全量审计中跳过，不阻塞。
-- `planned`、`ready_to_migrate`：需要 apply 确认。
+- `planned`、`ready_to_migrate`：核对待应用计划；既有授权覆盖精确目标与动作时继续，否则请求缺失授权。
 - `missing_skill`、`invalid_source`、`missing_target_root`、`target_exists`：路径/源未修好前阻塞。
 - `real_path_conflict`、`external_symlink_conflict`、`hermes_local_shadow_conflict`：阻塞；报告精确目标，不覆盖。旧 `active/skills` 托管软链接会规划为 `replace_link`。
 - `orphan_link`：全量同步中发现指向当前 source root 内部但目标已不存在的托管 symlink；`--apply` 时只删除该 symlink。

@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic
-description: "Kingdee Cosmic Java dev: 金蝶云苍穹 Java 二开、插件、BOTP/工作流、服务端 OpenAPI、Cache/MQ、运行诊断和代码质量核查。纯报表交 kingdee-report；外部 OpenAPI 调用交 kingdee-openapi-client；元数据/挂载证据交 kingdee-metadata-analyzer；SDK/API 签名交 kingdee-sdk-helper；KingScript/ISCB 分别交 kingdee-kingscript/iscb-script。"
+description: "Kingdee Cosmic Java dev: 金蝶云苍穹 Java 二开、插件、BOTP/工作流、服务端 OpenAPI、Cache/MQ 和 Java 代码核查。运行日志/Trace 交 kingdee-observability，测试执行交 kingdee-testing；纯报表交 kingdee-report；外部 OpenAPI 调用交 kingdee-openapi-client；元数据/挂载证据交 kingdee-metadata-analyzer；SDK/API 签名交 kingdee-sdk-helper；KingScript/ISCB 分别交 kingdee-kingscript/iscb-script。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -30,7 +30,7 @@ metadata:
 ## 触发与路由
 1. 只处理金蝶云苍穹 Java 二开、插件、配置、诊断、代码核查或改造任务，以及服务端 OpenAPI 开发。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；外部 OpenAPI 调用用 `kingdee-openapi-client`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
 2. 纯 Java 语法、类型、泛型、集合或编译错误可直接分析，不要无意义触发元数据查询。
-3. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先交 `kingdee-metadata-analyzer` 做环境选择、配置候选、在线查询和降级取证。
+3. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先复用当前任务已确认且仍匹配目标环境的 analyzer inventory/quick cache；缺失、过期或范围不足时再交 `kingdee-metadata-analyzer` 做取证。
 4. 移动端、派生表单、页面元素或生产行为链路问题，不能只看实体 quick-query；要求 analyzer 全景分析并核对 `pageElement`、`formPage`、派生表单和插件挂载链。
 5. 宿主工程模板、资源包、本地启动/页面联调上下文、登录态、配置检查或 KSQL/数据脚本，转 `kingdee-cosmic-devtools`、`kingdee-cosmic-login`、`kingdee-sql-and-data`。
 6. 纯报表插件取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析和 Algo API 精确签名，转 `kingdee-report`；本 skill 只保留轻量路由和概览。

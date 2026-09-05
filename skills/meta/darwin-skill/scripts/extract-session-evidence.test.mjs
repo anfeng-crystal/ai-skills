@@ -145,3 +145,67 @@ function message(role, texts) {
     content: texts.map((text) => ({ type: role === "assistant" ? "output_text" : "input_text", text })),
   };
 }
+
+test("streams malformed lines, accepts modern metadata and links repeated child tool failures without output text", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-tools-"));
+  const file = path.join(temp, "child.jsonl");
+  const call = (id) => ({ type: "function_call", name: "exec_command", call_id: id,
+    arguments: JSON.stringify({ cmd: "python skills/demo/scripts/run.py --token private-secret" }) });
+  const result = (id, output) => ({ type: "function_call_output", call_id: id, output });
+  writeSession(file, { id: "child", source: { subagent: { thread_spawn: { parent_thread_id: "parent" } } } }, [
+    call("a"), result("a", "Process exited with code 2\ncan't open file: private-output"),
+    call("b"), result("b", "Process exited with code 2\ncan't open file: private-output"),
+    call("c"), result("c", "Process exited with code 0\nOK"),
+    call("d"), result("d", "Process exited with code 2\ncan't open file: private-output"),
+  ]);
+  fs.appendFileSync(file, '{"private-parser-secret"\n');
+  writeSession(path.join(temp, "main.jsonl"), { id: "modern", source: "cli" }, [message("user", ["错误"])]);
+  const run = spawnSync(process.execPath, [script.pathname, "--root", temp, "--include-subagents", "--tool-errors-only"], { encoding: "utf8" });
+  assert.equal(run.status, 1);
+  const report = JSON.parse(run.stdout);
+  assert.equal(report.stats.mainSessions, 1);
+  assert.equal(report.stats.subagentSessions, 1);
+  assert.equal(report.stats.toolCalls, 4);
+  assert.equal(report.stats.errorResults, 3);
+  assert.equal(report.stats.repeatedIdenticalFailures, 1);
+  assert.equal(report.candidates[0].callLine, 2);
+  assert.equal(report.candidates[0].sourceLine, 3);
+  assert.equal(report.candidates[1].repeatedAfterLine, 3);
+  assert.equal(report.candidates[2].repeatedAfterLine, null);
+  assert.deepEqual(report.candidates[0].scripts, ["run.py"]);
+  assert.equal(report.candidates[0].skillReference, true);
+  assert.equal(report.errors[0].sourceLine, 10);
+  for (const secret of ["private-secret", "private-output", "private-parser-secret"]) assert.ok(!run.stdout.includes(secret));
+  fs.rmSync(temp, { recursive: true });
+});
+
+test("unwraps nested tool content and detects nonzero structured exits without exposing output", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-nested-"));
+  writeSession(path.join(temp, "main.jsonl"), { id: "modern", source: "cli" }, [
+    { type: "custom_tool_call", name: "exec", call_id: "nested", input: "node skills/demo/check.mjs" },
+    { type: "custom_tool_call_output", call_id: "nested", output: JSON.stringify([
+      { type: "text", text: JSON.stringify({ exit_code: -9, output: "nested-secret" }) },
+    ]) },
+  ]);
+  const run = spawnSync(process.execPath, [script.pathname, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr);
+  const report = JSON.parse(run.stdout);
+  assert.deepEqual(report.candidates[0].categories, ["nonzero_exit"]);
+  assert.deepEqual(report.candidates[0].exitCodes, [-9]);
+  assert.ok(!run.stdout.includes("nested-secret"));
+  fs.rmSync(temp, { recursive: true });
+});
+
+test("reads a log larger than the Node heap without retaining every record", () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-stream-"));
+  const file = path.join(temp, "large.jsonl");
+  const fd = fs.openSync(file, "w");
+  fs.writeSync(fd, JSON.stringify({ type: "session_meta", payload: { id: "modern" } }) + "\n");
+  const line = JSON.stringify({ type: "response_item", payload: { type: "reasoning", text: "x".repeat(65536) } }) + "\n";
+  for (let i = 0; i < 1024; i += 1) fs.writeSync(fd, line);
+  fs.closeSync(fd);
+  const run = spawnSync(process.execPath, ["--max-old-space-size=48", script.pathname, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(JSON.parse(run.stdout).stats.mainSessions, 1);
+  fs.rmSync(temp, { recursive: true });
+});

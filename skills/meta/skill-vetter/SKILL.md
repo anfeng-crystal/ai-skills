@@ -26,7 +26,7 @@ metadata:
 - 默认只做静态审查，不联网查信誉，不执行目标脚本。
 
 ## 工作流
-1. 解析精确 skill root。多个 `SKILL.md` 时停止，让用户指定目标。
+1. 解析精确 skill root。多个入口先按用户点名路径、目录和安装计划定位；明确要求整包审查时逐个入口报告，不能唯一确定目标才询问。
 2. 解析本 skill 所在目录后运行静态检查：
    ```bash
    node <skill-vetter-root>/scripts/inspect-skill.mjs --path /absolute/path/to/skill --json
@@ -64,7 +64,7 @@ metadata:
 - 路径不存在、目标不清或无 `SKILL.md` 时停止并说明原因。
 - `review_needed` 或 `block` 后用户仍要安装，必须明确接受具名风险。
 - `block + rebuild` 只允许从已核验事实重新实现；不得复制或执行命中阻断证据的脚本、凭据、安装器和宿主写入逻辑。
-- 同一目录多个 skill root 时停止，让用户指定目标；不要把整仓风险套到单个子 skill。
+- 多个 skill root 按已授权范围分别核验；不要把整仓风险套到单个子 skill，也不因目标已明确却同目录有其他入口而停问。
 
 ## 输出
 简体中文：

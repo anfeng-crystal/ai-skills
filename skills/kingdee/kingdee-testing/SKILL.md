@@ -13,7 +13,7 @@ metadata:
 
 ## Routing
 
-- Use `kingdee-metadata-analyzer` before tests that depend on entity fields, forms, operations, or plugin mount points.
+- Use an existing confirmed `kingdee-metadata-analyzer` inventory/cache for tests that depend on entity fields, forms, operations, or plugin mount points; invoke the analyzer only when that evidence is missing, stale, or incomplete.
 - Use `kingdee-sdk-helper` before asserting an SDK signature.
 - Coordinate source fixes with `kingdee-cosmic`; keep this skill responsible for test design, execution, and evidence.
 - Use `kingdee-observability` for multi-log Trace, slow SQL, N+1, thread, or GC analysis.

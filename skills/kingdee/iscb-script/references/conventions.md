@@ -128,12 +128,18 @@ list.group(dept).each(value.concat(name, ","))
 
 ### SQL 查询优化
 - 避免在循环中执行 SQL，尽量一次性查询
-- 使用 IN 条件批量查询，而非循环单条查询
-- 批量写入使用 `execute_batch` 而非循环 `execute_update`
+
+## 7. DSL 与上下文硬约束
+
+- 类型转换优先使用 `I()` / `L()` / `D()` / `N()` / `X()` / `T()`；不要写裸 `parseInt()`、`parseLong()`、`parseDouble()` 或 `parseDecimal()`，确需显式解析时使用 `Number.parseInt()` 等形式。
+- 流式处理优先使用 `.each()` / `.filter()` / `.group()`，不是 `.map()` / `.reduce()`；嵌入式 SQL 是 DSL 语法，不用字符串拼接伪造。
+- `src` / `tar` / `param` / `cn` / `$process` / `#request` 只有对应上下文已由用户或目标证据确认时才能使用。
+- 单项追加使用 `list += element`；`Collection.addAll` 的第二参必须是已证实集合；List 切片使用 `Collection.slice`，不把 List literal 传给 `Array.sub`。
+- 使用 IN 条件批量查询，而非循环单条查询；批量写入使用 `execute_batch` 而非循环 `execute_update`。
 
 ---
 
-## 7. 常见错误模式
+## 8. 常见错误模式
 
 ### 错误 1：在值转换规则中写入数据
 ```javascript

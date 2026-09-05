@@ -59,7 +59,7 @@ if (Test-Path "$env:USERPROFILE\AI\skills\active\.git") {
 
 ## 2. Migrate Global Rules
 
-Use the canonical files from this repository:
+Use the canonical files from this repository. Before copying, compare them with the destination rules and preserve newer intentional host changes. Update the canonical copy when approved rules change; do not overwrite a newer destination with a stale template. Keep host files self-contained and verify the installed content after copying:
 
 - Codex: `docs/global-rules/codex/AGENTS.md`
 - Claude Code: `docs/global-rules/claude/CLAUDE.md`

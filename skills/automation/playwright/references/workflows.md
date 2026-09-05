@@ -32,8 +32,7 @@ pwcli snapshot
 
 ## Form submission
 
-Only click the final submit control after the user has confirmed the final
-submission, target, and scope. Filling fields is allowed when it does not
+Only click the final submit control when the current request or approved contract covers the submission, target, and scope; do not ask again when it already does. Filling fields is allowed when it does not
 trigger that final write.
 
 ```bash
@@ -41,7 +40,7 @@ pwcli open https://example.com/form --headed
 pwcli snapshot
 pwcli fill e1 "user@example.com"
 pwcli fill e2 "password123"
-# User confirmation required before this final business action:
+# The existing task authorization must cover this final business action:
 pwcli click e3
 pwcli snapshot
 pwcli screenshot  # confirm local path/privacy before saving
