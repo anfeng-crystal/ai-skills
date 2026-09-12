@@ -1,14 +1,14 @@
 ---
 name: kingdee-ui-testing
-description: "Orchestrate requirement-driven Kingdee Cosmic UI test generation, safe smoke checks, explicitly approved CRUD, production-safe smoke, and approved production E2E verification over the existing automation/playwright executor. Use for form/list rendering, F7 and subtable interaction, validation rules, requirement coverage, normalized JSON/CSV cases, cleanup/rollback, and step-level evidence reports."
+description: "生成或执行金蝶云苍穹表单/列表、F7、分录和业务操作的 UI 测试，按任务授权验证结果并清理测试数据。"
 ---
 
 # Kingdee UI Testing
-> Cross-platform Agent Skill: use UTF-8, host-neutral paths, and the existing Playwright execution skill.
+> Cross-platform Agent Skill: use UTF-8, host-neutral paths, and an existing supported browser executor when executing UI cases.
 
 ## 触发与路由
 
-Act as the Kingdee UI domain orchestrator. Load and use `automation/playwright` for browser control; do not copy its CLI, selectors, browser binaries, or authentication state. If its supported runtime is unavailable, report the execution as blocked instead of installing dependencies.
+Act as the Kingdee UI domain orchestrator. For browser execution, reuse the currently available supported browser skill/tool, such as `playwright`; keep this skill responsible for the case, page identity, authorization and evidence contracts. Do not copy browser executors, binaries or authentication state. If no equivalent supported runtime is available, report browser execution as blocked; case generation and contract preparation can continue. `generate` mode does not load or require a browser runtime.
 
 ## 模式与契约
 
@@ -22,16 +22,16 @@ Act as the Kingdee UI domain orchestrator. Load and use `automation/playwright` 
 
 Validate the task contract before browser execution. One approved contract authorizes all listed steps; do not repeat confirmation per click or case. Stop before any target, case, action, selector intent, data record, operation, or cleanup outside the contract.
 
-Read `references/execution-contract.md` for action gates and `references/case-schema.md` when generating or importing cases.
+Read `references/execution-contract.md` before browser execution and `references/case-schema.md` when generating or importing cases.
 
 ## 工作流
 
 1. Map confirmed requirements to case IDs, expected fields, rules, operations, and evidence; do not invent form keys or F7 semantics.
 2. Normalize JSON/CSV with `scripts/normalize_cases.py`; keep source order and reject credentials or bundled browser state.
-3. Validate the execution contract with `scripts/validate_execution_contract.py`.
+3. For browser modes, validate the execution contract with `scripts/validate_execution_contract.py`; `generate` completes with normalized cases and requirement coverage.
 4. Capture every contract-level before assertion before the first write.
 5. Before each page-specific assertion, capture the actual route, `formId`, `pageType` (list/detail/edit/dialog), and relevant `pageElement`; a detail page cannot satisfy a list-layout/list-plugin case, even if both expose the same entity fields.
-6. Execute normalized steps through `automation/playwright`. Within the contract, continue without per-step confirmation; outside it, stop and request a revised contract.
+6. Execute normalized steps through the selected browser executor. Within the contract, continue without per-step confirmation; outside it, stop and request a revised contract.
 7. For approved writes, require the test-data prefix on every created/updated record, record identifiers immediately, and verify after assertions.
 8. Run contract cleanup and rollback. If either fails, stop further writes and report exact residual records without broad deletion.
 9. Build step evidence with `scripts/build_evidence_report.py`; keep missing, blocked, and not-run distinct from passed.

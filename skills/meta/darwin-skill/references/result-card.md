@@ -1,42 +1,22 @@
-# 成果卡片生成
+# 可选视觉成果卡
 
-每个skill优化完成后（或全量汇总后），自动生成视觉成果卡片，截图保存为PNG。
+仅在用户需要展示卡片，或批量结果用图卡确有阅读收益时使用。普通修订交付 Markdown 即可，不为每个 Skill 自动生成 HTML/PNG。
 
-## 卡片模板
+## 模板与样式
 
-模板位置：`templates/result-card.html`
+复用 Skill 根目录下 `templates/result-card.html`；只创建任务产物副本，不覆盖模板。样式由用户选择或沿用已有风格；无偏好时可用 Warm Swiss，不随机切换。
 
-3种风格，每次随机选择一种：
+| 风格 | CSS 类 | URL hash |
+| --- | --- | --- |
+| Warm Swiss | `.theme-swiss` | `#swiss` |
+| Dark Terminal | `.theme-terminal` | `#terminal` |
+| Newspaper | `.theme-newspaper` | `#newspaper` |
 
-| 风格 | CSS类 | URL hash | 视觉特点 |
-|------|--------|----------|---------|
-| Warm Swiss | `.theme-swiss` | `#swiss` | 暖白底+赤陶橙，Inter字体，干净网格 |
-| Dark Terminal | `.theme-terminal` | `#terminal` | 近黑底+荧光绿，等宽字体，扫描线 |
-| Newspaper | `.theme-newspaper` | `#newspaper` | 暖白纸+深红，衬线字体，双栏编辑风 |
+## 生成与验收
 
-## 生成流程
+- 将 `data-field="skill-name"`、日期和改进摘要替换为实际结果。只有可比的实测评分才填 score-before/after/delta 和维度条；无分数时明确显示未评分，不能编造数据。
+- 需要 PNG 时，使用当前宿主已有的浏览器或截图能力打开本地卡片，待内容和字体就绪后截图。可用 960×1280 作为起点，按内容调整；检查裁切、溢出和可读性。
+- 单 Skill 卡和汇总卡按展示目的选择，不必同时生成。截图能力不可用时交付实际可用的 HTML/Markdown 并说明限制，不把未生成的 PNG 当作产物。
+- 沿用模板品牌元素（Darwin.skill、日期、底部品牌文字与项目链接），用户要求其他展示风格时按其选择调整。
 
-```
-1. 复制 templates/result-card.html 到临时工作文件
-2. 用 sed/编辑工具 替换占位数据：
-   - data-field="skill-name" → 实际skill名
-   - data-field="score-before/after/delta" → 实际分数
-   - 8个维度的 dim-bar-before/after width → 实际百分比
-   - data-field="improvement-1/2/3" → 实际改进摘要
-   - data-field="date" → 当前日期
-3. 随机选择风格：hash 设为 swiss/terminal/newspaper 之一
-4. 用 Playwright 截图：
-   npx playwright screenshot "file:///path/to/card.html#[theme]" \
-     output.png --viewport-size=960,1280 --wait-for-timeout=2000
-5. 提示用户查看成果卡片 PNG
-```
-
-## 何时生成
-
-- **单skill卡片**：每个skill优化完成后，展示该skill的分数变化
-- **总览卡片**：全部优化完成后（Phase 3），展示全局战绩
-
-## 品牌元素
-
-- 顶部：Darwin.skill 品牌标识 + 日期
-- 底部：「Train your Skills like you train your models」+ github.com/alchaincyf/darwin-skill
+交付实际产物路径、评分口径和未验证项，不把视觉形式作为优化效果的证据。

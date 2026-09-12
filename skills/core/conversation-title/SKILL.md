@@ -1,6 +1,6 @@
 ---
 name: conversation-title
-description: Automatically name the current root conversation once its main goal is clear, or rename it when the user asks. Use a native title API when available and otherwise govern the host's automatic title generation without simulating unsupported mutation.
+description: "Name a new root conversation when its main goal is clear, or rename the current conversation on request."
 ---
 
 # Conversation Title

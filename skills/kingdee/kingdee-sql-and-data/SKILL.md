@@ -1,6 +1,6 @@
 ---
 name: kingdee-sql-and-data
-description: Use when validating Kingdee Cosmic KSQL, generating preset-data scripts, resolving project ksql config.ini, performing scoped read-only data checks, generating reviewable DDL from verified metadata, or preparing an approved database change contract. ISCB DML service-flow generation routes to iscb-script.
+description: "校验金蝶 KSQL、生成预置数据/DDL，或核对与变更数据库数据；ISCB SQL/DML 服务流程交 iscb-script。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -78,4 +78,4 @@ python3 "$SQL_SKILL_ROOT/scripts/ksql_generate/cli.py" generate --type coderule 
 - KSQL：报告规则命中、方言风险和未确认项。
 - 预置数据/DDL：报告输入证据、输出文件、生成未执行状态和执行契约缺口。
 - 真实查询/写入：报告模式、环境、精确范围、受影响行数或只读结果摘要、回滚状态；不回显凭据或敏感数据。
-- 修改本 skill 的脚本后运行 `python3 -m unittest discover -s scripts/tests -p 'test_*.py'`。
+- 修改本 skill 的脚本后运行受影响的 `scripts/tests` 测试；修改共用生成或契约逻辑时使用 `python3 -m unittest discover -s scripts/tests -p 'test_*.py'`。纯说明或审阅稿变更不触发脚本全量回归。

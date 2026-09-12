@@ -1,6 +1,6 @@
 ---
 name: kingdee-sdk-helper
-description: "Kingdee SDK/API lookup and evidence routing: class definitions, exact method signatures, Javadoc, API ownership, version/source verification, and community-snippet confirmation against project JARs or the local SDK index."
+description: "查询和核验金蝶云苍穹 SDK 类、方法签名、Javadoc 与目标版本依据；业务实现交回对应领域 skill。"
 license: MIT
 metadata:
   author: "anfeng"

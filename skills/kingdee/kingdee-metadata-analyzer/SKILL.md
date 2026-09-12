@@ -1,6 +1,6 @@
 ---
 name: kingdee-metadata-analyzer
-description: "金蝶云苍穹实体、字段、表单、插件挂载、上下游关系和跨环境差异的只读元数据取证；需要真实字段或页面链路证据时使用。"
+description: "需要金蝶云苍穹真实字段、页面、插件挂载或跨环境差异证据时，进行只读元数据分析。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -36,16 +36,16 @@ metadata:
 1. 确定实体、证据目标、环境和模式；字段层级、派生页面、PC/移动执行链、共用物理表的多实体/多布局或流程包直接用 `full`。
 2. 从当前目录向上定位项目根，按“目标环境显式配置 → 同项目通用配置 → 其它环境配置仅作对照 → 可用历史产物”选择证据源。
 3. 从当前 SKILL.md 定位 skill 根。POSIX 使用 `python3`，Windows 使用 `py -3`；所有路径作为独立参数传递并允许空格。
-4. 先运行：
+4. 在线采集且目标配置尚未验证时运行；仅分析已有有效证据时跳过：
    ```text
    <python> <skill-root>/scripts/bootstrap-python-env.py -- <skill-root>/scripts/cosmic-metadata-analyzer.py check-config --config <config>
    ```
    bootstrap 尊重 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` / `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URL`；安装失败时报告依赖、配置、凭据或网络的具体分类。
 5. `quick` 调用 `quick-query.py` 的 `--fields`、`--ops`、`--plugins`、`--enums`、`--all` 或 `--search`；出现警告、截断或层级需求时升级到 `full`。
 6. `full` 调用 `cosmic-metadata-analyzer.py <entity> --config <config>`，按脚本打印的 `__INVENTORY_PATH__` 和 `__OUTPUT_DIR__` 读取结果；默认产物留在系统缓存，不写业务仓库。
-7. 在线配置失败时依次尝试同项目候选配置、已有 inventory/quick cache、设计 XML、源码和 JAR；跨环境结果只标为对照或推断。
+7. 在线配置失败后，按失败原因和可用性选择同项目候选配置、已有 inventory/quick cache、设计 XML、源码或 JAR；无需逐项穷举。跨环境结果只标为对照或推断。
 8. 需要给其它 skill 消费时运行 `metadata_contract.py --inventory <inventory> --environment <env>`；只有 quick cache 时使用 `--quick-cache`。
-9. 当前请求已包含完整分析或实现目标时连续生成所需证据，不增加中途确认；只有分析对象或副作用范围扩大时再询问。
+9. 以回答当前字段、页面或挂载问题所需的完整证据为完成条件；不因生成 inventory 就提前结束，也不为单字段问题扩大成全量盘点。当前请求包含完整分析或实现目标时连续完成，不增加中途确认；扩大分析对象或副作用范围时再核对授权。
 10. `export` 前列出并哈希输入。用户人工标注的 MD/Excel/CSV 是只读权威输入；不得通过 `import`/`runpy` 执行副作用不明的生成器覆盖它。新导出写入不同路径，并按用户指定主清单做行数、主键和覆盖率对账。
 
 ## 证据判定

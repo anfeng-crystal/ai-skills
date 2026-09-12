@@ -153,6 +153,10 @@ Minimal example:
 
 ## Troubleshooting
 
-- If an element ref fails, run `pwcli snapshot` again and retry.
-- If the page looks wrong, re-open with `--headed` and resize the window.
-- If a flow depends on prior state, use a named `--session`.
+- Snapshot 无输出：检查加载状态，用当前 CLI 的 `run-code` 等待已核实页面条件，并检查 URL/404。
+- 元素引用失效：重刷 snapshot；仍找不到时检查页面跳转、结构和登录态。重试前先确认前次动作是否已生效。
+- Click 后无反应：核页面/业务结果，再检查遮挡、引用与交互方式。副作用不明时不要重放提交。
+- 截图空白：检查页面白屏/加载，按需要试 `--full-page` 或 headed 模式。
+- 登录态失效：确认 cookie/session 过期后打开登录页，按授权认证并更新当前任务的 storage state。
+- 依赖或命令缺失：检查 Node/npm 与 PATH，仅缺依赖时运行 `npm-deps.mjs install`。
+- 流程依赖既有状态：使用命名 `--session`，保持 tab 选择明确。

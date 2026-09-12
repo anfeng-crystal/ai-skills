@@ -1,6 +1,6 @@
 ---
 name: kingdee-kingscript
-description: "用于 KingScript、苍穹脚本插件、SDK 声明与脚本运行错误/风险审查；KingScript 报表插件与 kingdee-report 协作确认取数和 Algo 合同；Java 二开交 kingdee-cosmic，ISCB DSL 交 iscb-script，前端页面/扩展 JS 交 kingdee-frontend-script，独立 KDApi 自定义控件交 kingdee-custom-control。"
+description: "编写、解释或修复 KingScript 服务端脚本插件，查询脚本 SDK 声明；ISCB 与浏览器页面脚本使用各自专用 skill。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -19,27 +19,29 @@ metadata:
 - 前端页面/扩展 `index.js`、`index_m.js` 或浏览器端页面脚本不使用；改用 `kingdee-frontend-script`。独立 KDApi 自定义控件源码、生命周期、构建和交付改用 `kingdee-custom-control`。
 - 用户只说“脚本”时，先用当前会话、所附文件、路径、导入和生命周期入口判断脚本体系；证据明确则直接路由。只有仍存在会改变实现结果的多种解释时才询问一次，并继续不依赖该选择的只读检查。
 
-## 工作流与资源发现
-1. 先确认任务类型：生成脚本、修改脚本、解释 SDK、排查运行错误或风险审查；复用用户已确认的产品与目标版本。只确认到 `7.0` 就保留该粒度，不补成 `7.0.13`，不因 `8.0` 示例/声明较新而提升目标；用户指定其他版本时按该目标处理。
-2. 先检查当前项目或工作区里是否已有同类脚本模块、公共函数、共享工具、SDK wrapper、模板或示例实现，能复用时优先复用。
-3. 再读 `references/index.md`，按任务落到 `templates/`、`examples/`、`sdk/` 或 `language/` 的具体入口。
-4. 遇到目录级线索时不能停在目录名；必须继续收敛到该目录下的 `index.md`、`indexes/*.md`、`manifests/index.md` 或目标 `*.md`。
-5. 生成或修改脚本前读 `references/templates/index.md` 和最接近的模板，再进入对应示例或事件拆分文件确认写法。
-6. 涉及 SDK 时先读 `references/sdk/index.md`、`references/sdk/strategy.md` 和 `references/sdk/indexes/`，再进入具体 `classes/`、`packages/`、`plugins/`、`microservices/` 卡片。
-7. 涉及语法、关键字、模块、异常处理时先读 `references/language/kingscript/index.md`，再进入对应主题 `*.md`。
-8. 需要示例时先读 `references/examples/index.md`、`references/examples/plugins/index.md`，再按插件类型、事件拆分或场景拆分进入具体示例。
-9. `references/` 用于定位候选 API；生成或修改平台相关脚本前，先用目标项目依赖、匹配目标实际版本的 `.d.ts`/SDK/JAR/Javadoc 确认本次 API、导入和事件签名，不等到版本冲突才核对。同大版本不同补丁也不自动兼容；补丁未知但目标声明/依赖已能确认本次 API 时可继续。目标与实际依赖冲突时报告冲突，不以另一版本的类型检查或编译通过冒充目标兼容。
-10. 输出前检查事件类型、参数类型、API 归属、字段标识、异常处理、空值边界和复用决策。
+## 实现与证据
 
-- 默认发现顺序：当前项目或工作区已有实现 → `references/index.md` → 对应子目录 `index.md` / `indexes/*.md` / 具体 `*.md`。
-- 若当前任务只给出插件类型、类名、方法名、事件名、场景词或报错词，先回到 `references` 对应索引入口，再落到具体知识卡或示例，不直接凭目录名或示例标题作答。
-- `examples/` 侧先看 `references/examples/index.md`、`references/examples/plugins/index.md`，再进入插件分类目录下的 `index.md` 与目标场景 `*.md`。
-- `templates/` 侧先看 `references/templates/index.md`，确认模板后继续打开模板表中指向的最近示例入口。
-- `sdk/` 侧优先用 `references/sdk/indexes/class-index.md`、`method-index.md`、`methods-by-name.md`、`methods-lifecycle.md`、`plugin-index.md`、`scenario-index.md`、`keyword-index.md` 收敛；索引命中后继续打开 `classes/`、`packages/`、`plugins/`、`microservices/` 的具体文件。
-- 报错涉及“事件参数类型不匹配”“`any` 用错位置”“`confirmCallBack` / `messageBoxClosed` / `closedCallBack`”时，先看 `references/sdk/indexes/error-index.md` 和 `keyword-index.md`，再落到插件基类、事件参数类卡和对应示例。
-- `language/` 侧先看 `references/language/kingscript/index.md`，再按主题进入 `类.md`、`方法.md`、`变量.md`、`接口.md`、`异常处理.md`、`语法示例.md` 等具体条目。
-- 当 `sdk/indexes/` 仍不能定位时，再降级到 `references/sdk/manifests/index.md` 与相关 `*.json` 清单；仍不足时才继续外部兜底。
-- 目录级资料不够时，优先在当前 skill 的 `references/` 内做关键字检索，再考虑 skill 外资料。
+- 按用户请求完成生成、修改、SDK 解释、运行错误排查或风险审查；先复用项目已有脚本、公共函数、wrapper 和同类实现。已有实现与目标签名足够时，不为局部修改另读模板或完整索引链。
+- 沿用已确认的产品与目标版本。`7.0` 不等于某个补丁，也不能被 `8.0` 示例/声明提升；用户指定其他版本时按该目标处理。
+- 生成或修改平台相关脚本前，用目标项目依赖、匹配目标实际版本的 `.d.ts`/SDK/JAR/Javadoc 确认本次 API、导入、归属和事件签名。references 只定位候选；同大版本另一补丁也不自动兼容。补丁未知但目标声明足以确认本次 API 时可继续；目标与实际依赖冲突时报告，不以另一版本检查通过冒充目标兼容。
+- 交付前核对受影响的事件/参数类型、字段标识、异常与空值边界及复用选择；完成已授权本地修改和适用验证，真实动作按下方契约执行。
+
+## 按需资料路由
+
+已知具体卡片或目标声明时直接读取；只有位置不明才走索引。目录名、索引命中和示例标题均不是签名证据，须收敛到具体内容。
+
+| 当前需要 | 资料入口 |
+|---|---|
+| 不确定资料位置或任务类别 | `references/index.md` |
+| 新建脚本结构、插件模板 | `references/templates/index.md`，选择对应模板；需要事件写法时再读其关联示例 |
+| 插件或场景示例 | `references/examples/index.md` 或 `references/examples/plugins/index.md`，按类型/事件/场景进入具体文件 |
+| SDK 来源和版本判定 | `references/sdk/strategy.md`；需要总体组织说明时读 `references/sdk/index.md` |
+| 已知类名或方法名 | `references/sdk/indexes/class-index.md`、`method-index.md` 或 `methods-by-name.md` 中匹配的一项 |
+| 生命周期或插件类型 | `references/sdk/indexes/methods-lifecycle.md`、`plugin-index.md` |
+| 场景、关键词或错误 | `references/sdk/indexes/scenario-index.md`、`keyword-index.md` 或 `error-index.md`；参数不匹配、`any`、确认框/关闭回调优先用错误索引 |
+| 语法、关键字、模块或异常处理 | `references/language/kingscript/index.md`，再读对应主题（如类、方法、变量、接口、异常处理或语法示例） |
+
+SDK 索引定位后读取对应 `classes/`、`packages/`、`plugins/` 或 `microservices/` 卡片。未命中时在本 skill 的 `references/` 检索；仍不足时用 `references/sdk/manifests/index.md` 与相关 JSON 清单，或目标声明/官方资料补证。无需按顺序穷尽已无帮助的资料，未知签名仍不得猜。
 
 ## References
 - 总入口：`references/index.md`

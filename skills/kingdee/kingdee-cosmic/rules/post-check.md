@@ -7,13 +7,13 @@
 
 ## 触发条件
 
-**每次 AI 生成或修改 `.java` 文件后，自动触发**，无需用户手动请求。
+生成或修改 Java 逻辑、平台调用、事件签名或资源管理时，使用本入口完成受影响范围的编译与场景/资源检查；当前差异已完成等价检查时不重复运行。仅注释或格式变化检查差异即可。必要检查属于本地实现任务，不逐次请求批准；业务行为变化再运行相应测试，不固定追加全模块测试。
 
 ## 默认执行命令
 
 以下命令中的 `python3` 表示当前已核实的 Python 启动器；Windows 可用 `py -3` 或解释器绝对路径，优先进程参数数组传参。Gradle 使用项目自带 wrapper：Windows 为 `gradlew.bat`，macOS/Linux 为 `./gradlew`；检查脚本已按平台选择，不要求安装 Bash。
 
-首次运行或新建隔离环境时，按锁定版本安装最小解析依赖：
+仅运行检查所需解析依赖缺失时，在合适的项目或隔离环境按锁定版本安装最小依赖：
 
 ```bash
 python3 -m pip install -r <SKILL_ROOT>/requirements.txt
@@ -93,9 +93,9 @@ graph TB
 
 补充说明：
 
-- SDK 类名、方法签名和 `@Override` 正确性改为**事前**通过 `cosmic-api-knowledge.py detail/search`、模板、cheat-sheet 或编译验证，不再由 post-lint 的 `API-*` 规则兜底。
+- SDK 类名、方法签名和 `@Override` 在实现前用目标项目实际依赖、匹配目标版本的 SDK/JAR/Javadoc 确认；`cosmic-api-knowledge.py detail/search`、模板和 cheat-sheet 用于定位候选，编译也须使用匹配目标的依赖。复用本次已确认的证据，不再由 post-lint 的 `API-*` 规则兜底。
 - `SCENE-*` 与 `RESOURCE-*` 中既有明显硬错误，也可能包含偏治理的 warning；解释结果时要结合上下文，不要机械套标签。
-- 需要按 A 层（ERROR）处理的 SCENE/STYLE/RESOURCE 规则 ID，统一定义在 [a-layer-rules.json](a-layer-rules.json)（单一可信源），`cosmic-post-lint.py` 在运行时自动加载。如需新增/移除 A 层规则，直接编辑该 JSON 文件即可，无需改脚本代码。
+- 需要按 A 层（ERROR）处理的 SCENE/STYLE/RESOURCE 规则 ID，统一定义在 [a-layer-rules.json](../references/rules/a-layer-rules.json)（单一可信源），`cosmic-post-lint.py` 在运行时自动加载。如需新增/移除 A 层规则，直接编辑该 JSON 文件即可，无需改脚本代码。
 - `RESOURCE-004` 认可直接 `close()`、`DataSet` try-with-resources、返回/后续 DataSet 消费，以及词法作用域覆盖声明的 `try (AlgoContext ... = Algo.newContext())`；把上下文创建放在别的方法里不作为静态豁免。
 - `STYLE-015` 仅对可证明的有界主键游标分页放行：同一方法内必须有 `id > cursor`、`id asc`、有限页大小，并从本页末行推进同一 cursor；普通循环查询仍是 ERROR。
 - `VERIFY-*` 默认不作为当前交付阻断项；只有在 `--strict` 或用户明确要求治理时，才应提高关注度。

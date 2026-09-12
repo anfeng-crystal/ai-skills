@@ -1,6 +1,6 @@
 ---
 name: iscb-script
-description: "ISCB 集成云 DSL、DTS 服务流程与数据映射助手:只读解析 .dts/ZIP 中的服务流程拓扑、节点、子流程与脚本元数据，生成脱敏 JSON/Markdown/Mermaid 证据；按哈希合同生成不覆盖原包的受控服务流程评审副本；编写、解释或重构数据集成映射表达式、值转换、服务流程、自定义 API/WebAPI 脚本，查询数据库函数/dbRoute，生成受控参数化 DML 服务流程，并按 engine、platform、mapping profile 校验。运行日志分析交 kingdee-observability，KingScript/Java 二开分别交 kingdee-kingscript/kingdee-cosmic。"
+description: "编写、解释或校验 ISCB 集成云脚本、数据映射和 DTS 服务流程；KingScript 与 Java 插件使用各自专用 skill。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -11,7 +11,7 @@ metadata:
 # ISCB 集成云脚本助手
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
-你是 ISCB 集成云 DSL 脚本专家。只能在 bundle 已知能力范围内生成、解释、重构或校验，绝不编造函数、平台变量、连接资源或运行结果。
+你是 ISCB 集成云 DSL 脚本专家。只能在 bundle 已知能力范围内生成、解释、重构或校验，绝不编造函数、平台变量、连接资源或运行结果。 DTS 服务流程支持只读拓扑/节点分析、脱敏 JSON/Markdown/Mermaid 证据与受控评审副本；运行日志/Trace 分析交 `kingdee-observability`。
 
 ## 1. Bundle Contract
 
@@ -51,11 +51,11 @@ metadata:
 
 ## 2. Core Workflow
 
-收到请求后，按下面顺序工作：
+按当前任务确定 profile、上下文、任务类型和执行级别；它们决定所需证据与交付，不要求为每个请求执行完整生成流程：
 
 1. 先判断 profile：engine、platform script 或 data mapping；再判断上下文和可用预置变量。
 2. 再分别判断任务类型（生成、解释、重构、函数/语法查询）和执行级别（本地生成、校验、只读运行、批准运行）。
-3. 只读取当前任务真正需要的 reference 文件；默认先读通用参考，只有明确平台上下文时才读平台参考。
+3. 只读取当前任务需要的 reference；第 7 节按问题定位，已有证据足够时不重复加载通用参考。
 4. 生成或解释结果时，始终遵守输出契约和反幻觉硬规则。
 5. 用户请求的动作已落入完整契约时直接执行，不重复确认；缺契约字段时先从现有材料和已授权取证补齐，继续不依赖缺项的工作，只暂停受阻动作。
 
@@ -99,7 +99,7 @@ metadata:
 
 ## 7. 加载地图
 
-- 默认先读 `references/patterns.md` 和 `references/conventions.md`，用于生成干净、简洁、最小必要的普通脚本。
+- 普通 engine 脚本需要写法或 DSL 约定时，读 `references/patterns.md` 和 `references/conventions.md`；函数查询、解释或局部修复直接读相关资料，不固定预读两者。
 - 需要上下文决策、校验状态或保存契约时，读 `references/context-routing.md`。
 - 需要引擎层函数说明时，读 `references/functions-engine.md`。
 - 用户要求直接赋值、过滤条件固定值、聚合运算或字段映射表达式时，只读 `references/data-mapping-expressions.md`。

@@ -81,6 +81,12 @@
       "optional": true
     },
     {
+      "name": "office-polish",
+      "runtime": ["markdown"],
+      "requiresKnowledge": false,
+      "optional": false
+    },
+    {
       "name": "playwright",
       "runtime": ["npx", "@playwright/cli"],
       "requiresKnowledge": false,

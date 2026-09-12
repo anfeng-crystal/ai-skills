@@ -142,7 +142,7 @@
 ### 基础资料 {#basedata}
 - **关键词**: 基础资料 / 管控策略 / 分配 / 个性化 / 客户 / 物料 / 供应商
 - **入口类**: `BaseDataServiceHelper` · `kd.bd.master.*`
-- **先读**: 先用 `cosmic-form-metadata.py` / `cosmic-basedata-query.py` 确认 `refType` / `entityId`
+- **字段证据**: 复用当前任务中匹配目标环境的 `refType` / `entityId` 证据；缺失或范围不足时，再用 `cosmic-form-metadata.py` / `cosmic-basedata-query.py` 或 `kingdee-metadata-analyzer` 补证，不重复查询已确认字段
 - **兜底**: [sdk-dynamic-model-svc.md](../references/base/sdk/sdk-dynamic-model-svc.md)
 - **片段**: [BaseDataQuerySample](../assets/snippets/query/BaseDataQuerySample.java)
 

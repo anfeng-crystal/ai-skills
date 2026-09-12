@@ -1,6 +1,6 @@
 ---
 name: kingdee-security-review
-description: "Use when reviewing Kingdee Cosmic security issues, auditing OpenAPI endpoints, verifying community/external findings against target evidence, performing authorized production read-only checks, or running scoped POC/redteam-lite validation."
+description: "审查金蝶云苍穹安全问题与 OpenAPI 鉴权，或在授权范围内验证漏洞线索；普通插件排错不触发。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -44,6 +44,8 @@ Read `references/modes.md` when the user asks for verification, active testing, 
 
 ## Workflow
 
+Resolve the requested findings to an evidence-backed status and report scope limits. Load the following references only for the corresponding work; a static audit does not require POC preparation.
+
 1. Identify mode, target repo/path, endpoint or finding list, and whether network access is requested.
 2. For API endpoint work, read `references/openapi-audit.md`; confirm endpoint location, handler method, request parameters, and auth/filter chain before rating severity.
 3. When a claim comes from a community article, project snippet, external report or old POC, read `references/evidence-sources.md` and treat it as a candidate until target-version evidence confirms it.
@@ -80,6 +82,5 @@ Use Chinese by default. Report:
 - evidence: files, endpoints, call chain, auth boundary, sanitizer status;
 - mode and target scope;
 - findings ordered by severity;
-- verification state: unverified, statically confirmed, dynamically verified, blocked by scope, or needs manual confirmation;
+- finding state: source-only candidate/unverified, statically confirmed, dynamically verified, not reproduced, blocked by scope, or needs manual confirmation;
 - residual risk and next action.
-- evidence source state: source-only candidate, statically confirmed, dynamically verified, not reproduced, or blocked by scope.

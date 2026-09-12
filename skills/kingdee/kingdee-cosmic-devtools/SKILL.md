@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic-devtools
-description: "用于 KDDT 苍穹工程/模块骨架、插件或服务类骨架，以及本机 COSMIC_HOME 资源包的 inspect、staging、apply 和 rollback。不用于业务模块的 Gradle 编译测试、jarZip、uploadZipRestartAndWait、DEV/TEST/PROD 部署、服务重启或部署验收。"
+description: "创建 KDDT 工程、模块或类骨架，管理本机 COSMIC_HOME 资源包；普通业务模块构建、部署和服务运维不使用。"
 license: MIT
 metadata:
   author: "anfeng"

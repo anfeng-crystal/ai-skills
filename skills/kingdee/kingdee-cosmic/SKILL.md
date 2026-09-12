@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic
-description: "Kingdee Cosmic Java dev: 金蝶云苍穹 Java 二开、插件、BOTP/工作流、服务端 OpenAPI、Cache/MQ 和 Java 代码核查。运行日志/Trace 交 kingdee-observability，测试执行交 kingdee-testing；纯报表交 kingdee-report；外部 OpenAPI 调用交 kingdee-openapi-client；元数据/挂载证据交 kingdee-metadata-analyzer；SDK/API 签名交 kingdee-sdk-helper；KingScript/ISCB 分别交 kingdee-kingscript/iscb-script。"
+description: "开发、修复或审查金蝶云苍穹 Java 插件与服务端 OpenAPI；报表、脚本和外部 OpenAPI 调用使用各自专用 skill。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -33,7 +33,7 @@ metadata:
 2. 纯 Java 语法、类型、泛型、集合或编译错误可直接分析，不要无意义触发元数据查询。
 3. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先复用当前任务已确认且仍匹配目标环境的 analyzer inventory/quick cache；缺失、过期或范围不足时再交 `kingdee-metadata-analyzer` 做取证。
 4. 移动端、派生表单、页面元素或生产行为链路问题，不能只看实体 quick-query；要求 analyzer 全景分析并核对 `pageElement`、`formPage`、派生表单和插件挂载链。
-5. 宿主工程模板、资源包、本地启动/页面联调上下文、登录态、配置检查或 KSQL/数据脚本，转 `kingdee-cosmic-devtools`、`kingdee-cosmic-login`、`kingdee-sql-and-data`。
+5. 工程骨架或 `COSMIC_HOME` 资源包交 `kingdee-cosmic-devtools`；本地启动、模块构建和部署沿用当前仓库流程。登录态交 `kingdee-cosmic-login`，KSQL/数据脚本交 `kingdee-sql-and-data`。运行日志/Trace 分析交 `kingdee-observability`，专项测试执行交 `kingdee-testing`。
 6. 纯报表插件取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析和 Algo API 精确签名，转 `kingdee-report`；本 skill 只保留轻量路由和概览。
 
 ## 取证
@@ -41,8 +41,8 @@ metadata:
 - 配置预检先从当前目录向上定位聚合项目根，再按“用户明确目标环境 → 当前任务已确定环境 → 同项目通用配置仅作明确后备”选择配置。环境已确定时优先使用 `ok-cosmic.<env>.json`，不得用其它环境或泛化 `ok-cosmic.json` 静默替代。
 - 环境配置文件按目标环境选择，但 `graph.dbPath` 表示本地离线知识库，同一项目的 DEV/PROD 可以按项目约定共享同一路径；路径相同不是跨环境混用。共享文件不存在时应报告知识库缺失，不能误判为环境配置选择错误。
 - 执行时必须显式传绝对配置路径：`python3 <SKILL_ROOT>/scripts/cosmic-config-check.py --config <PROJECT_ROOT>/ok-cosmic.<env>.json`。未确定环境或未找到对应配置时只停用相关在线能力，不得声称“仓库未提供配置”，也不得阻断不依赖在线能力的本地编译、测试或部署。
-- 业务话术先读 `rules/intent-routing.md`，再按 `rules/decision-matrix.md` 选插件、配置、脚本或诊断路径。
-- 生成或修改 Java 前，读 `rules/platform-baseline.md`、`rules/cheat-sheet.md` 和最接近的 `assets/*.java` 模板；事件顺序不确定时读 `references/event-lifecycle.md`。
+- 业务话术无法确定实现入口时读 `rules/intent-routing.md`；需要插件、配置或脚本选型时读 `rules/decision-matrix.md`。
+- 命名、数据模型、日志或平台设计约束需要补证时读 `rules/platform-baseline.md`；查 API 读 `rules/cheat-sheet.md`；新建插件或缺少同类结构时选最接近的 `assets/*.java` 模板；事件顺序不确定时读 `references/event-lifecycle.md`。局部修改不固定加载整套资料。
 - 在线元数据不可用时，可复用 analyzer 产物、quick-query 缓存、项目源码、JAR 和本 skill references，但输出必须区分“源码推断”和“目标环境元数据已确认/未确认”。
 
 ## 工作流
@@ -51,7 +51,7 @@ metadata:
 3. 按需读取最小资料集：插件/配置选型 `rules/decision-matrix.md`；API 速查 `rules/cheat-sheet.md`；插件类型 `references/plugin-types-cheatsheet.md`；BOTP `references/botp-convert.md`；DynamicObject `references/dynamic-object.md`；生命周期 `references/event-lifecycle.md`；工作流/布局元数据包 `references/workflow-metadata-change.md`；DataSet 概览 `references/query-dataset.md`；Cache/MQ `references/cache-mq-runtime.md`；异常诊断与复核 `references/error-review-patterns.md`。
 4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。
 5. 页面事件已覆盖验收路径时，不默认追加保存、操作、接口或批量链路兜底；只有需求明确覆盖绕过页面事件的入口时才扩展链路。
-6. 编码后执行模块级 Gradle 编译/测试；无法定位模块时执行 `python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <file_or_dir> --fix-hint`。
+6. 按改动验证：平台调用或 Java 逻辑变更完成受影响模块的编译、场景/资源静态检查及适用测试；已有检查覆盖当前差异时不重复运行。仅注释/格式修改检查差异即可。检查入口与降级方式见 `rules/post-check.md`，不能以静态结果冒充编译或运行通过。
 7. 收口按 `rules/post-check.md` 给出依据、改动、验证和风险。
 
 ## Scripts

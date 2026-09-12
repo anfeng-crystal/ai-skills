@@ -1,6 +1,6 @@
 ---
 name: kingdee-custom-control
-description: "从零设计、创建、修复、验证、构建、打包和交付金蝶云苍穹 KDApi 前端自定义控件。用于自定义控件方案、index.js 生命周期、handleDirective/triggerCustomMsgEvent/model.invoke、PC/移动端控件工程、版本化运行包、服务端插件联调和目标环境验收；仅有页面脚本联动时使用 kingdee-frontend-script。"
+description: "开发、修复和交付金蝶云苍穹独立 KDApi 自定义控件；仅页面脚本联动使用 kingdee-frontend-script。"
 ---
 
 # Kingdee Custom Control

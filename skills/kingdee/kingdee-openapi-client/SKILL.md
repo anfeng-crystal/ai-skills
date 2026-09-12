@@ -1,6 +1,6 @@
 ---
 name: kingdee-openapi-client
-description: "Kingdee Cosmic OpenAPI client: OAuth2 getToken, queryOpenApi discovery, request param probing, Java/Python call code. Use for 调用金蝶云苍穹/星瀚 OpenAPI、getToken 鉴权与刷新、queryOpenApi 查接口清单、参数探测、生成 Java/Python 调用代码;服务端 OpenAPI 开发用 kingdee-cosmic,接口安全审计用 kingdee-security-review,Web 登录态用 kingdee-cosmic-login。"
+description: "从外部客户端调用金蝶云苍穹/星瀚 OpenAPI，处理鉴权、接口发现和调用代码；服务端接口开发使用 kingdee-cosmic。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -49,4 +49,4 @@ metadata:
 - 仅文档化调用流程与模板，不内置第三方脚本或接口定义包；`queryOpenApi` 的下列路径尚未核验为官方通用发现接口，必须以目标部署证据为准。不可用时继续使用已有官方或目标 API 文档；导入定义另按该环境变更授权处理。
 
 ## Output
-使用简体中文:结论 → 是否执行过真实请求(未执行/已授权执行/被拒绝) → 鉴权与接口定位依据 → 调用代码(Java/Python)→ 必填参数与幂等说明 → 风险与未确认项。
+使用简体中文给出结论、鉴权/接口依据及实际请求状态。仅在用户需要示例或实现时给 Java/Python 代码，并说明相关必填参数、幂等语义和未确认项；接口查询不固定附带完整调用模板。

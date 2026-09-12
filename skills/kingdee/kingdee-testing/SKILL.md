@@ -1,6 +1,6 @@
 ---
 name: kingdee-testing
-description: "Test and verify Kingdee Cosmic Java plugins and services through targeted unit tests, Gradle runs, local harnesses, task-scoped runtime probes, and redacted evidence. Use for test generation, failing-test diagnosis, regression coverage, testability checks, or explicitly scoped local, dev/test, production-readonly, and approved-write verification."
+description: "为金蝶云苍穹 Java 插件/服务设计与执行测试、诊断测试失败，或按任务范围验证运行行为；UI 测试交 kingdee-ui-testing。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -37,11 +37,11 @@ Read `references/execution-contract.md` before any runtime request or approved w
 
 ## Workflow
 
-1. Capture the failing command, assertion, stack, source location, and current behavior.
-2. Classify the failure as compile, test logic, product defect, environment/dependency, metadata, or runtime.
-3. Reproduce with the narrowest deterministic check; distinguish observed evidence from inference.
+1. Define the requested behavior and evidence needed to finish. For a failure, capture the command, assertion, stack and source location; for new coverage, identify the relevant source paths and expected outcomes.
+2. For failures, classify the cause as compile, test logic, product defect, environment/dependency, metadata, or runtime.
+3. Verify with the narrowest deterministic check that exercises the behavior; distinguish observed evidence from inference.
 4. If a fix is authorized, make the smallest source or test change. Preserve a product-defect regression as `formal` only when the approved fix scope and repository test policy make it a deliverable; otherwise keep the reproducer `task-local` and report that no formal regression was delivered.
-5. Run the targeted test, then the relevant module regression; do not hide existing failures.
+5. Run the targeted test. Add module regression when the change affects shared behavior, the targeted check leaves a material gap, or repository requirements call for it; do not hide existing failures. Once relevant checks pass, finish the authorized delivery rather than repeat or broaden tests without new evidence.
 6. Perform runtime verification only when the selected mode and contract require it.
 7. Report diagnosis, changed files, commands, results, unverified items, and residual risk.
 
@@ -69,7 +69,7 @@ Read `references/execution-contract.md` before any runtime request or approved w
 
 - Reject fake/self-comparison assertions, swallowed exceptions, wildcard Mockito imports, leaked `MockedStatic`, and tests that never reach an assertion or verification.
 - Preserve constants and enums; do not replace missing platform symbols with string literals.
-- Cover meaningful normal, boundary, empty/null, exception, branch, state-transition, and side-effect paths; justify exclusions.
+- Select meaningful normal, boundary, empty/null, exception, branch, state-transition and side-effect cases according to the changed behavior; report material coverage gaps. This is a coverage guide, not a requirement to create every category for each small change.
 - Do not invent metadata keys, entry points, runtime success, or dependency availability.
 - 报告编译/类型检查所用 SDK 来源与目标关系；业务逻辑 mock 测试、骨架和静态规则通过不能单独证明平台 API 存在或运行行为兼容。已有目标依赖足以确认本次 API 时不重复索要版本信息；缺少目标依赖时记录未验证项，不以桩类补出不存在的兼容证明。
 - Gradle `test=NO-SOURCE` only proves that no test source was executed; report it separately from passed tests. An upload/restart request also is not deployment completion: wait for the target service state/count and restart timestamp required by the project, then verify the real business entry.

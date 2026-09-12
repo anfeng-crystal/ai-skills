@@ -1,6 +1,6 @@
 ---
 name: skill-vetter
-description: "需要审查第三方或 incoming skill 的来源可信度、脚本行为、宿主写入、破坏性命令、密钥暴露或安装风险时使用。"
+description: "对第三方或 incoming Skill 做安装前静态安全审查，并按需评估能力吸收；不执行目标代码。"
 license: MIT
 metadata:
   author: "anfeng"

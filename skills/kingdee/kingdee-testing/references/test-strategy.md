@@ -9,7 +9,7 @@
 | Verify a plugin against dev runtime | Runtime probe | Explicit read-only HTTP probe and evidence collection |
 | Check existing tests | Test rot scan | Identify fake assertions, wildcard imports, and resource leaks |
 | Guard a refactor | Regression guard | Replay `regression-playbook.md` rules |
-| Diagnose a failing test or runtime check | Diagnose/fix/verify loop | Preserve failure evidence, apply an authorized minimal fix, rerun narrow then broad checks |
+| Diagnose a failing test or runtime check | Diagnose/fix/verify loop | Preserve failure evidence, apply an authorized fix, rerun the affected check; broaden when impact or evidence requires it |
 
 ## Unit Test Rules
 
@@ -34,5 +34,5 @@
 
 1. Locate `gradlew` in the project root or an ancestor directory; verify that the resolved SDK/test classpath matches the task's target product/version. A successful build against another version does not establish target compatibility.
 2. Prefer module-level test tasks when the module is known.
-3. Run targeted tests before full test suites.
+3. Run targeted tests. Use a full suite only when shared impact, remaining uncertainty, or project requirements warrant it; passing relevant checks completes verification for the current scope.
 4. If dependencies or biz jars are unavailable, report the precheck failure and suggest IDE or environment verification instead of fabricating success.

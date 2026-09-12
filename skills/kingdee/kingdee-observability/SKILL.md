@@ -1,6 +1,6 @@
 ---
 name: kingdee-observability
-description: "Analyze Kingdee Cosmic and Xinghan runtime evidence through redacted offline logs or explicitly authorized read-only queries. Use for Trace reconstruction, exception chains, slow SQL, N+1 patterns, thread-pool symptoms, GC pauses, service timing, and bounded dev/test or production-readonly log diagnosis."
+description: "通过离线日志或已授权的只读查询，诊断金蝶云苍穹/星瀚的 Trace、异常和性能问题。"
 ---
 
 # Kingdee Observability
@@ -27,7 +27,7 @@ An approved query plan authorizes every read inside its exact bounds; do not ask
 2. For query modes, read `references/query-contract.md`, validate a non-secret plan with `scripts/validate_query_plan.py`, then use only a currently configured connector or task-provided client. This skill contains no login or network client.
 3. Keep configured task credentials in the active client/process only. Never echo, save, cache, or copy credentials, cookies, tokens, browser state, or internal URLs into plans or reports.
 4. Analyze retrieved records with `scripts/analyze_logs.py`; never copy raw candidate scripts or disable TLS verification.
-5. Distinguish source facts, derived evidence, and diagnostic inference. Do not claim root cause from a single correlated symptom.
+5. Distinguish source facts, derived evidence, and diagnostic inference. Complete the requested diagnosis with the narrowest supported conclusion, its evidence and remaining gaps; do not claim root cause from a single correlated symptom or require every diagnostic category for every request.
 
 ## Diagnose
 

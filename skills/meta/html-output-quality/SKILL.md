@@ -1,6 +1,6 @@
 ---
 name: html-output-quality
-description: "需要检查本地离线 HTML 报告的数据一致性、敏感信息和视觉结果时使用；不作为普通回答或所有网页的强制生成流程。"
+description: "检查本地离线 HTML 报告的数据、隐私与视觉质量；不负责决定是否生成报告。"
 license: MIT
 metadata:
   author: "anfeng"

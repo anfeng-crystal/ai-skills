@@ -1,6 +1,6 @@
 ---
 name: kingdee-report
-description: "Kingdee Cosmic report development: AbstractReportListDataPlugin data plugins, Algo/DataSet pipelines, precise Algo API signatures, report architecture patterns. Use for 金蝶云苍穹报表插件开发、报表取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析、报表架构选型与 Algo API 精确签名;实体或关键字段未确认时先取证、暂停依赖它们的取数代码生成，不生成占位代码，字段证据交 kingdee-metadata-analyzer,SDK 签名交 kingdee-sdk-helper。"
+description: "开发或审查金蝶云苍穹报表取数、DataSet/Algo 流水线及相关 API；普通表单和操作插件使用 kingdee-cosmic。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -30,7 +30,7 @@ metadata:
 
 ## 快速工作流
 1. 先区分 API 查询、架构分析和取数实现。API 查询与不依赖具体字段的分析无需完整报表合同。具体取数实现须确认报表标识、数据源实体、过滤项、输出列、计算口径、关联与分组；实体或 query/group/sum 关键字段未确认时，先复用项目、缓存和已授权的 `kingdee-metadata-analyzer` 证据，只暂停依赖缺失事实的代码生成，继续独立取证与检查。取证后仍无法确认时，报告 `contract_incomplete` 和最小缺失项；需要用户提供业务信息时再询问。只有用户明确要求架构伪代码时才提供伪代码，且不得写未核实 SDK 签名。
-2. 选架构模式(`references/architecture-patterns.md`):默认 Algo Pipeline(90%);复杂逐行转换用 Map-Based Assembly;成本卷算用 AlgoX。
+2. 按数据形态选架构(`references/architecture-patterns.md`)：查询、关联与聚合能表达时用 Algo Pipeline；复杂逐行转换用 Map-Based Assembly；明确需要 AlgoX 的成本卷算才用 AlgoX。
 3. 写取数:解析 `FilterInfo` → 构建 `QFilter[]` → 各数据源 `queryDataSet` → JOIN/UNION → `groupBy().sum().finish()` → `addField()` 计算列 → 返回 DataSet。`references/algo-api.md` 用于定位候选；使用各 API 前先核对目标版本签名，不凭记忆或未标版本的表格生成。
 4. 按 `references/codegen-checklist.md` 自检:无实例字段、BigDecimal 计算、AlgoKey 唯一、空值安全、NULL 用 `IS NULL`。
 5. Java 编译/运行验证交 `kingdee-testing`；KingScript 按目标声明及 `kingdee-kingscript` 的授权边界验证，不把 Java Gradle 编译套到 TS 文件。字段口径回 `kingdee-metadata-analyzer` 复核。

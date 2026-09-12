@@ -1,6 +1,6 @@
 ---
 name: kingdee-kcs-ops
-description: "金蝶 KCS 运维契约执行：在有官方或本地已验证 API 合同后检查集群或服务状态，生成审计计划，并按用户批准的精确摘要执行、验证或回滚。用于 KCS 控制面查询、服务重启和需可审核变更；COSMIC_HOME 资源更新交给 kingdee-cosmic-devtools。"
+description: "查询金蝶 KCS 控制面状态，或按已批准计划执行服务重启与运维变更；不处理 COSMIC_HOME 资源包。"
 ---
 
 # Kingdee KCS Ops
@@ -9,7 +9,7 @@ description: "金蝶 KCS 运维契约执行：在有官方或本地已验证 API
 
 ## 路由
 
-- 负责 KCS 控制面 `inspect -> plan -> apply-approved -> verify -> rollback`。
+- 负责 KCS 控制面状态查询、计划和批准执行。状态查询以只读证据完成；变更以已批准动作及其验证结果完成，失败时按计划验证或回滚，不要求每次执行全部阶段。
 - `COSMIC_HOME`、工程模板和资源包 staging/apply 交给 `kingdee-cosmic-devtools`。
 - 业务插件、运行诊断和部署验收交给 `kingdee-cosmic` 与 `kingdee-testing`。
 

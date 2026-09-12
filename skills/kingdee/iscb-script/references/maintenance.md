@@ -27,7 +27,7 @@ python3 scripts/validate_outbound_contract.py --contract <contract.json> --paylo
 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 ```
 
-修改 runtime harness、主规则或重要示例后必须运行 `runtime-selftest`；修改 Markdown 中脚本示例后运行 `audit-examples`；主规则、reference、cases 或 validator 变化最终运行 `audit-bundle`。
+只改 description、资料路由或文字编排且脚本语义、校验规则不变时，核对能力、引用与结构并运行 `audit-skill`；不因此触发 runtime 全量回归。修改 runtime harness、影响运行语义的主规则或重要脚本示例后运行 `runtime-selftest`；修改 Markdown 中脚本示例后运行 `audit-examples`；主规则、reference、cases 或 validator 的语义变化最终运行 `audit-bundle`。
 
 ## Runtime Java 基线
 

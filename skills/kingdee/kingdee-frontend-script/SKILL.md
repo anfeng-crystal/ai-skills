@@ -1,6 +1,6 @@
 ---
 name: kingdee-frontend-script
-description: "Kingdee Cosmic frontend page script (browser JS): lifecycle/field/button/table/tree events, control APIs, server communication, PC/mobile extension JS, custom CSS and deterministic lifecycle/style validation. Use for 金蝶云苍穹前端页面脚本、扩展 JS(index.js/index_m.js)、控件事件绑定、字段联动、表格/树渲染、前后端通信、自定义样式与静态校验;独立 KDApi 自定义控件工程转 kingdee-custom-control。"
+description: "编写、修复或校验金蝶云苍穹页面脚本、PC/移动端扩展 JS 和自定义 CSS；独立 KDApi 控件使用 kingdee-custom-control。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -46,7 +46,7 @@ metadata:
    - 生命周期/样式确定性校验:`references/validation-contract.md`
 3. 控件标识、字段 key 不能猜:用设计器或 `kingdee-metadata-analyzer` 确认。
 4. 表格/树操作前必须等待 `onInit()` Promise;嵌套回调用箭头函数保 `this`;`didMount` 注册的监听在 `willUnmount` 配对清理。
-5. 产出前运行 `python3 scripts/validate_frontend.py <file-or-directory>`；控件标识、事件时机和 PC/移动端入口仍需目标版本证据。
+5. 生成或修改 JS/CSS 后，对本次文件运行 `python3 scripts/validate_frontend.py <file-or-directory>`；仅解释 API 或审阅已有结果不为校验新建文件。控件标识、事件时机和 PC/移动端入口仍需目标版本证据，页面验证按当前模式执行。
 
 ## References
 - 事件体系与 7 类控件 API:`references/events-and-api.md`
