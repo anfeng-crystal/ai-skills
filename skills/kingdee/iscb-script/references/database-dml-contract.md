@@ -36,15 +36,17 @@
 | 模式 | 动作 |
 |---|---|
 | `generate` | 生成或修订脚本，不执行外部调用 |
-| `validate` | 运行本地静态/编译/runtime 校验；不等同平台执行 |
+| `validate` | 生成、修改或修复包含必要的本地静态及适用的不执行业务脚本的编译校验；runtime 校验仍须用户明确要求或已在授权范围内，不等同平台执行 |
 | `run-readonly` | 目标、连接、表/实体、过滤范围、结果上限、授权已知时执行只读查询；生产只读契约完整后无需重复确认 |
 | `run-approved` | 仅在环境、资源别名、SQL 目标、数据范围、最大影响行数、预检、回滚/恢复方案和授权引用完整时执行已批准写入；契约完整后不重复确认 |
 
-缺任一契约项时输出 `contract_incomplete` 并停止。运行工具不可用时输出 `generated_not_executed`，不能把生成或静态通过写成平台执行成功。
+按当前动作模式核对其必需契约项；缺项时输出具体 `contract_incomplete`，只阻塞依赖该项的动作。先从已有材料或已授权的只读取证补齐事实，继续可安全完成的分析、预检和审阅稿，不以准备工作代替执行批准。DML 服务流程生成仍须满足下述生成器契约。运行工具不可用时输出 `generated_not_executed`，不能把生成或静态通过写成平台执行成功。
 
 恢复/回滚必须按每条业务记录的真实 before-image、权威历史版本或已验证的逐行旧值映射执行；不能按错误时间窗、当前状态分布或单一常量把一批记录推定恢复成同一旧状态。某行原值不可证明时，将其标成 `unrecoverable_without_evidence` 并停止该行，不得用“最可能的旧值”补齐。恢复 SQL 同样需要主键、当前值 compare-before-restore、精确行数和恢复后逐行复核。
 
 ## DML 服务流程生成器
+
+命令示例中的 `python3` 按当前已核实的解释器替换，Windows 可用 `py -3`；优先进程参数数组传参，路径由当前任务解析，不要求 Bash 或特定 Agent 宿主。
 
 ```text
 python3 scripts/dml_service_flow.py inspect --baseline <current.dts> --sql-file <write.sql> --precheck-sql-file <count.sql> --parameters-file <params.json> --contract-file <contract.json>
@@ -57,7 +59,7 @@ python3 scripts/dml_service_flow.py generate --baseline <current.dts> --sql-file
 - 只更新指定服务流程的指定 Script 节点，保留其他记录、资源、连接 ID 和节点。
 - DML 仅允许单条参数化 INSERT/UPDATE/DELETE；UPDATE/DELETE 强制包含 WHERE。
 - 强制提供独立 `SELECT COUNT...` 预检、参数类型、最大影响行数、回滚方案和授权引用。
-- `inspect` 只返回脱敏结构摘要；`generate` 要求契约中 `approved=true`，只写用户给定的新输出路径，不导入、不发布、不执行。
+- `inspect` 只返回脱敏结构摘要；`generate` 要求契约中 `approved=true`，只写用户给定的新输出路径，不导入、不发布、不执行。此项批准仅授权本地生成，不代替导入、发布或数据库执行批准。
 - 输出已存在时必须显式传 `--overwrite`；基线文件永不原地覆盖。
 
 参数文件结构：`params`、`types`、`precheck_params`、`precheck_types` 四个数组。契约文件至少包含 `approved`、`authorization_ref`、`environment`、`scope`、`rollback_plan`、`max_rows`、`resource_alias`、`flow_number` 和 `node_id`。

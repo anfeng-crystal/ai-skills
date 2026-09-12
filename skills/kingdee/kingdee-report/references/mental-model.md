@@ -1,5 +1,7 @@
 # 报表核心心智模型
 
+以下平台类与调用链用于解释报表结构；生成或修改代码前按 `../SKILL.md` 核对目标版本与本次具体 API，不用未标版本的概览替代目标依赖证据。
+
 ## 1. 单一入口生命周期
 报表取数插件只有一个核心方法 `query(ReportQueryParam, Object) → DataSet`,所有逻辑挂在此。执行链:
 解析 `FilterInfo` → 构建 `QFilter[]` → 查询多个 DataSet → JOIN/UNION → `groupBy().sum().finish()` → `addField()` 计算列 → 返回最终 DataSet。

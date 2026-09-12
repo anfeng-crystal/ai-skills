@@ -3,6 +3,7 @@
 ## Profile
 
 - 本目录确认平台脚本节点可见的官方名称，不代表 bundled engine JAR 已实现或已运行通过。
+- 官方名称也不等于所有产品版本可用；按 `SKILL.md` 使用当前任务版本、目标依赖/声明或注明该版本适用性的官方依据，不能以最新速查覆盖 7.0 等既有目标。本地 manifest 收录不证明兼容。
 - 有详细签名时继续读取 `functions-platform.md`、`functions-platform-services.md`；只有名称而无签名时，先查目标版本官方页面、现有脚本或目标环境，不推断参数。
 - 使用 `check-script --mode platform` 做上下文与安全弱预检；最终以目标平台版本验证为准。
 
@@ -42,4 +43,4 @@
 
 ## 已废弃
 
-`invokeOpenApi`、`queryOpenApi` 已由官方速查标为废弃；维护旧脚本时允许识别，新代码改用目标版本确认的 `OpenAPI.invokeOperation`、`OpenAPI.invokeOperation2` 或 `OpenAPI.queryData`。
+`invokeOpenApi`、`queryOpenApi` 已由所收录官方速查标为废弃；维护旧脚本时允许识别。选用 `OpenAPI.invokeOperation`、`OpenAPI.invokeOperation2` 或 `OpenAPI.queryData` 前须确认目标版本签名和支持范围，不能因最新资料的废弃标记就直接给旧工程换名；相关依据不足只暂停这部分替换。

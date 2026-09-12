@@ -16,6 +16,8 @@
 
 - SQL 类型值转换先选连接、再解析路由。查询目标系统时使用 `use $tar;`，后续 `@ROUTE` 由目标苍穹连接解析；不能把带路由的 SQL 直接交给外部 JDBC 源库。
 - `use $tar;` 是 SQL 编辑器的连接选择指令；脚本类型中的 `$tar` / `$this` 是 `ConnectionWrapper`，两者不能混写。
+- 此处专指 `kd.isc.iscb.platform.core.vc.SQLRule`：`param` 是输入变量，最终返回小写 `result` 变量；每条 SELECT 只允许返回 0 或 1 行。0 行会终止后续 SQL，1 行的列名转为小写上下文变量，后续通过 `#{name}` 引用。不要把它当成返回任意行数的 `query_list`，也不要把这条行数限制套到普通查询函数。
+- SQLRule 的参数非字符串或源/目标类型不一致时，按官方语法显式 `declare name data_type;`；文档列出的类型为 `varchar`、`bigint`、`int`、`decimal`、`nvarchar`。这与脚本数据库函数的 `params/types` 数组是不同入口，不能混用。
 - 同一段 SQL 不同时访问苍穹的多个业务库路由；需要跨路由时，用 `#{临时变量}` 串联多段查询。
 - `SQLRule` 堆栈后接源库 JDBC 驱动，且错误对象含 `@ROUTE`，优先判定为连接未切换；核实 `use $tar;`、源/目标系统和实际路由后再修改，不直接删路由或改脚本类型。
 
@@ -25,6 +27,8 @@
 use $tar;
 SELECT fid AS result FROM target_table@ROUTE WHERE fnumber = #{param};
 ```
+
+示例条件需保证至多命中一行，或按已确认的业务语义及目标方言限制结果。来源：[值转换规则（SQL）](https://developer.kingdee.com/knowledge/specialDetail/136861720890670848?category=137199965671116544&id=6677&type=Knowledge&productLineId=29&lang=zh-CN)，官方知识正文更新于 2025-11-04，未标最低产品版本。连接选择、0/1 行及小写变量规则仅用于该 SQLRule 上下文，目标补丁行为仍需核验。
 
 ## 查询结果
 

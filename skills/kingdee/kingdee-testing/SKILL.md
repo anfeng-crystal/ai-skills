@@ -15,6 +15,8 @@ metadata:
 
 - Use an existing confirmed `kingdee-metadata-analyzer` inventory/cache for tests that depend on entity fields, forms, operations, or plugin mount points; invoke the analyzer only when that evidence is missing, stale, or incomplete.
 - Use `kingdee-sdk-helper` before asserting an SDK signature.
+- Select test base classes, Java toolchain and assertion style from the target project's actual contract. The `SvcUnitTest*` examples are a conditional project profile, not a universal Kingdee SDK requirement; an unsourced API blacklist cannot establish deprecation.
+- 生成或验证平台相关测试前，复用任务已确认的产品/运行版本并核对实际测试依赖。目标 7.0 不能用 8.0 索引、mock 或另一版本 SDK 的编译通过来证明兼容；具体补丁从项目证据确认，不默认取最新补丁，也不为让测试通过升级依赖。目标与类路径版本冲突时先查原因，只暂停依赖该冲突的实现/兼容结论，继续独立检查。
 - Coordinate source fixes with `kingdee-cosmic`; keep this skill responsible for test design, execution, and evidence.
 - Use `kingdee-observability` for multi-log Trace, slow SQL, N+1, thread, or GC analysis.
 
@@ -69,6 +71,7 @@ Read `references/execution-contract.md` before any runtime request or approved w
 - Preserve constants and enums; do not replace missing platform symbols with string literals.
 - Cover meaningful normal, boundary, empty/null, exception, branch, state-transition, and side-effect paths; justify exclusions.
 - Do not invent metadata keys, entry points, runtime success, or dependency availability.
+- 报告编译/类型检查所用 SDK 来源与目标关系；业务逻辑 mock 测试、骨架和静态规则通过不能单独证明平台 API 存在或运行行为兼容。已有目标依赖足以确认本次 API 时不重复索要版本信息；缺少目标依赖时记录未验证项，不以桩类补出不存在的兼容证明。
 - Gradle `test=NO-SOURCE` only proves that no test source was executed; report it separately from passed tests. An upload/restart request also is not deployment completion: wait for the target service state/count and restart timestamp required by the project, then verify the real business entry.
 - Classify newly generated tests as `task-local` or `formal` before writing them. A test is `formal` only when the user explicitly requests test source, or an authorized product fix requires a durable regression and the repository test policy supports it; probes, one-off reproducers, harnesses and fixtures created only for this task are `task-local`. Task-local assets stay outside the deliverable and must be removed by exact attribution before any Git handoff; never delete or rewrite pre-existing tracked tests.
 - Do not stage, commit, push, modify online metadata/configuration, or broaden a runtime contract.

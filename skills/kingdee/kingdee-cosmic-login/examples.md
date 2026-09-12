@@ -1,5 +1,7 @@
 # Cosmic Login 使用示例
 
+以下示例仅演示随附页面会话模块；Cookie/CSRF 只用于目标已确认接受此认证方式的接口。外部 OpenAPI 令牌流程及版本边界见 `reference.md`，不能由登录成功推断任意 kapi 可调用。Shell/slash command 是可选宿主示例；通用入口是当前 Python 解释器与此 Skill 真实目录中的模块。
+
 ## 示例 1: Claude Code 中使用 slash command
 
 ```
@@ -33,12 +35,14 @@ result = auto_login("http://127.0.0.1:8080/ierp", "admin", "<password>")
 if result["success"]:
     cookie = result["cookie"]
     csrf = result["csrf_token"]
-    # 用 cookie 调用苍穹 API...
+    # 仅传给已授权且明确接受页面会话的目标接口
 
 # 检查已有 Cookie 是否还能用
-if not check_session("http://127.0.0.1:8080/ierp", old_cookie):
-    result = auto_login(...)  # 重新登录
+session_ok = check_session("http://127.0.0.1:8080/ierp", old_cookie)
+# False 不能单独证明过期；先结合端点合同、网络状态和脱敏错误核对原因。
 ```
+
+`session_ok` 为 False 时先诊断；证据确认会话失效后，在原有授权范围内继续 `auto_login()`，不重复索要授权。网络或端点不兼容时处理对应原因，不反复登录。
 
 ## 示例 4: 在 shell 脚本中解析状态
 

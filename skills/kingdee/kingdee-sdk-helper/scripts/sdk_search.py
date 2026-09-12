@@ -1,13 +1,63 @@
 import json
 import sys
-import os
 import argparse
+import re
+from pathlib import Path
 
-def load_sdk():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    sdk_path = os.path.join(script_dir, "..", "assets", "sdk.json")
-    with open(sdk_path, 'r', encoding='utf-8') as f:
+
+def load_sdk(path=None):
+    sdk_path = Path(path).expanduser() if path is not None else Path(__file__).resolve().parent.parent / "assets" / "sdk.json"
+    with sdk_path.open('r', encoding='utf-8') as f:
         return json.load(f)
+
+
+def version_parts(value):
+    """Read stated numeric components without inventing a missing patch version."""
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r"(?:Cosmic\s+)?[vV]?(\d+(?:\.\d+)*)", value.strip(), re.IGNORECASE)
+    return tuple(int(part) for part in match.group(1).split('.')) if match else None
+
+
+def version_comparison(index_version, target_version):
+    if target_version is None or (isinstance(target_version, str) and not target_version.strip()):
+        return "target-not-specified"
+    indexed, target = version_parts(index_version), version_parts(target_version)
+    if indexed is None or target is None:
+        return "unknown"
+    if any(left != right for left, right in zip(indexed, target)):
+        return "different-version"
+    if len(indexed) < 3 or len(target) < 3 or len(indexed) != len(target):
+        return "incomplete-version"
+    return "same-version"
+
+
+def evidence_header(sdk, target_version=None):
+    metadata = sdk.get('metadata', {}) if isinstance(sdk, dict) else {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    index_version = metadata.get('version')
+    target_label = target_version if target_version is not None and str(target_version).strip() else "not provided"
+    lines = [
+        "## SDK evidence",
+        f"- Index version: {index_version or 'unknown'}",
+        f"- Index source: {metadata.get('source_url') or 'unknown'}",
+        f"- Index crawl time: {metadata.get('crawl_time') or 'unknown'}",
+        f"- Requested target version: {target_label}",
+        f"- Version comparison: {version_comparison(index_version, target_version)}",
+        "- Project compatibility: unverified",
+        "- Evidence scope: index-candidate; not confirmed-project.",
+        "A matching index version or a unique result does not prove this API is available in the target project. "
+        "Verify candidates against the target project's resolved JARs, same-version documentation or compilation against a classpath matching that target. "
+        "An incomplete version (for example 7.0) does not identify a patch release; no method introduction version is inferred.",
+    ]
+    return "\n".join(lines)
+
+
+def search(sdk, query, limit=10, target_version=None):
+    """Search without filtering other versions, while keeping compatibility unverified."""
+    return evidence_header(sdk, target_version) + "\n\n" + _search_results(sdk, query, limit)
+
 
 def format_class(cls_data):
     lines = []
@@ -45,7 +95,7 @@ def format_class(cls_data):
             
     return "\n".join(lines)
 
-def search(sdk, query, limit=10):
+def _search_results(sdk, query, limit=10):
     query = query.lower()
     matches = []
     
@@ -105,11 +155,17 @@ def search(sdk, query, limit=10):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("query", help="Class name or keyword to search")
+    parser.add_argument("--target-version", help="Requested platform version, e.g. 7.0 or 7.0.13; missing patch stays unknown")
+    parser.add_argument("--sdk-path", type=Path, help="Path to a user-provided SDK index; defaults to the bundled index")
     args = parser.parse_args()
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="backslashreplace")
+    sdk = {}
     
     try:
-        sdk = load_sdk()
-        print(search(sdk, args.query))
+        sdk = load_sdk(args.sdk_path)
+        print(search(sdk, args.query, target_version=args.target_version))
     except Exception as e:
+        print(evidence_header(sdk, args.target_version))
         print(f"Error: {str(e)}")
         sys.exit(1)

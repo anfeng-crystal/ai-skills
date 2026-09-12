@@ -58,7 +58,7 @@ metadata:
 - `*Field` 未知类型保留原始标签，不因白名单缺失判定字段不存在。
 - 插件挂载同时核对 `className`/`oid`、`operation`、`formPage` 和 `pageElement`；类名相同不等于入口相同。
 - 无 `Key/Name/OperationKey` 的 `action=edit` 只能输出无语义标签，不能按顺序推断暂存、提交或审核。
-- 字段不存在只能由完整字段扫描、设计 XML 或目标环境证据证明。
+- 字段不存在只能由完整字段扫描、包含目标对象完整有效祖先/扩展/继承链的设计 XML，或目标运行期元数据证据证明；单份设计期差量 XML 中没有某字段不能证明它不存在。依据和分层规则见 `references/field-evidence.md`。
 
 ## References
 - 取证评分：`references/analysis-rubric.md`

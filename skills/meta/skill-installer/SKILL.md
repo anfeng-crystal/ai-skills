@@ -46,16 +46,14 @@ active checkout 下有四个相关入口。`sync-and-install.mjs` 是同步安�
 
 ### 1. 一站式同步 + 安装 + 诊断（推荐）
 
-```bash
-# 先确定 source root；以下命令均使用 source root/active root 的绝对路径。
-SKILLS_ROOT="${AI_SKILLS_HOME:?set AI_SKILLS_HOME or pass an explicit skills root}"
-ACTIVE_ROOT="$(cd "$SKILLS_ROOT/.." && pwd)"
+先按“入口脚本”中的解析规则确定 source root 和 active root。以下是跨平台参数示意：`<node>` 是已核实的 Node 可执行文件，`<host-home>` 是目标用户目录；优先进程参数数组传参。使用 shell 时按实际 shell 引用含空格路径，PowerShell 调用带引号的可执行文件用 `&`，不依赖 Bash 变量展开或命令替换。
 
+```text
 # dry-run：预览所有操作，不执行
-node "$ACTIVE_ROOT/scripts/sync-and-install.mjs" --tool hermes --dry-run
+<node> <active-root>/scripts/sync-and-install.mjs --tool hermes --dry-run
 
 # apply：执行 pull → install → doctor
-node "$ACTIVE_ROOT/scripts/sync-and-install.mjs" --tool hermes
+<node> <active-root>/scripts/sync-and-install.mjs --tool hermes
 
 # 选项
 #   --home <path>     目标宿主 HOME（默认 $AI_HOST_HOME 或 OS home）
@@ -68,27 +66,25 @@ node "$ACTIVE_ROOT/scripts/sync-and-install.mjs" --tool hermes
 
 ### 2. 仅安装 / 审计链接
 
-```bash
+```text
 # 审计 Hermes 链接（显式不 apply）
-node "$ACTIVE_ROOT/install.mjs" --home "$HOME" --tool hermes --dry-run
+<node> <active-root>/install.mjs --home <host-home> --tool hermes --dry-run
 
 # 根 install.mjs 默认安装；--dry-run 才审计；两者不要混用
-node "$ACTIVE_ROOT/install.mjs" --home "$HOME"
-node "$ACTIVE_ROOT/install.mjs" --home "$HOME" --dry-run
+<node> <active-root>/install.mjs --home <host-home>
+<node> <active-root>/install.mjs --home <host-home> --dry-run
 
 # bin 的 install 先生成计划；确认后只对选定宿主 apply
-node "$SKILLS_ROOT/meta/skill-installer/bin/skill-installer.mjs" install /path/to/local-skill \
-  --source-root "$SKILLS_ROOT" --category auto --tool codex
-node "$SKILLS_ROOT/meta/skill-installer/bin/skill-installer.mjs" install /path/to/local-skill \
-  --source-root "$SKILLS_ROOT" --category auto --tool codex --apply
+<node> <skills-root>/meta/skill-installer/bin/skill-installer.mjs install <local-skill> --source-root <skills-root> --category auto --tool codex
+<node> <skills-root>/meta/skill-installer/bin/skill-installer.mjs install <local-skill> --source-root <skills-root> --category auto --tool codex --apply
 
 # 不指定 --tool 可能把已选分类同步到更大的宿主范围；需要明确收窄时始终指定它。
 ```
 
 ### 3. 仅医生诊断
 
-```bash
-node "$ACTIVE_ROOT/scripts/doctor.mjs" --source-root "$SKILLS_ROOT" --home "$HOME"
+```text
+<node> <active-root>/scripts/doctor.mjs --source-root <skills-root> --home <host-home>
 ```
 
 安装/同步入口用于审计时必须带 `--dry-run`；doctor 本身是只读诊断，无须不存在的参数。真实安装、同步或 pull 只有用户明确要求或已批准方案点名时才执行；执行前确认范围，执行后再次 dry-run 或检查链接。
@@ -105,8 +101,8 @@ node "$ACTIVE_ROOT/scripts/doctor.mjs" --source-root "$SKILLS_ROOT" --home "$HOM
 - `already_linked`、`managed_via_external_dir`：通过。
 - `optional_host_unavailable`：默认全量审计中跳过，不阻塞。
 - `planned`、`ready_to_migrate`：核对待应用计划；既有授权覆盖精确目标与动作时继续，否则请求缺失授权。
-- `missing_skill`、`invalid_source`、`missing_target_root`、`target_exists`：路径/源未修好前阻塞。
-- `real_path_conflict`、`external_symlink_conflict`、`hermes_local_shadow_conflict`：阻塞；报告精确目标，不覆盖。旧 `active/skills` 托管软链接会规划为 `replace_link`。
+- `missing_skill`、`invalid_source`、`missing_target_root`、`target_exists`：路径/源未修好前阻塞对应对象及依赖操作。
+- `real_path_conflict`、`external_symlink_conflict`、`hermes_local_shadow_conflict`：阻塞对应对象及依赖操作；报告精确目标，不覆盖。旧 `active/skills` 托管软链接会规划为 `replace_link`。
 - `orphan_link`：全量同步中发现指向当前 source root 内部但目标已不存在的托管 symlink；`--apply` 时只删除该 symlink。
 - `needs_external_dir_config`：Hermes 需要配置或跳过。
 - `needs_review`：install 被归到 `incoming`；审核/分类前不分发。
@@ -133,11 +129,12 @@ node "$ACTIVE_ROOT/scripts/doctor.mjs" --source-root "$SKILLS_ROOT" --home "$HOM
 
 ### 稳定异常门禁
 
-- Hermes 同名入口、真实目录/外部链接冲突、缺少 `external_dirs` 或 `incoming` 未审核时，报告精确对象并停止，不覆盖、不递归删除；废弃 skill 由源目录的正常变更流程处理。
+- Hermes 同名入口、真实目录/外部链接冲突、缺少 `external_dirs` 或 `incoming` 未审核时，报告精确对象并停止对应对象及依赖操作，不覆盖、不递归删除；废弃 skill 由源目录的正常变更流程处理。
+- 现有入口能独立选定、且授权与检查均完整的其他目标继续完成。共享前置条件失效或入口只能原子执行时，停止该批次并说明具体依赖，不通过拆分规避原有门禁。
 
 ## 输出
 简体中文：
-- 结论：已同步 / 待 apply / 阻塞。
+- 结论：按目标分别报告已同步 / 待 apply / 阻塞，不以一个目标的阻塞代替其他目标的结果。
 - 源目录：解析后的 source root 和 skill 名。
 - 目标：工具和目标根目录。
 - Dry-run：summary 和冲突。

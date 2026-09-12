@@ -1,10 +1,12 @@
 # KSQL 语法规范参考
 
-> 基于《KSQL使用说明》整理，适用于苍穹KSQL引擎（SQL Server / MySQL / Oracle / PostgreSQL / DM / KingBase / TDSQL / Vastbase / GaussDB / GBase / YashanDB / OceanBase）
+> 基于既有《KSQL使用说明》整理的保守语法参考。本次官方核验未取得该说明的版本化正文，以下语法限制及 SQL Server / MySQL / Oracle / PostgreSQL / DM / KingBase / TDSQL / Vastbase / GaussDB / GBase / YashanDB / OceanBase 支持矩阵均未独立核验；不得据此宣称适用于所有苍穹版本、补丁和数据库版本。
 
 ## 1. 概述
 
 KSQL是SQL92的子集，抽取了SQL92的部分语法来满足金蝶ERP产品的最大功能集合。苍穹系统的SQL最终经过KSQL引擎解析翻译为不同数据库的方言SQL。
+
+上段为既有说明的概述，使用前先确认调用入口是否经过 KSQL 翻译，不能据此把数据库方言入口也按本文件处理。当前 `validate_ksql.py` 是本地规则预检；它的通过或拒绝都不能代替目标版本 KSQL 解析器/数据库证据。官方[二开安装包制作](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=475348205593507584&id=43334364940533760&type=Knowledge&productLineId=29&lang=zh-CN)（更新于 2026-07-30，未标最低版本）明确要求安装包上传的 SQL 遵循 KSQL 规范；这不能反向证明本文件列举的全部方言限制已获官方确认。
 
 ## 2. 支持的语句类型
 

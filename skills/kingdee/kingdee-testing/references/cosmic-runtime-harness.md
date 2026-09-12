@@ -26,3 +26,5 @@ Then copy only the relevant template pieces into the business repository after r
 - `ExampleCosmicHarnessTest.java`: JUnit 5 smoke example.
 
 These templates are intentionally platform-light; real Kingdee SDK objects should be mocked or wrapped by project-specific adapters.
+
+骨架/mock 测试只验证本地安排的业务行为，不证明某个苍穹 API 在目标版本可用。涉及平台签名时先核对与任务目标一致的实际 SDK/声明；例如目标 7.0 不能用 8.0 索引或手写桩补出的类代替兼容证据。继续允许生成标明用途的本地骨架，不为证明兼容自动下载 SDK 或连接业务环境。

@@ -33,6 +33,8 @@ py -3 scripts\kddt_devtools.py --help
 
 1. 先用 `inspect --project <工程根目录>` 判断现有工程是否有 `project_flag`、`COSMIC_HOME`、资源 URL 和模板类型。
    本地页面联调必须优先复用当前仓库的启动脚本、production/dev 配置和静态资源；不要为绕过当前启动错误自动另建隔离工程，导致运行上下文失真。
+   内置资产固定为 KDDT `2.3.5-GA`，不是“当前最新版”；先核对项目布局与资源管理方式，按 `references/template-map.md` 的版本范围使用，不能仅替换文档版本号就声称模板已升级。
+   KDDT 版本、`project_flag` 新旧模板与苍穹运行版本不是同一个版本号。复用任务已确认的目标（如 7.0），插件模板里的平台类、重载和依赖须由该目标的实际 SDK/声明或官方适用版本确认；不能因模板生成成功自动改为 8.0。未知兼容性的骨架可作为明确标注的本地候选，继续独立工程工作，不声称已适配目标，不伪填版本或升级依赖。
 2. 创建完整工程用 `create-project`；`project_flag` 可空，空值走旧模板，非空走新模板。
 3. 新增模块用 `add-module`；只解压 `*-sub.zip` 增量模板，并补 `settings.gradle` 与调试工程依赖，不创建完整工程。
 4. 生成插件或服务用 `create-plugin --kind inherit|extend|service`；默认不覆盖同名文件。
@@ -42,7 +44,8 @@ py -3 scripts\kddt_devtools.py --help
 
 适用于用户要求“从 appstore/dev_env 拉取最新资源包”“更新 COSMIC_HOME”“生产/dev 包对比吸收”等场景。
 
-1. 预检目标路径：确认 `COSMIC_HOME`、`mservice-cosmic/lib`、`static-file-service`、磁盘剩余空间、当前进程是否占用目标目录；若目标目录是隐藏目录或受权限限制，先请求/确认写入授权再动手。
+1. 预检目标路径：确认 `COSMIC_HOME`、`mservice-cosmic/lib`、`static-file-service`、磁盘剩余空间、当前进程占用情况和实际写权限。当前任务已授权的更新及其 cache、staging、backup 写入可直接准备，不因目录隐藏而重复确认；实际权限不足、需提权或目标超出授权路径时，暂停对应写入并说明所需授权。apply 仍遵守审核摘要与授权门禁。
+   同时核对目录归属：官方开发助手不通过资源更新覆盖与 `COSMIC_HOME` 重叠的 CosmicStudio 环境目录；此类目录交现有 CosmicStudio 管理，或在授权范围内选择独立资源目录。能读取 Studio 格式下载源，不等于可对 Studio 托管目录 apply，见 `references/env-update.md`。
 2. 预检远端：优先拉取 `update.json`，失败再用 `update.md5`；记录脱敏远端 URL、manifest 类型、包数量、MD5/sha1 摘要和缺失项。服务刚恢复时先做一次只读 manifest 检查，不直接 apply。
 3. 下载必须落到新的 staging 或新目录，不直接覆盖现有 `COSMIC_HOME`。使用 `update-env start --foreground` 便于实时看到失败点；失败后先查 `status` 和 `worker.log`，再用 `resume --foreground` 续传，避免从头下载。
 4. 下载完成后先核验：文件数、总大小、每个 zip/jar 的摘要、是否存在多级目录嵌套、`cus/biz/bos/trd` 是否平铺。发现 `cus/<模块>/<jar>` 这类多级目录时，先生成修正清单并移动到平铺目录，再继续。
@@ -78,7 +81,7 @@ python scripts/kddt_devtools.py update-env rollback --cosmic-home <目标COSMIC_
 - 无项目标识的老工程不能写入 `systemProp.project_flag` 或 `COSMIC_PROJECT_FLAG`，除非用户明确要求迁移工程结构。
 - `update-env start` 只下载到 staging；真实替换必须执行 `update-env apply`。
 - `apply` 前必须有 job manifest、校验记录和备份目录；失败时提示 `rollback`。
-- 远端访问不稳定、下载中断、目录权限异常、文件数为 0、Finder 里看不到包、包落到多级目录、MD5/sha1 不一致时，先停在 staging 并报告失败项；不要猜测成功，也不要清理旧包。
+- 下载、目录或校验异常时暂停 apply，保留旧目标并核对 status、worker.log、实际路径、数量和摘要。瞬时网络错误按既定 resume 流程恢复；目录嵌套按已核验的无冲突清单修正。无安全恢复路径、证据仍不完整或需扩大授权时报告阻塞，不原样重复失败动作。摘要不匹配的包不得 apply；Finder 不可见只触发磁盘路径核验，不单独判定失败，也不清理旧包。
 - 清理重复/低版本包只移动到 `.quarantine`，除非用户明确说“可以清理/删除”；平台扩展点包恢复或隔离后必须核验目标路径是否真的存在/不存在。
 - 输出、manifest 摘要和错误日志必须脱敏 token、Cookie、账号、租户、数据中心、内部 URL、下载签名参数和本地敏感路径。
 - 不把本次排查过程、实现取舍或临时路径写进生成的工程代码注释。

@@ -1,6 +1,6 @@
 # 插件类型 → 基类 → 注册位置速查
 
-选型与挂载入口速查;基类、事件签名、字段标识仍以 `rules/cheat-sheet.md`、`references/event-lifecycle.md`、元数据与 `kingdee-sdk-helper` 为准,不凭本表写最终签名。
+选型与挂载入口速查；`rules/cheat-sheet.md`、`references/event-lifecycle.md` 提供候选，生成前用目标项目依赖/同版 SDK 确认基类与事件签名，用元数据确认字段标识；遵守 `SKILL.md` 的目标版本契约，不凭本表写最终签名。
 
 | 需求场景 | 插件类型 | 基类 | 注册位置 |
 |---|---|---|---|
@@ -14,7 +14,7 @@
 | 反写规则执行时干预 | 单据反写 | `AbstractWriteBackPlugIn` | 单据 → 关联配置 → 反写插件 |
 | 基础资料界面交互 | 基础资料界面 | `AbstractBasePlugIn` | 基础资料 → 表单主实体 → 插件 |
 
-> 报表插件(取数/界面)的实现细节与 Algo 精确签名以 `kingdee-report` skill 为权威入口,本表只用于选型与挂载定位。
+> 报表插件(取数/界面)的实现细节与 Algo 签名检索转 `kingdee-report`；具体 API 仍须匹配目标版本，本表只用于选型与挂载定位。
 
 ## 需求信息采集清单
 

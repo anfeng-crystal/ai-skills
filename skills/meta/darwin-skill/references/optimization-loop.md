@@ -1,14 +1,18 @@
 # 优化循环详细步骤
 
+## 执行与审核模式
+
+按 `SKILL.md` 的能力保留、验证和授权规则执行。用户选择逐阶段审核时，在测试 prompt、基线评估及每个 Skill 完成后等待其确认；用户要求先审方案时，修改前仍须批准。已授权连续优化可完成范围内的评估、修改、验证和下一项，不在阶段之间重复确认。任何模式下，扩范围、独立发布、付费和 Git 动作仍核对相应授权；只读审阅不进入修改循环。
+
 ## Phase 0: 初始化
 
 ```
 1. 确认优化范围：
    - 全部 skills → 扫描当前 source skills 与宿主实际启用目录（如 .agents/skills、.codex/skills）
    - 指定skills → 用户指定列表
-2. 创建 git 分支：auto-optimize/YYYYMMDD-HHMM
-3. 初始化 results.tsv（如不存在）
-4. 读取现有 results.tsv 了解历史优化记录
+2. 保存精确目标的可回滚基线；需创建分支时按当前任务授权和宿主命名规范执行
+3. 需要批量评分或留档时，按 references/evaluation-contract.md 初始化 results.tsv
+4. 有相关 results.tsv 时读取其历史记录
 ```
 
 ## Phase 0.5: 测试Prompt设计
@@ -21,7 +25,7 @@ for each skill:
   2. 设计2-3个测试prompt，覆盖：
      - 最典型的使用场景（happy path）
      - 一个稍复杂或有歧义的场景
-  3. 保存到 skill目录/test-prompts.json：
+  3. 需要留档时保存到任务产物目录的 test-prompts.json；写入 Skill 目录须由本次交付范围明确包含：
      [
        {
          "id": "happy_path",
@@ -40,7 +44,7 @@ for each skill:
      ]
 ```
 
-展示所有测试prompt给用户，**确认后再进入评估**。测试prompt的质量决定了优化方向是否正确。
+检查测试 prompt 是否覆盖目标能力。逐阶段审核模式展示后等待确认；已授权连续优化直接进入评估。评估本身需要新增权限或实质增加成本时，先完成可审核的测试范围再请求批准。
 
 ## Phase 1: 基线评估（Baseline）
 
@@ -84,11 +88,11 @@ for each skill in 优化范围:
 └──────────────────────────┴───────┴──────────────┴──────────────┘
 ```
 
-**暂停等用户确认，再进入优化循环。**
+逐阶段审核模式在此等待用户确认；已授权连续优化直接进入优化循环。
 
 ## Phase 2: 优化循环
 
-用户确认后，按基线分数从低到高排序，先优化最弱的。
+满足当前审核模式的进入条件后，按基线证据确定优先级；分数仅作辅助，不以提分替代任务效果。
 
 ```
 for each skill:
@@ -107,31 +111,31 @@ for each skill:
 
     # Step 3: 执行改进
     编辑 SKILL.md
-    git add + commit（message: "optimize {skill}: {改进摘要}"）
+    仅在已有 Git 提交授权时精确暂存并提交；否则保留本地修改
 
     # Step 4: 重新评估
     - 结构维度：主agent重新打分
-    - 效果维度：spawn独立子agent重跑测试prompt；能用多模型就跑多模型，必须保留 no_skill baseline（关键！不能自己评自己）
+    - 效果维度：使用当前宿主可用的独立评审能力重跑测试 prompt；能用多模型就跑多模型，保留 no_skill baseline。不可用时按基线阶段的 dry_run 合同记录限制，不把主agent自评写成独立实测
 
     # Step 5: 决策
-    if 新总分 > 旧总分:
+    if 有改善证据且能力、正确性、权限和调用路径均无回退:
       status = "keep"，更新旧总分
     else:
       status = "revert"
-      git revert HEAD（创建新commit回滚，不用reset --hard）
+      仅恢复本轮目标改动并保留无关资产；已提交改动的 revert 按 Git 授权执行，不用 reset --hard
       记录失败尝试到 results.tsv
       break  # 该skill到瓶颈，跳到下一个
 
     # Step 6: 日志
     results.tsv 追加行
 
-  # === 每个skill优化完后的人类检查点 ===
+  # === 每个 Skill 优化后的结果核对 ===
   展示该skill的改动摘要：
     - git diff（改前 vs 改后）
     - 分数变化（哪些维度提升/下降）
     - 测试prompt输出对比（如果跑过的话）
-  等用户确认 OK 再继续下一个skill。
-  如果用户说"不好"，回滚到该skill的优化前版本。
+  逐阶段审核模式等用户确认 OK；已授权连续优化直接处理下一项。
+  用户要求撤回时，仅恢复本轮目标改动；已提交回滚仍按 Git 授权执行。
 ```
 
 ## Phase 2.5: 探索性重写（可选）
@@ -140,11 +144,11 @@ for each skill:
 
 ```
 1. 选一个瓶颈skill
-2. git stash 保存当前最优版本
+2. 保存精确目标的当前可回滚版本，不触碰无关改动
 3. 从头重写SKILL.md（不是微调，是重新组织结构和表达方式）
 4. 重新评估
-5. if 重写版 > stash版: 采用重写版
-   else: git stash pop 恢复
+5. if 重写版有改善证据且能力和权限均无回退: 采用重写版
+   else: 仅恢复本轮目标改动；已提交回滚按 Git 授权执行
 ```
 
 这解决了 hill-climbing 的局部最优问题——有时候需要「先拆后建」才能突破瓶颈。

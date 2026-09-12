@@ -59,6 +59,80 @@ class CustomControlCliTests(unittest.TestCase):
             "pc,mobile",
         )
 
+    def use_modern_lifecycle(self, version: str = "7.0.4", hook: str = "onPropsUpdate") -> dict:
+        self.init_project()
+        config_path = self.project / "cosmic-control.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["runtimeContract"] = "modern-kdapi-v7.0.4"
+        config["platformEvidence"]["version"] = version
+        config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
+        entry = self.project / "src" / "index.js"
+        entry.write_text(entry.read_text(encoding="utf-8").replace("update: function", f"{hook}: function"), encoding="utf-8")
+        tests = self.project / "tests" / "control.test.mjs"
+        tests.write_text(tests.read_text(encoding="utf-8").replace("control.update(", f"control.{hook}("), encoding="utf-8")
+        return config
+
+    @unittest.skipUnless(NODE, "node is required for generated project tests")
+    def test_modern_candidate_release_keeps_runtime_unverified(self) -> None:
+        self.use_modern_lifecycle()
+        validation = self.run_cli("validate", "--project", str(self.project))
+        self.assertEqual(validation["errors"], 0)
+        released = self.run_cli("release", "--project", str(self.project), "--output-dir", str(self.root / "release"))
+        manifest = json.loads(Path(released["manifest"]).read_text(encoding="utf-8"))
+        self.assertEqual(manifest["runtimeContract"], "modern-kdapi-v7.0.4")
+        self.assertEqual(manifest["platformEvidence"]["profileStatus"], "candidate")
+        self.assertEqual(manifest["runtimeVerification"]["status"], "not-run")
+        self.assertEqual(manifest["platformInstall"], "not-run")
+
+    def test_modern_specialized_hook_and_official_destroy_name_are_valid(self) -> None:
+        self.use_modern_lifecycle("V8.0.1", "onDataUpdate")
+        entry = self.project / "src" / "index.js"
+        entry.write_text(entry.read_text(encoding="utf-8").replace("destroyed: function", "localDisposeAlias: function"), encoding="utf-8")
+        result = self.run_cli("validate", "--project", str(self.project))
+        codes = {finding["code"] for finding in result["findings"]}
+        self.assertNotIn("CC116", codes)
+        entry.write_text(entry.read_text(encoding="utf-8").replace("destoryed: function", "localDispose: function"), encoding="utf-8")
+        failed = self.run_cli("validate", "--project", str(self.project), expected=1)
+        self.assertIn("CC115", {finding["code"] for finding in failed["findings"]})
+
+    def test_modern_rejects_old_or_unknown_target_versions(self) -> None:
+        config = self.use_modern_lifecycle()
+        config_path = self.project / "cosmic-control.json"
+        for version in ("7.0.3", "7.0", "unknown", "", None):
+            with self.subTest(version=version):
+                config["platformEvidence"]["version"] = version
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                failed = self.run_cli("validate", "--project", str(self.project), expected=1)
+                self.assertIn("CC015", {finding["code"] for finding in failed["findings"]})
+
+    def test_modern_rejects_mixed_or_implicit_profiles(self) -> None:
+        config = self.use_modern_lifecycle()
+        entry = self.project / "src" / "index.js"
+        modern_source = entry.read_text(encoding="utf-8")
+        entry.write_text(modern_source.replace("onPropsUpdate: function", "update: function () {},\n    onPropsUpdate: function"), encoding="utf-8")
+        failed = self.run_cli("validate", "--project", str(self.project), expected=1)
+        self.assertIn("CC127", {finding["code"] for finding in failed["findings"]})
+        entry.write_text(modern_source, encoding="utf-8")
+        config["runtimeContract"] = "classic-kdapi-candidate-v1"
+        (self.project / "cosmic-control.json").write_text(json.dumps(config), encoding="utf-8")
+        failed = self.run_cli("validate", "--project", str(self.project), expected=1)
+        self.assertIn("CC128", {finding["code"] for finding in failed["findings"]})
+
+    def test_modern_verified_profile_still_requires_evidence_for_release(self) -> None:
+        config = self.use_modern_lifecycle()
+        config["platformEvidence"]["profileStatus"] = "verified"
+        config_path = self.project / "cosmic-control.json"
+        for missing in ("source", "verifiedAt"):
+            with self.subTest(missing=missing):
+                config["platformEvidence"]["source"] = "official target-version fixture"
+                config["platformEvidence"]["verifiedAt"] = "2026-09-07"
+                config["platformEvidence"][missing] = ""
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                failed = self.run_cli("validate", "--project", str(self.project), expected=1)
+                self.assertIn("CC010", {finding["code"] for finding in failed["findings"]})
+                self.run_cli("release", "--project", str(self.project), "--output-dir", str(self.root / "release"), expected=2)
+                self.assertFalse((self.root / "release").exists())
+
     @unittest.skipUnless(NODE, "node is required for generated project tests")
     def test_full_release_is_deterministic_and_self_verifying(self) -> None:
         created = self.init_project()

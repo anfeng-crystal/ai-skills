@@ -21,6 +21,8 @@ python3 scripts/metadata_to_ddl.py generate --metadata <schema.json> --dialect p
 
 支持 `postgresql`、`mysql`、`oracle` 的共同基础类型：`string`、`text`、`integer`、`bigint`、`decimal`、`boolean`、`date`、`datetime`、`binary`。生成器只生成 `CREATE TABLE` 和显式索引，不生成连接配置、不读取数据库凭据、不执行 DDL、不生成 DROP/ALTER。
 
+这些是本地生成器的目标方言，不代表已生成符合二开安装包要求的 KSQL。用于二开安装包时还需单独确认 KSQL 兼容性；不能把某数据库方言生成通过写成安装包可移植性验证通过。依据：[二开安装包制作](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=475348205593507584&id=43334364940533760&type=Knowledge&productLineId=29&lang=zh-CN)的 SQL 上传说明（更新于 2026-07-30，未标最低版本）。
+
 输出已存在时必须显式传 `--overwrite`。路径使用 UTF-8，支持空格和当前平台分隔符；POSIX 上也兼容相对 Windows `\` 分隔符。
 
 ## 执行契约

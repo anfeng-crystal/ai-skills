@@ -53,7 +53,7 @@ Agent Skill 生态在快速扩张。Claude Code、Codex、OpenClaw、Trae、Code
 | `program.md` | 本 SKILL.md | 定义评估标准和约束规则 |
 | `train.py` | 每个待优化的 SKILL.md | 被优化的资产，每次实验只改它 |
 | `val_bpb` | 8 维加权总分（满分100） | 可量化的优化目标 |
-| `git ratchet` | keep / revert 机制 | 只保留有改进的 commit |
+| `git ratchet` | keep / revert 机制 | 只保留有改善证据的修改；Git 动作遵守任务授权 |
 | `test set` | test-prompts.json | 验证改进是否真的有效 |
 | 全自主运行 | **人在回路** | Skill 的好坏比 loss 更微妙，需要人的判断 |
 
@@ -66,14 +66,14 @@ Agent Skill 生态在快速扩张。Claude Code、Codex、OpenClaw、Trae、Code
 | 01 | **单一可编辑资产** | 每次只改一个 SKILL.md，变量可控，改进可归因 |
 | 02 | **双重评估** | 结构评分（静态分析）+ 效果验证（跑测试看输出） |
 | 03 | **棘轮机制** | 只保留改进，自动回滚退步，分数只升不降 |
-| 04 | **独立评分** | 评分用子 agent，避免「自己改自己评」的偏差 |
-| 05 | **人在回路** | 每个 Skill 优化完后暂停，用户确认再继续下一个 |
+| 04 | **独立评分** | 优先可用的独立评审；不可用时标记 dry_run，不把自评当独立实测 |
+| 05 | **人在回路** | 用户选择逐阶段审核时保留检查点；已授权连续优化不逐项重复确认 |
 
 ---
 
 ## 8 维度评估体系
 
-总分 100。结构维度靠静态分析（60分），效果维度必须实测（40分）。
+总分 100。结构维度靠静态分析（60分）；效果维度（40分）优先实测，能力不足时记录 dry_run 与限制，不等同实测。
 
 ![Evaluation Rubric](assets/chart-rubric.png)
 
@@ -83,7 +83,7 @@ Agent Skill 生态在快速扩张。Claude Code、Codex、OpenClaw、Trae、Code
 
 ## 优化循环：5 个阶段
 
-系统在每个阶段内自主运行，但在阶段之间暂停等待人类确认。
+用户选择逐阶段审核时，在测试 prompt、基线评估及每个 Skill 完成后等待确认；已授权连续优化可跨阶段继续。先审方案的要求和独立发布、付费、Git 动作的批准条件始终保留。图示仅表示阶段关系，实际检查点按此模式执行。
 
 ![Optimization Lifecycle](assets/chart-phases.png)
 
@@ -91,10 +91,10 @@ Agent Skill 生态在快速扩张。Claude Code、Codex、OpenClaw、Trae、Code
 
 1. 找出得分最低的维度
 2. 针对该维度生成 1 个具体改进方案
-3. 编辑 SKILL.md，git commit
-4. 子 agent 独立重新评分
-5. 新分 > 旧分 → 保留；否则 → git revert
-6. 每个 Skill 完成后暂停，展示 diff + 分数变化，等用户确认
+3. 编辑 SKILL.md；仅在已有 Git 提交授权时精确暂存并提交
+4. 使用可用的独立评审重新评分；不可用时按规则记录 dry_run 与限制
+5. 有改善证据且能力、正确性和权限无回退 → 保留；否则仅恢复本轮目标改动，已提交回滚仍按 Git 授权执行
+6. 展示 diff、效果与分数变化；逐阶段审核模式等待确认，已授权连续优化继续下一项
 
 ---
 
@@ -116,7 +116,7 @@ npx skills add alchaincyf/darwin-skill
 
 安装后在任何支持 Skill 的 Agent 工具中说「优化所有skills」或「优化某个skill」就行。
 
-无法访问 GitHub 的朋友，可以直接下载 zip 包：[darwin-skill.zip](https://pub-161ae4b5ed0644c4a43b5c6412287e03.r2.dev/skills/darwin-skill.zip)，解压后把 SKILL.md 放到 `~/.claude/skills/darwin-skill/` 目录即可。
+离线安装时，使用已取得且审核过的完整 Skill 目录，保留 `SKILL.md`、`references/`、`scripts/` 和所需资产，并放入当前 Agent 声明的 Skill 目录。目录位置由宿主配置决定，不固定到 Claude 或某个操作系统；仅复制 `SKILL.md` 会丢失引用和执行能力。
 
 ---
 

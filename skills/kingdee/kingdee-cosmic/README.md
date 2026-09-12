@@ -318,7 +318,7 @@ kingdee-cosmic/
 ## 依赖
 
 - Python 3.8+
-- Java 8+
+- Java/JDK 按目标苍穹版本、部署形态和项目构建合同选择；8.0 兼容 JDK8/17、未来 9.0+ 最低 JDK17，不能将 Java 8 作为通用前提。见 [JDK 兼容说明](rules/post-check.md)。
 - Gradle Wrapper
 - psycopg2-binary（元数据查询）
 - javalang（代码扫描）

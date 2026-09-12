@@ -16,6 +16,7 @@ metadata:
 - 处理 KSQL 兼容性、预置数据脚本、项目 KSQL 配置、只读数据核对、元数据到 DDL 和已批准的数据变更契约。
 - 字段到物理表/列、类型和 dbRoute 的事实先交 `kingdee-metadata-analyzer`；ISCB 参数化 SQL 或 DML 服务流程交 `iscb-script`。
 - Java 插件实现、KingScript 和安全 POC 分别交 `kingdee-cosmic`、`kingdee-kingscript`、`kingdee-security-review`。
+- 平台/KSQL 特有函数或语法生成前，复用任务已确认的苍穹版本与目标数据库类型/版本，从目标项目或适用版本的官方依据核对；不能把 8.0 资料默认套到 7.0，也不能把苍穹版本与数据库版本混同。本地语法校验或 DDL 生成通过只证明其检查范围；未知条目仅暂停依赖它的实现，继续独立取证和标明状态的审阅稿，不新增数据库执行授权。
 
 ## 模式与契约
 

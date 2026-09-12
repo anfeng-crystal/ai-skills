@@ -18,6 +18,12 @@ Standard target directories:
 
 Paths are shown with `/` as documentation separators; the CLI uses the host platform path rules at runtime.
 
+## Resource Ownership
+
+Before `start` or `apply`, inspect project configuration and the target directory's owner/manager. The [official KDDT update feed](https://tool.kingdee.com/kddt/idea-updatePlugins.xml), in its 2.4.2-GA notes, distinguishes a separate developer-assistant `cosmic_home` from a CosmicStudio environment directory. It directs overlapping directories to CosmicStudio management or to an independent resource directory; `apppackage-cosmic.zip` and `static-file-service.zip` are cited as diagnostic evidence, not proof of ownership by themselves.
+
+This skill's downloader can understand a Studio-style source manifest, but that does not authorize replacing the Studio-managed environment. If the target overlaps, continue read-only diagnosis and any already authorized independent staging; do not apply there through this updater. Resolve another authorized target or use the environment's supported manager. This is a product/tool compatibility boundary, not an OS-specific path rule.
+
 ## Update Sources
 
 The updater first tries `update.json`. If it is not available, it falls back to `update.md5`.
@@ -51,6 +57,8 @@ Recommended operator loop:
 4. Before `apply`, count staged files and compare the manifest item count. For `update.md5` mode, verify the expected package-level zips are present because per-file precision is unavailable.
 5. After `apply`, run the nearest compile or launch check that uses the updated `COSMIC_HOME`.
 
+A download or layout error pauses `apply`, not the already authorized status checks, resume, or verified conflict-free layout repair. Continue that recovery loop when evidence supports it; report a blocker when recovery is unavailable, evidence remains incomplete, or the next action needs authorization beyond the current scope. Do not repeat a failed action unchanged without new evidence.
+
 ## Network Recovery
 
 - Downloads use `.part` files.
@@ -78,6 +86,8 @@ Resource packages must be normalized before apply or manual absorption:
 ## Apply Safety
 
 Before writing into `COSMIC_HOME`, the script checks that the job completed, paths stay inside `COSMIC_HOME`, zips do not contain unsafe paths, and a backup can be created.
+
+An authorized update includes preparation in its cache, staging, and backup directories; a hidden directory alone does not require another confirmation. Stop the affected write if actual permissions are insufficient, privilege elevation is needed, or the target is outside the authorized paths. Applying the update still requires the review summary and authorization defined in `SKILL.md`.
 
 Manual package absorption follows the same safety model:
 

@@ -27,11 +27,12 @@
 - Keep `ResManager.loadKDString` in Flow/plugin layers. BizLogic should return codes or result objects, not localized platform messages.
 - Preserve constants and enums. Do not replace `OperationConst.AUDIT` or similar constants with `"audit"` literals.
 - Before choosing a common utility from another product line, check `cross-module-allowed.json`; otherwise recommend an equivalent utility from the same product line.
-- Before using platform helpers or internal utilities, check `deprecated-api-blacklist.md`.
+- Before using platform helpers or internal utilities, follow the evidence checks in `deprecated-api-blacklist.md`; a legacy candidate entry alone cannot label an API deprecated or trigger automatic replacement.
+- 新增或改动平台调用/测试基类前，确认该 API 在目标实际依赖或适用目标的官方证据中存在；新版本参考卡命中只作候选。mock 的定义不构成目标版本证据，不升级 SDK 来迎合生成的测试。
 
 ## Gradle Verification
 
-1. Locate `gradlew` in the project root or an ancestor directory.
+1. Locate `gradlew` in the project root or an ancestor directory; verify that the resolved SDK/test classpath matches the task's target product/version. A successful build against another version does not establish target compatibility.
 2. Prefer module-level test tasks when the module is known.
 3. Run targeted tests before full test suites.
 4. If dependencies or biz jars are unavailable, report the precheck failure and suggest IDE or environment verification instead of fabricating success.

@@ -1,6 +1,6 @@
 ---
 name: kingdee-kingscript
-description: "用于 KingScript、苍穹脚本插件、SDK 声明与脚本运行错误/风险审查；Java 二开交 kingdee-cosmic，AbstractReportListDataPlugin/Algo DataSet 报表取数交 kingdee-report，ISCB DSL 交 iscb-script，前端页面/扩展 JS 交 kingdee-frontend-script，独立 KDApi 自定义控件交 kingdee-custom-control。"
+description: "用于 KingScript、苍穹脚本插件、SDK 声明与脚本运行错误/风险审查；KingScript 报表插件与 kingdee-report 协作确认取数和 Algo 合同；Java 二开交 kingdee-cosmic，ISCB DSL 交 iscb-script，前端页面/扩展 JS 交 kingdee-frontend-script，独立 KDApi 自定义控件交 kingdee-custom-control。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -14,13 +14,13 @@ metadata:
 ## 触发边界
 - 用户明确涉及 KingScript/Kingscript、苍穹脚本插件、脚本 SDK 声明、脚本运行错误或风险审查时使用。
 - 普通苍穹 Java 插件开发不使用；改用 `kingdee-cosmic`。
-- `AbstractReportListDataPlugin`、Algo/DataSet 报表取数或分组汇总不使用；即使用户建议“放 KingScript”，默认仍交 `kingdee-report`。只有目标环境的 KingScript 声明和现有实现明确支持该报表插件形态时，才按当前证据调整路由。
+- KingScript 报表查询/表单插件由本 skill 处理脚本语法、导入和注册形态，同时使用 `kingdee-report` 核对取数、字段与 Algo 合同。官方已有 TS 继承 `AbstractReportListDataPlugin` 的开发指南，不因出现该基类或 DataSet 就强制转 Java；目标版本仍须有匹配的声明/SDK 证据，新建实现不以已有同类插件为前提。见 `references/official-report-support.md`。
 - ISCB、ISC 脚本、集成云 DSL 或数据集成方案脚本不使用；改用 `iscb-script`。
 - 前端页面/扩展 `index.js`、`index_m.js` 或浏览器端页面脚本不使用；改用 `kingdee-frontend-script`。独立 KDApi 自定义控件源码、生命周期、构建和交付改用 `kingdee-custom-control`。
-- 只说“脚本”但未说明 KingScript/苍穹脚本插件上下文时，先澄清脚本体系，不默认接管。
+- 用户只说“脚本”时，先用当前会话、所附文件、路径、导入和生命周期入口判断脚本体系；证据明确则直接路由。只有仍存在会改变实现结果的多种解释时才询问一次，并继续不依赖该选择的只读检查。
 
 ## 工作流与资源发现
-1. 先确认任务类型：生成脚本、修改脚本、解释 SDK、排查运行错误或风险审查。
+1. 先确认任务类型：生成脚本、修改脚本、解释 SDK、排查运行错误或风险审查；复用用户已确认的产品与目标版本。只确认到 `7.0` 就保留该粒度，不补成 `7.0.13`，不因 `8.0` 示例/声明较新而提升目标；用户指定其他版本时按该目标处理。
 2. 先检查当前项目或工作区里是否已有同类脚本模块、公共函数、共享工具、SDK wrapper、模板或示例实现，能复用时优先复用。
 3. 再读 `references/index.md`，按任务落到 `templates/`、`examples/`、`sdk/` 或 `language/` 的具体入口。
 4. 遇到目录级线索时不能停在目录名；必须继续收敛到该目录下的 `index.md`、`indexes/*.md`、`manifests/index.md` 或目标 `*.md`。
@@ -28,7 +28,7 @@ metadata:
 6. 涉及 SDK 时先读 `references/sdk/index.md`、`references/sdk/strategy.md` 和 `references/sdk/indexes/`，再进入具体 `classes/`、`packages/`、`plugins/`、`microservices/` 卡片。
 7. 涉及语法、关键字、模块、异常处理时先读 `references/language/kingscript/index.md`，再进入对应主题 `*.md`。
 8. 需要示例时先读 `references/examples/index.md`、`references/examples/plugins/index.md`，再按插件类型、事件拆分或场景拆分进入具体示例。
-9. 只有当 skill 内 `references/` 仍不足以确认 API、声明或运行边界时，才降级到当前项目 `.d.ts`、本地 jar/Javadoc 或外部文档。
+9. `references/` 用于定位候选 API；生成或修改平台相关脚本前，先用目标项目依赖、匹配目标实际版本的 `.d.ts`/SDK/JAR/Javadoc 确认本次 API、导入和事件签名，不等到版本冲突才核对。同大版本不同补丁也不自动兼容；补丁未知但目标声明/依赖已能确认本次 API 时可继续。目标与实际依赖冲突时报告冲突，不以另一版本的类型检查或编译通过冒充目标兼容。
 10. 输出前检查事件类型、参数类型、API 归属、字段标识、异常处理、空值边界和复用决策。
 
 - 默认发现顺序：当前项目或工作区已有实现 → `references/index.md` → 对应子目录 `index.md` / `indexes/*.md` / 具体 `*.md`。
@@ -43,7 +43,7 @@ metadata:
 
 ## References
 - 总入口：`references/index.md`
-- 插件基类×事件 / SDK 导入速查：`references/plugin-event-cheatsheet.md`(入口速查;签名仍以 sdk/ 卡片为准)
+- 插件基类×事件 / SDK 导入速查：`references/plugin-event-cheatsheet.md`（入口速查；卡片用于定位，签名须由匹配目标版本的声明/SDK 确认）
 - SDK 查询：`references/sdk/index.md`、`references/sdk/strategy.md`
 - SDK 索引：`references/sdk/indexes/class-index.md`、`references/sdk/indexes/method-index.md`、`references/sdk/indexes/methods-by-name.md`、`references/sdk/indexes/methods-lifecycle.md`、`references/sdk/indexes/plugin-index.md`、`references/sdk/indexes/scenario-index.md`、`references/sdk/indexes/keyword-index.md`
 - SDK 清单：`references/sdk/manifests/index.md`
@@ -51,6 +51,7 @@ metadata:
 - 示例：`references/examples/index.md`、`references/examples/plugins/index.md`
 - 语法：`references/language/kingscript/index.md`
 - 注释规范：`references/comment-policy.md`
+- 官方报表支持与版本边界：`references/official-report-support.md`
 
 ## 代码注释策略
 - 生成或修改 KingScript 时，脚本模块、类、工具函数、公共函数、复杂函数和关键业务分支必须写功能性注释。
@@ -59,9 +60,9 @@ metadata:
 - 简单 getter、简单透传、纯字段拼装不强行写长注释；禁止把排查路径、修改经过或交付口径写进脚本。
 
 ## 契约与门禁
-- 默认只生成、解释、修改建议或风险审查;不部署脚本、不注册插件、不登录真实环境、不执行真实业务动作。
-- 涉及 `BusinessDataServiceHelper`、操作插件、保存、提交、删除、反审核、调度任务、消息发送或 HTTP 出站时,先确认环境、权限、数据范围、幂等性、回滚方案和测试路径;生产环境默认只读分析。
-- 需要真实运行、接口调用或环境验证时,必须由用户明确目标环境和授权边界;未确认时只给本地静态检查建议。
+- 用户要求生成或修改脚本时，完成已授权的本地源码修改、静态检查和不调用真实业务的本地验证；只要求解释、建议或风险审查时不修改文件。默认不部署脚本、不注册插件、不登录真实环境、不执行真实业务动作。
+- 仅阅读或修改包含 `BusinessDataServiceHelper`、操作插件、保存、提交、删除、反审核、调度任务、消息发送或 HTTP 出站 API 的源码，不触发真实执行审批。准备实际执行这些动作前，核对环境、权限、数据范围、幂等性、回滚方案和测试路径；生产环境默认只读分析。
+- 真实运行、接口调用或环境验证必须有用户明确的目标环境和授权边界；复用当前会话已有授权，不要求重复确认。缺少真实执行授权时，只暂停相关真实动作，继续已授权的本地修改、静态检查和独立验证。
 - Cookie、token、session、账号、密码、租户、数据中心、内部 URL、连接串和业务敏感字段值必须脱敏,不写入脚本、注释、输出或日志。
 - 不凭示例猜 API；调用对象方法前必须确认方法属于当前类型或声明继承链。
 - 事件参数不得写成 `any`；声明只给出通用类型时按声明原样使用。
@@ -69,7 +70,7 @@ metadata:
 - `showConfirm` / `confirmCallBack` / `messageBoxClosed` 使用 `MessageBoxClosedEvent`；子页面关闭回调再看 `ClosedCallBackEvent` 或 `BillClosedCallBackEvent`，不能混用。
 - 生成或修改事件方法时，必须核对事件参数类型是否与当前插件基类、生命周期和示例上下文一致；同名事件在不同插件体系下不能混用参数签名。
 - 生成脚本前先确认 import、对象归属和声明入口；拿不准时先回 `references/sdk/indexes/` 和具体类卡，不凭印象补全 API。
-- `references/` 内资料能确认时，不降级到 skill 外资料；只有 skill 内资料不足时，才依次查看当前项目 `.d.ts`、本地 jar/Javadoc、外部文档。
+- `references/` 的发现顺序不代表版本权威；新版或版本不明的卡片始终是目标 API 候选，复用已有有效目标证据，不固定追加人工确认、下载、登录或编译步骤。只暂停依赖未确认签名的实现，继续独立本地检查；实际运行与写入仍遵守原授权。
 - 新增脚本模块、类、工具函数和复杂函数必须写功能性注释。
 - 涉及代码、注释、文档或提交时，署名必须遵守全局规则：不用 AI，统一用 `anfeng`。
 - 当前项目或工作区已有脚本模块、共享工具函数、SDK wrapper、模板或示例能覆盖需求时，不再复制一份同逻辑脚本。

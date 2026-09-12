@@ -1,6 +1,9 @@
 # 报表代码生成规范与验证清单
 
-## 生成顺序
+## Java 生成顺序
+
+以下包声明、注解和 Gradle 项适用于 Java。KingScript 报表使用 `kingdee-kingscript` 的报表查询模板与目标版本 `.d.ts`；共用后续字段、只读、精度和数据集检查，不照搬 Java 语法。
+生成前先复用已确认产品/目标版本，按 `SKILL.md` 核对本次使用的基类、import、事件和 Algo API；`algo-api.md` 与架构示例仅作候选。补丁未知但目标依赖/声明已能确认本次 API 时不机械阻断；未知签名只暂停依赖代码，继续独立工作。
 1. 包声明 + 标准 import 集(见 `algo-api.md`)。
 2. `extends AbstractReportListDataPlugin`。
 3. `private static final Log logger = LogFactory.getLog(...)`。
@@ -33,6 +36,6 @@
 - 字段 key 与报表元数据一致(metadata-analyzer 复核)。
 - 实体编码在目标环境可用。
 - 过滤编码值在基础资料中存在。
-- 编译无语法错误,模块级 Gradle 测试通过(kingdee-testing)。
+- Java 编译无语法错误、适用的模块级 Gradle 测试通过；KingScript 按目标声明和脚本验证路径检查，不要求 TS 通过 Java 编译。
 - BigDecimal 精度正确;大数据量(10 万+ 行)性能可接受。
 - 无实例字段导致的并发串数据。

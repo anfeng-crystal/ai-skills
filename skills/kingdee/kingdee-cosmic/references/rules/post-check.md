@@ -31,7 +31,9 @@ python3 "$KINGDEE_COSMIC_SKILL_ROOT/scripts/cosmic-post-check.py" <生成的文�
 
 检查不会修改 `gradlew` 权限；POSIX 下 wrapper 不可执行时使用 `sh gradlew` 调用。
 
-JDK 兼容判断优先使用项目声明的 `systemProp.jdk.version`、`systemProp.jdk_version` 或 `sourceCompatibility`；金蝶苍穹 JDK8 项目应允许在 JDK8 下执行编译检查，不因 Gradle wrapper 版本被抬高到 JDK17。
+JDK 兼容判断先读取项目声明的 `systemProp.jdk.version`、`systemProp.jdk_version` 或 `sourceCompatibility`，并区分构建启动 JVM、编译目标与部署运行 JVM。已有 JDK8 项目不因 wrapper 版本或新版公告被自动升级；实际启动 JVM 还须满足所用 wrapper 的要求，不能把 `sourceCompatibility=8` 当作 wrapper 必能在 JDK8 启动的证明。
+
+[官方 JDK 调整公告](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=218024718795190528&id=767850225473553920&type=Knowledge&productLineId=29&lang=zh-CN)（更新于 2026-03-17 09:55）说明：苍穹 8.0 支持 JDK17 且为最后兼容 JDK8 的版本，8.0 公有云使用 JDK17、私有云仍可用 JDK8；未来 9.0+ 最低 JDK17。据此核对目标版本与部署形态，不默认“Java 8+”覆盖所有苍穹项目，不擅改旧项目构建目标或取消既有兼容性检查。脚本的 JDK 推断只是检查策略选择，不能代替平台兼容性结论。
 
 ## 严格模式（仅影响 post-lint 阶段）
 

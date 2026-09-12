@@ -54,12 +54,12 @@ Expected block:
 
 ## RC-2605-06 - Deprecated platform API
 
-Trigger when generated or reviewed code calls an API listed in `deprecated-api-blacklist.md`.
+Trigger only when the target SDK annotation/Javadoc or an applicable official migration notice confirms that the exact called overload is deprecated. A legacy candidate entry in `deprecated-api-blacklist.md` triggers source lookup, not this finding.
 
 Expected warning:
 
 ```text
-[P4 禁止] 调用了 @Deprecated 方法
+[已确认废弃] <类与完整重载>：<目标版本与官方/SDK证据>；按项目规则处置
 ```
 
 ## RC-2605-07 - Mockito wildcard import or fake assertion

@@ -53,11 +53,11 @@ This project maps Karpathy's autoresearch directly onto skill optimization:
 | `program.md` | This SKILL.md | Defines evaluation criteria and constraints |
 | `train.py` | Each target SKILL.md | The single editable asset per experiment |
 | `val_bpb` | 8-dimension weighted score (max 100) | Quantifiable optimization target |
-| `git ratchet` | keep / revert mechanism | Only improving commits survive |
+| `git ratchet` | keep / revert mechanism | Keep evidence-backed improvements; Git actions follow task authorization |
 | `test set` | test-prompts.json | Validates whether improvements are real |
 | Fully autonomous | **Human in the loop** | Skill quality is more subjective than loss |
 
-The key difference: autoresearch is fully autonomous (loss is just a number). Skill quality sometimes needs human judgment. So darwin.skill pauses after each skill's optimization cycle, shows you the diff and score delta, and waits for your confirmation.
+Skill quality requires evidence and sometimes human judgment. When the user chooses staged review, darwin.skill waits after test prompts, baseline evaluation, and each skill. An authorized continuous optimization proceeds across these stages without repeated confirmation. Plan-first requests and separate publication, payment, or Git approvals remain binding.
 
 ---
 
@@ -68,8 +68,8 @@ The key difference: autoresearch is fully autonomous (loss is just a number). Sk
 | 01 | **Single editable asset** | One SKILL.md per experiment. One change, one measurement, one decision |
 | 02 | **Dual evaluation** | Structure scoring (static analysis) + effectiveness scoring (live test execution) |
 | 03 | **Ratchet mechanism** | Score can only go up. Regressions are auto-reverted |
-| 04 | **Independent scoring** | The agent that edits is never the agent that scores |
-| 05 | **Human in the loop** | System pauses after each skill. You review, then continue |
+| 04 | **Independent scoring** | Prefer available independent review; when unavailable, label dry_run and never present self-review as an independent live test |
+| 05 | **Human in the loop** | Preserve user-selected review gates; do not repeat approval during authorized continuous work |
 
 ---
 
@@ -85,7 +85,7 @@ Total: 100 points. Structure (60) + Effectiveness (40).
 
 ## The Optimization Cycle
 
-Five phases. Only one is the core.
+Five phases. Only one is the core. The diagram shows stage relationships; review gates follow the selected staged or continuous mode.
 
 ![Optimization Lifecycle](assets/chart-phases-en.png)
 
@@ -93,10 +93,10 @@ Five phases. Only one is the core.
 
 1. Find the lowest-scoring dimension
 2. Generate one targeted improvement
-3. Edit SKILL.md, git commit
-4. Independent sub-agent re-scores
-5. Score up → keep. Score down → git revert
-6. Pause. Show diff + score delta. Wait for human confirmation
+3. Edit SKILL.md; stage exact paths and commit only with existing Git authorization
+4. Re-score with available independent review; otherwise record dry_run and its limitations
+5. Keep evidence-backed improvements without capability, correctness, or permission regressions; otherwise restore only this task's changes, respecting Git authorization for committed changes
+6. Show the diff, outcome evidence, and score delta; wait in staged review mode or continue within existing continuous-work authorization
 
 ---
 
@@ -118,7 +118,7 @@ npx skills add alchaincyf/darwin-skill
 
 After installation, tell your agent: "optimize all skills" or "optimize [skill-name]". Works with any tool that supports the SKILL.md format.
 
-Can't access GitHub? Download the zip: [darwin-skill.zip](https://pub-161ae4b5ed0644c4a43b5c6412287e03.r2.dev/skills/darwin-skill.zip). Extract and place SKILL.md in `~/.claude/skills/darwin-skill/`.
+For offline installation, use an acquired and reviewed complete Skill directory, retaining `SKILL.md`, `references/`, `scripts/`, and required assets. Place it in the current agent's configured Skill directory; do not assume a Claude path or a particular operating system. Copying only `SKILL.md` loses referenced guidance and executable capabilities.
 
 ---
 

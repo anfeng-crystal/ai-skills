@@ -4,19 +4,19 @@
 
 **注意：仅限内部使用**
 
-面向金蝶云苍穹（Kingdee Cloud Cosmic）开发的自动登录工具，提供**自包含、零项目依赖**的登录能力。CLI 完成 RSA 加密认证后只返回非敏感状态；同一 Python 进程可通过 `auto_login()` 取得供后续 OpenAPI / kapi / 元数据接口调用的 `Cookie` 与 `CSRF Token`。
+面向金蝶云苍穹（Kingdee Cloud Cosmic）开发的自动登录工具，提供**自包含、零项目依赖**的页面会话登录能力。CLI 完成 RSA 加密认证后只返回非敏感状态；同一 Python 进程可通过 `auto_login()` 取得 `Cookie` 与 `CSRF Token`，仅供目标合同明确接受页面会话的接口使用。外部 OpenAPI 令牌认证交 `kingdee-openapi-client`；官方依据及本地实现边界见 [reference.md](reference.md)。
 
 ---
 
 ## 📌 概览
 
-`kingdee-cosmic-login` 专门解决**"调任何苍穹接口前，先得有合法登录态"**这一通用前置问题。它把苍穹页面端登录的 3 步 RSA 加密流程（拉数据中心、取公钥、加密提交凭据）封装成一个独立 Python 脚本，无需手工抓包、F12 拷 Cookie，也无需任何项目侧改造。
+`kingdee-cosmic-login` 用于需要页面会话的接口。它把随附实现所使用的 3 步 RSA 加密流程（拉数据中心、取公钥、加密提交凭据）封装成独立 Python 脚本；不同版本、SSO 或认证配置需按目标合同核对，不能把它作为所有苍穹接口的通用前置步骤。
 
 适用场景包括但不限于：自动化测试、CI/CD 鉴权、二开调试脚本、元数据批量探查、HAR 回放、跨环境对比工具等所有"需要先登录再调用苍穹接口"的工作流。它也可以作为 `cosmic-dev`、`cosmic-replay`、`cosmic-hr-knowledge-ingest`、`cosmic-env` 等所有"调用苍穹环境"工具的**共用登录底座**。
 
 ## 🧠 核心能力
 
-- `🔐` **RSA 加密自动登录**：3 步走完整页面端登录协议（getAllDatacenters → getPublicKey → yzjlogin），与浏览器登录完全一致，不依赖私有协议或抓包来的临时 Cookie
+- `🔐` **RSA 加密自动登录**：实现 getAllDatacenters → getPublicKey → yzjlogin 的页面会话流程；其跨版本适用性未获官方通用合同确认，不等同于所有浏览器/SSO 登录方式
 - `🌐` **多数据中心识别**：单数据中心自动选择，多数据中心列出 ID 强制要求显式指定
 - `🔁` **会话有效性探活**：`--check` 模式发轻量请求验证现有 Cookie 是否仍可用，避免重复登录
 - `📦` **零项目依赖**：整个目录可独立拷贝到任何项目使用，仅需 `pip install requests pycryptodome`
@@ -210,13 +210,15 @@ result = auto_login("http://127.0.0.1:8080/ierp", "admin", "<password>")
 if result["success"]:
     cookie = result["cookie"]
     csrf_token = result["csrf_token"]
-    # 用 cookie + csrf 调用任意苍穹接口
+    # 仅供已授权、且目标合同明确接受 Cookie/CSRF 的接口使用
     headers = {"Cookie": cookie, "kd-csrf-token": csrf_token}
 
 # 复用前先探活
-if not check_session("http://127.0.0.1:8080/ierp", old_cookie):
-    result = auto_login("http://127.0.0.1:8080/ierp", "admin", "<password>")
+session_ok = check_session("http://127.0.0.1:8080/ierp", old_cookie)
+# False 不能单独证明过期；先结合端点合同、网络状态和脱敏错误核对原因。
 ```
+
+`session_ok` 为 False 时先诊断；证据确认会话失效后，在原有授权范围内继续调用 `auto_login()`，无须重新索要已经给出的授权。网络或端点不兼容时处理对应原因，不用重复登录代替诊断。
 
 ### 4.3 Shell 脚本中解析状态
 
@@ -283,7 +285,7 @@ LOGIN_FAILED: 用户名或密码错误
 典型用法：
 
 ```bash
-# 例：用 cookie 调元数据 OpenAPI
+# 仅限目标已验证接受页面会话的元数据接口；不是通用 OpenAPI 认证示例
 curl -H "Cookie: $COSMIC_COOKIE" -H "kd-csrf-token: $CSRF" \
      "http://127.0.0.1:8080/ierp/kapi/v2/.../getMetaFields?formId=hspm_ermanfilereform"
 ```
@@ -340,18 +342,18 @@ python cosmic_login.py http://127.0.0.1:8080/ierp admin <password> 100002
 
 ### Q5: 登录成功但调 API 返回 HTTP 403
 
-**原因：** Cookie 合法但当前账号在该数据中心**没有 kapi 调用权限**。
+**可能原因：** 会话失效、目标端点不接受 Cookie 认证、账号权限或网关策略等；仅凭 HTTP 403 不能确认其中一种。
 
-**解决方案：** 在苍穹管理后台 → 用户角色 → 开启对应应用 / OpenAPI 调用权限。
+**处理：** 先核对该端点认证合同及脱敏错误信息。确认会话失效才重新登录；需要应用令牌时转 OpenAPI 客户端；权限配置变更另按目标任务授权处理。
 
 ### Q6: `check_session` 总是返回 False
 
 **可能原因：**
-1. Cookie 已过期（默认会话 30 分钟，不活动会断）
+1. Cookie 已过期（会话时长以目标配置为准；原“默认 30 分钟”未获本轮官方正文核验）
 2. 服务端重启了，之前的 session 全部失效
 3. Cookie 字符串拷贝时多了空格 / 换行
 
-**解决方案：** 直接重新 `auto_login()`，本 Skill 设计上鼓励"过期就重登"而不是手工续期。
+**处理：** `False` 也可能来自网络、认证方式或探测端点不兼容；先区分原因，仅确认会话失效时重新 `auto_login()`。
 
 ### Q7: pycryptodome 在内网机器装不上
 
@@ -382,7 +384,7 @@ pip install rsa
 | `cosmic-replay` | YAML 用例执行前 | 注入到 HAR 回放的 HTTP 头 |
 | `cosmic-hr-knowledge-ingest` | 各阶段元数据采集前 | 反复调 `getMetaFields` / `queryOne` |
 | `cosmic-dev` | 真发 buildMeta / addRule 前 | 调元数据治理 OpenAPI |
-| 自定义脚本 / CI 任务 | 任意苍穹 kapi 调用前 | 直接放进 `headers["Cookie"]` |
+| 自定义脚本 / CI 任务 | 目标已确认接受页面会话的接口调用前 | 按该接口合同传递 Cookie/CSRF |
 
 ---
 

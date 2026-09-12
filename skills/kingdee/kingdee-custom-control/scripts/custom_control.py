@@ -26,6 +26,11 @@ CONFIG_NAME = "cosmic-control.json"
 TEXT_SUFFIXES = {".css", ".html", ".js", ".json", ".md", ".mjs", ".txt", ".xml", ".yml", ".yaml"}
 IDENTIFIER_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$")
+MODERN_RUNTIME_CONTRACT = "modern-kdapi-v7.0.4"
+MODERN_LIFECYCLE_HOOKS = (
+    "onPropsUpdate", "onThemeUpdate", "onDataUpdate", "onLockUpdate",
+    "onCardRowDataUpdate", "onGridRowDataUpdate",
+)
 REGISTER_RE = re.compile(r"KDApi\.register\s*\(\s*(['\"])([^'\"]+)\1")
 RESOURCE_RE = re.compile(
     r"KDApi\.(?:loadFile|getTemplateStringByFilePath)\s*\(\s*(['\"])([^'\"]+)\1"
@@ -331,6 +336,16 @@ def validate_config(config: dict[str, Any], config_path: Path) -> list[Finding]:
             "runtime profile is candidate; target-platform verification is still required",
             config_path,
         )
+    if config.get("runtimeContract") == MODERN_RUNTIME_CONTRACT:
+        raw_version = evidence.get("version") if isinstance(evidence, dict) else None
+        match = re.fullmatch(r"[vV]?(\d+)\.(\d+)(?:\.(\d+))?", raw_version.strip()) if isinstance(raw_version, str) else None
+        version_tuple = tuple(int(part or "0") for part in match.groups()) if match else None
+        if version_tuple is None or version_tuple < (7, 0, 4):
+            add_finding(
+                findings, "error", "CC015",
+                "modern lifecycle requires an explicit target platform version >= 7.0.4",
+                config_path,
+            )
     for raw_path, label in (
         (config.get("sourceDir"), "sourceDir"),
         ((config.get("build") or {}).get("outputDir") if isinstance(config.get("build"), dict) else None, "build.outputDir"),
@@ -540,18 +555,27 @@ def validate_runtime_tree(root: Path, config: dict[str, Any], *, package_stage: 
             "index.js",
             line_number(text, matches[0].start()),
         )
-    for hook in ("init", "update"):
+    modern = config.get("runtimeContract") == MODERN_RUNTIME_CONTRACT
+    modern_hooks = [hook for hook in MODERN_LIFECYCLE_HOOKS if re.search(rf"\b{hook}\s*(?::\s*function|\()", text)]
+    has_update = bool(re.search(r"\bupdate\s*(?::\s*function|\()", text))
+    for hook in (("init",) if modern else ("init", "update")):
         if not re.search(rf"\b{hook}\s*(?::\s*function|\()", text):
             add_finding(findings, "error", "CC114", f"missing {hook} lifecycle hook", "index.js")
+    if modern and not modern_hooks:
+        add_finding(findings, "error", "CC114", "modern profile requires onPropsUpdate or a specialized update lifecycle hook", "index.js")
+    if has_update and (modern or modern_hooks):
+        add_finding(findings, "error", "CC127", "legacy update cannot be used with the modern lifecycle profile/hooks", "index.js")
+    if modern_hooks and not modern:
+        add_finding(findings, "error", "CC128", f"modern lifecycle hooks require explicit runtimeContract {MODERN_RUNTIME_CONTRACT}", "index.js")
     destroy_hooks = [hook for hook in ("destoryed", "destroyed") if re.search(rf"\b{hook}\s*(?::\s*function|\()", text)]
     if not destroy_hooks:
         add_finding(findings, "error", "CC115", "missing destruction lifecycle hook", "index.js")
-    elif len(destroy_hooks) == 1:
+    elif destroy_hooks == ["destroyed"]:
         add_finding(
             findings,
             "warning",
             "CC116",
-            f"only {destroy_hooks[0]} is present; require target-version lifecycle evidence",
+            "only destroyed is present; official KDApi lifecycle is destoryed, require target-version evidence for this alias",
             "index.js",
         )
     features = config.get("features") if isinstance(config.get("features"), dict) else {}

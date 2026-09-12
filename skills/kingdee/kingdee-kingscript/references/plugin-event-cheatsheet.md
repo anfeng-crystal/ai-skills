@@ -1,6 +1,6 @@
 # KingScript 插件基类×事件 / SDK 导入速查
 
-快速定位入口用;最终 API 签名、事件参数类型仍以 `references/sdk/` 与 `references/language/` 的具体卡片为准,不凭本表猜签名。
+快速定位入口用；`sdk/` 与 `language/` 卡片提供检索和写法线索，最终 API、导入和事件参数类型须按 `../SKILL.md` 的已确认目标版本，由匹配的声明/SDK 确认；不凭本表或新版卡片猜目标签名。
 
 ## 插件基类 × 事件
 

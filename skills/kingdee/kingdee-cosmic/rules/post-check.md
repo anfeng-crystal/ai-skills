@@ -11,6 +11,8 @@
 
 ## 默认执行命令
 
+以下命令中的 `python3` 表示当前已核实的 Python 启动器；Windows 可用 `py -3` 或解释器绝对路径，优先进程参数数组传参。Gradle 使用项目自带 wrapper：Windows 为 `gradlew.bat`，macOS/Linux 为 `./gradlew`；检查脚本已按平台选择，不要求安装 Bash。
+
 首次运行或新建隔离环境时，按锁定版本安装最小解析依赖：
 
 ```bash
@@ -29,7 +31,9 @@ python3 <SKILL_ROOT>/scripts/cosmic-post-check.py <生成的文件或目录> --f
 
 检查不会修改 `gradlew` 权限；POSIX 下 wrapper 不可执行时使用 `sh gradlew` 调用。
 
-JDK 兼容判断优先使用项目声明的 `systemProp.jdk.version`、`systemProp.jdk_version` 或 `sourceCompatibility`；金蝶苍穹 JDK8 项目应允许在 JDK8 下执行编译检查，不因 Gradle wrapper 版本被抬高到 JDK17。
+JDK 兼容判断先读取项目声明的 `systemProp.jdk.version`、`systemProp.jdk_version` 或 `sourceCompatibility`，并区分构建启动 JVM、编译目标与部署运行 JVM。已有 JDK8 项目不因 wrapper 版本或新版公告被自动升级；实际启动 JVM 还须满足所用 wrapper 的要求，不能把 `sourceCompatibility=8` 当作 wrapper 必能在 JDK8 启动的证明。
+
+[官方 JDK 调整公告](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=218024718795190528&id=767850225473553920&type=Knowledge&productLineId=29&lang=zh-CN)（更新于 2026-03-17 09:55）说明：苍穹 8.0 支持 JDK17 且为最后兼容 JDK8 的版本，8.0 公有云使用 JDK17、私有云仍可用 JDK8；未来 9.0+ 最低 JDK17。据此核对目标版本与部署形态，不默认“Java 8+”覆盖所有苍穹项目，不擅改旧项目构建目标或取消既有兼容性检查。脚本的 JDK 推断只是检查策略选择，不能代替平台兼容性结论。
 
 ## 严格模式（仅影响 post-lint 阶段）
 
@@ -123,5 +127,6 @@ AI 应：
 ## 证据驱动的停止条件
 
 - 每轮修复后比较编译/lint findings、错误位置、失败类型和测试结果；只有产生可区分的新证据，且修复仍在当前任务契约内，才继续自动修复。
-- 出现以下任一情况立即停止并报告剩余 findings：同一错误重复且没有新的根因证据；错误/回归数量不降反升；修复需要猜 SDK/元数据事实；改动将越出批准范围；需要外部授权、破坏性动作或高风险契约变更。
+- 同一错误重复且无新根因证据，或修复引入新增错误时，停止沿当前假设继续改写；先核对失败证据、定位新增影响，必要时撤回本轮可归因改动，并继续范围内的只读取证与已授权本地检查。错误数量不降本身不是结束任务的依据；获得支持下一步的新证据且仍在授权范围内时继续修复。
+- 修复依赖尚未确认的 SDK/元数据事实时，只暂停依赖该事实的改写并继续取证。下一步将越出批准范围、缺少外部授权，或涉及未批准的破坏性动作、高风险契约变更时，暂停相关动作并报告最小待决策项；不阻断独立且已授权的工作。
 - 只剩无法由当前证据判定的 `ERROR` 时，报告已尝试动作、最后证据、阻塞项和最小人工决策；不按固定轮数假装完成或强行改写。

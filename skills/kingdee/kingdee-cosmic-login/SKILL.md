@@ -14,6 +14,7 @@ metadata:
 ## 触发与路由
 - 需要枚举数据中心、登录苍穹或校验 Cookie/CSRF 时使用。
 - 本 skill 只返回鉴权结果；API、元数据、测试、诊断或业务写入仍由发起任务负责。
+- 此模块实现页面会话流程，端点与版本适配边界见 `reference.md`；不把 Cookie/CSRF 假定为所有 kapi 的认证方式。外部 OpenAPI 的增强型 Token / 旧应用令牌流程交 `kingdee-openapi-client`。
 
 ## 契约
 | 模式 | 输入 | 输出 |
