@@ -26,6 +26,7 @@
 | rpt-gen 65 实战报表源码 | `exclude` 原文 | 仅 `publish` 已脱敏的模式/签名(已落入 kingdee-report,无业务字段) |
 | ISC 90+ 错误库文本 | `exclude` | 低增量诊断 skill 及其两张路由表已移除，发布集不含该错误库原文或改写目录 |
 | Algo/SDK 方法签名 | `publish` | 已在 kingdee-report/算子文档中以手写签名表呈现,非 sdk.json 原文搬运 |
+| `kingdee-metadata-change/knowledge/dev-current` | `publish` | 用户于 2026-10-04 明确允许按当前内容随 ai-skills 公开发布；含开发环境元数据定义，13 个文件约 17 MB，保留原始哈希用于离线校验 |
 
 ## 失败条件(发布门禁)
 - 任一"待授权"项在用户确认前被标 `publish` → 停止发布。

@@ -1,0 +1,51 @@
+{
+  "knowledge_version": 2,
+  "source": {
+    "environment": "dev",
+    "snapshot_manifest_sha256": "19795124de0be796af346d6eba21fa9442e53e06eac80e1e76cee807ed01dc46",
+    "snapshot_captured_at_utc": "2026-09-20T07:44:08.939443+00:00",
+    "template_filter": "fistemplate='1'"
+  },
+  "status": "observed",
+  "authoring_verified_contracts": 0,
+  "counts": {
+    "entity_node_types": 175,
+    "form_node_types": 218,
+    "control_types": 142,
+    "models": 17,
+    "binding_combinations": 678,
+    "operation_binding_combinations": 43,
+    "form_action_binding_combinations": 133,
+    "identity_contracts": 393,
+    "localization_term_contracts": 4,
+    "mainentity_columns": 24
+  },
+  "payload_sha256": {
+    "entity-types.json": "82ba442f819af273f303dc3a9fab7efc1ba0c2535da3fe45cc7dd2dd34928883",
+    "form-types.json": "03dbbd8f6d339f62454c8b609a30b2895da27f46b4ae0583c2999d68ee734eaa",
+    "control-types.json": "74c8fc007be340dba286fb42f34db1b4d3d97b75fc5c907b3d9af6e5249c4799",
+    "model-matrix.json": "d5b479225e0b7fba88864cf71a1b3a78744c1cada0311d70c555023972e91d81",
+    "binding-matrix.json": "daa2d2d61096abf8ab85066ee297c8744955ca78fe5a6009fd9ee3a273f5b9f4",
+    "identity-contracts.json": "793fb5da37bde1aee4f8774fea17ded658990960e62492bb9bb8454d858a836a",
+    "localization-term-contracts.json": "9f9f6e32262342838c270170ab3596d6832ce960446df0c4cea752715ff01c14",
+    "mainentity-contract.json": "916c8b4de8c6b78b616d39bf561a9833f2d8d43e7f5b2cd84d2ae7d562f14ed0"
+  },
+  "standard_record_files": {
+    "standard-entity.jsonl.gz": {
+      "sha256": "0ad7305aa1e969d5e76336f57b8960d6c306e5b919c166762dc6d1e29db7e3c6",
+      "bytes": 2404556
+    },
+    "standard-form.jsonl.gz": {
+      "sha256": "b4952f65759727c1c9aab75524362eec0e0594e5caef0881ca8810b2c0ebc4d8",
+      "bytes": 3425419
+    },
+    "standard-mainentity.jsonl.gz": {
+      "sha256": "13e54111da9e5c9dc34b60b116516674d1507ae05451d028a2163fa82f21cb32",
+      "bytes": 23813
+    },
+    "standard-reference-registry.jsonl.gz": {
+      "sha256": "0d1efee83e38d67b7e467c54969b1d6f5e76375d0ca7e8aba9015540ed982908",
+      "bytes": 214
+    }
+  }
+}
