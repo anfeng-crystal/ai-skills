@@ -17,7 +17,8 @@
 - `initialize`：做轻量初始化；不要注册监听，不要做 UI 可见性/启用状态逻辑。
 - `registerListener`：只注册监听；不要依赖已绑定的数据，不要在这里 `model.getValue(...)`。
 - `createNewData` / `loadData` / `afterLoadData`：做数据包初始化、补字段、加载后整理。
-- `beforeBindData` / `afterBindData`：处理绑定前后和 UI 状态；不要在绑定阶段改数据对象。
+- `beforeBindData`：设置参与绑定的精度等视图属性；直接设置控件状态会被后续绑定清空。字段初始化优先在 `afterCreateNewData` 完成，绑定前改值会置数据修改标志。
+- `afterBindData`：根据已有字段值设置可见、可用等界面状态；不要在此修改字段值。
 - 操作插件：先区分事务前、事务中、事务后；明确规则优先放校验器。
 - 转换 / 反写插件：先看当前是在“转换阶段”还是“回写阶段”，再判断事件位置。
 
@@ -39,8 +40,12 @@ flowchart TD
     I --> J["afterBindData"]
     J --> K["propertyChanged / click / beforeDoOperation / afterDoOperation"]
     K --> L["beforeClosed"]
-    L --> M["destory"]
+    L -->|取消关闭| K
+    L -->|完成关闭| M["destory"]
+    M --> N["pageRelease"]
 ```
+
+关闭段描述正常关闭路径：`beforeClosed` 时界面资源仍存在，可用 `BeforeClosedEvent.setCancel(true)` 取消关闭；取消后不能据图继续推定进入关闭后释放。`destory` 比 `pageRelease` 先触发，两者用于释放插件创建的资源；`destory` 时表单上下文可能已销毁，不要在关闭后的释放阶段读取表单信息或补做关闭校验。正文未承诺浏览器异常退出、断网等场景一定触发全部回调。
 
 ### 放置策略
 
@@ -48,10 +53,17 @@ flowchart TD
 |---|---|---|
 | `initialize` | 轻量初始化、上下文准备 | 监听注册、UI 状态逻辑 |
 | `registerListener` | `add*Listener`、监听器注册 | `model.getValue(...)`、联动赋值 |
-| `createNewData` | 新建默认值、数据包初始化 | 控件可见性 / 启用状态 |
+| `createNewData` / `afterCreateNewData` | 创建数据包、调整新建默认值；初始计算显式完成 | 依赖初始化自动触发 `propertyChanged`、控件可见性 / 启用状态 |
 | `afterLoadData` | 已有单据加载后整理 | 事务级校验 |
-| `beforeBindData` / `afterBindData` | UI 刷新前后、界面状态控制 | `setValue(...)`、改数据包 |
+| `beforeBindData` | 参与绑定的精度等视图属性 | 直接设置可见/可用状态；把默认值移到这里导致数据修改标志 |
+| `afterBindData` | 根据已加载值设置可见/可用状态 | `setValue(...)`、初始化字段赋值 |
 | `propertyChanged` | 字段联动、即时补值 | 跨事务级复杂状态流转 |
+| `beforeClosed` | 在界面资源仍可用时读取关闭校验所需信息，必要时取消关闭 | 把取消关闭视为已完成关闭 |
+| `destory` / `pageRelease` | 释放插件创建的资源 | 读取表单信息、补做关闭校验 |
+
+表单依据：[初始化事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222735399012056064&productLineId=29)、[绑定前事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222740062122405120&productLineId=29)、[绑定后事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222741078570036480&productLineId=29)。具体控件属性仍核对目标 SDK；不把默认放置策略当作所有版本的 API 禁令。
+
+关闭事件依据：[beforeClosed](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222768769984991488&productLineId=29)（2026-07-31 更新）、[destory](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222769424095135488&productLineId=29)（2024-04-17 更新）、[pageRelease](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222769921389358336&productLineId=29)（2026-07-31 更新）。正文未给完整版本范围；生成实现前仍核对目标 SDK。
 
 ## 列表插件
 
@@ -163,7 +175,7 @@ flowchart TD
 | `preparePropertys` / `beforeReadSourceBill` | 补字段准备 | 直接做反写结果修正 |
 | `beforeExecWriteBackRule` / `afterCalcWriteValue` | 控制规则是否执行、修正反写值 | 事务补偿逻辑 |
 | `beforeExcessCheck` / `afterExcessCheck` | 超额校验、提示策略 | 一刀切取消全部检查 |
-| `beforeSaveTrans` / `rollbackSave` | 外部补偿、第三方一致性闭环 | 忽略失败回滚 |
+| `beforeSaveTrans` / `rollbackSave` | 保存事务前预读数据、接收保存失败通知 | 把外部写入当成原子事务；跨库异步保存不能靠抛异常回滚，见[反写边界](../base/plugin/plugin-writeback.md) |
 | `finishWriteBack` | 释放网控、缓存句柄等资源 | 留资源不释放 |
 
 ## 常见错位速查
@@ -172,7 +184,7 @@ flowchart TD
 |---|---|---|
 | 在 `initialize()` 中注册监听或写 UI 状态 | 生命周期过早，逻辑失效或错时 | `registerListener` / `afterBindData` |
 | 在 `registerListener` 中读模型值 | 数据尚未绑定 | `afterBindData` / `propertyChanged` |
-| 在 `beforeBindData` / `afterBindData` 中 `setValue(...)` | 绑定阶段改数据，容易出错 | `createNewData` / `afterLoadData` / `propertyChanged` / 保存前 |
+| 在绑定阶段补新建默认值或初始联动 | `beforeBindData` 改值置修改标志；`afterBindData` 不用于字段赋值 | `afterCreateNewData` 显式计算与赋值；交互联动放 `propertyChanged` |
 | 在 UI 插件中承担事务级校验或状态流转 | 与服务端状态机冲突 | 操作插件 |
 | 把“业务上说反写”直接理解成反写插件 | 场景误判 | 先判断是不是普通实体更新，只有明确插件语义时才走反写插件 |
 

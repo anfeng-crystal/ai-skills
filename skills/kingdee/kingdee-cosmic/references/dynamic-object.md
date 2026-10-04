@@ -2,16 +2,16 @@
 
 ## TL;DR
 - 适用：`DynamicObject` 安全取值、分录提取、批量扁平化和序列化。
-- 先抓：优先 `DynamicObjectUtils`，避免原生 `get()` + 强转连写导致空指针和类型错误。
-- 跳转：看字段结构/属性元数据改读 `entity-metadata.md`；查询取数改读 `query-dataset.md`。
+- 先抓：项目已提供且核实可用时优先 `DynamicObjectUtils`；无此封装或需核原生空值/Key行为时，读 [原生数据包合同](base/sdk/sdk-dynamic-object.md)。
+- 跳转：看字段结构/属性元数据改读 [实体元数据](adv/entity-metadata.md)；查询取数改读 `query-dataset.md`。
 - 继续读全文：当你要写深路径取值、批量提取或克隆/状态判断代码时。
 
 ## 概述
-`DynamicObject` 是苍穹数据的核心载体（内存中的数据包）。`DynamicObjectUtils` (位于 `kd.cd.common.util`) 提供了对这些对象及其集合的高效、安全操作。由于原生 API 容易引发 `NullPointerException` 或类型转换异常，推荐一律使用工具类进行数据存取。
+`DynamicObject` 是苍穹数据的核心载体（内存中的数据包）。`DynamicObjectUtils` (位于 `kd.cd.common.util`) 提供了对这些对象及其集合的高效、安全操作。以下工具类方法需由当前项目的封装依赖确认；封装可用时优先复用，不因它在原生 SDK 中缺席而阻塞。原生读写及 null/0/默认值区别见 [DynamicObject 原生合同](base/sdk/sdk-dynamic-object.md)，不能假定工具名中的“安全”会保留所有业务空值语义。
 
 > **适用边界**
 > ✅ 适用：DynamicObject 安全取值/批量提取/集合操作。
-> ❌ 不适用：元数据结构解析请用 `entity-metadata.md`；查询构建请用 `query-dataset.md`。
+> ❌ 不适用：元数据结构解析请用 [实体元数据](adv/entity-metadata.md)；查询构建请用 `query-dataset.md`。
 
 ## 核心类
 - **`kd.bos.dataentity.entity.DynamicObject`**: 基础数据载体（单对象）。

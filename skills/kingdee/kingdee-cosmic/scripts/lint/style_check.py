@@ -85,9 +85,9 @@ STYLE_RULES = [
     {
         "pattern": r"\bthrow\s+new\s+(?:(?:java\.lang\.)?RuntimeException|(?:java\.lang\.)?IllegalArgumentException|(?:java\.lang\.)?IllegalStateException)\b",
         "rule_id": "STYLE-018",
-        "severity": Severity.ERROR,
-        "message": "业务异常应统一使用 KDBizException，不要直接抛 RuntimeException/IllegalArgumentException/IllegalStateException",
-        "fix_hint": "改为 throw new KDBizException(new ErrorCode(...))；若为包装异常，保留原始 cause",
+        "severity": Severity.WARNING,
+        "message": "此异常类型需结合语义核对；平台业务异常推荐使用 KDException 体系",
+        "fix_hint": "先区分业务拒绝与程序参数/状态错误；业务异常可用 KDBizException 或合适的 KDException 子类，通用参数错误保留既有合同；包装异常保留原始 cause，不要机械替换",
     },
     {
         "pattern": r"\bnew\s+Thread\s*\(",

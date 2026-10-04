@@ -15,19 +15,6 @@ import java.util.Map;
  */
 public class BatchImportPluginTemplate extends BatchImportPlugin {
 
-    /**
-     * 触发时机: 在需要了解当前插件可访问上下文能力时调用。
-     * 参数要点: 无入参；仅展示当前插件可通过 this. 访问的方法能力。
-     * 典型用途: 作为模板提示，指导在各事件内选择正确的上下文 API。
-     */
-    private void getContextSample() {
-        // this.getContext();
-        // this.getLogger();
-        // this.getBatchSize();
-        // this.refreshHeartbeat();
-        // this.call();
-    }
-
     private static final int BATCH_SIZE = 200;
     private static final String FIELD_BILL_STATUS = "billstatus";
     private static final String FIELD_BILL_NO = "billno";
@@ -42,7 +29,6 @@ public class BatchImportPluginTemplate extends BatchImportPlugin {
      */
     @Override
     protected int getBatchImportSize() {
-        super.getBatchImportSize();
         return BATCH_SIZE;
     }
 
@@ -53,7 +39,6 @@ public class BatchImportPluginTemplate extends BatchImportPlugin {
      */
     @Override
     protected boolean isForceBatch() {
-        super.isForceBatch();
         return true;
     }
 
@@ -63,11 +48,10 @@ public class BatchImportPluginTemplate extends BatchImportPlugin {
      * - rowdatas: 当前批次行数据。
      * - logger: 导入日志记录器，用于记录行级失败原因。
      * 典型用途: 批量校验、过滤非法数据、自定义保存逻辑。
-     * 返回值: 返回 ApiResult 表示自定义处理结果，返回 null 由框架继续默认保存流程。
+     * 返回值: 原样返回默认保存结果；空批由默认实现返回 null，不会再次保存。
      */
     @Override
     protected ApiResult save(List<ImportBillData> rowdatas, ImportLogger logger) {
-        super.save(rowdatas, logger);
         Iterator<ImportBillData> iterator = rowdatas.iterator();
         while (iterator.hasNext()) {
             ImportBillData data = iterator.next();
@@ -77,17 +61,16 @@ public class BatchImportPluginTemplate extends BatchImportPlugin {
             String billNo = rowData == null ? null : String.valueOf(rowData.get(FIELD_BILL_NO));
             if (name == null) {
                 logger.log(data.getStartIndex(), "名称不能为空").fail();
+                logger.signTotalRow(data.getEndIndex() - data.getStartIndex() + 1);
                 iterator.remove();
                 continue;
             }
             if ("A".equalsIgnoreCase(billStatus)) {
                 logger.log(data.getStartIndex(), "单据" + billNo + "为暂存状态，不允许导入").fail();
+                logger.signTotalRow(data.getEndIndex() - data.getStartIndex() + 1);
                 iterator.remove();
             }
         }
-        if (rowdatas.isEmpty()) {
-            return ApiResult.fail("IMPORT_EMPTY", "当前批次无可保存数据");
-        }
-        return null;
+        return super.save(rowdatas, logger);
     }
 }

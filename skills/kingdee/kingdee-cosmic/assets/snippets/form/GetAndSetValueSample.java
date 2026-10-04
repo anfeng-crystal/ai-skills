@@ -124,7 +124,8 @@ public class GetAndSetValueSample extends AbstractFormPluginExt {
 
     public void appendEntryRowByObject() {
         DynamicObjectCollection entryRows = getModel().getEntryEntity(ENTRY_KEY);
-        DynamicObject row = entryRows.addNew();
+        // 先构造未加入集合的行模板，由 createNewEntryRow 完成新增。
+        DynamicObject row = new DynamicObject(entryRows.getDynamicObjectType());
         row.set(FIELD_QTY, BigDecimalUtils.valueOf(1));
         // 基础资料赋值方式1：从缓存加载基础资料对象后再 set
         DynamicObject supplier = BusinessDataServiceHelper.loadSingleFromCache(10001L, "bd_supplier", "id");

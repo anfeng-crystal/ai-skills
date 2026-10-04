@@ -29,8 +29,8 @@ import java.util.Map;
  * 生命周期方法执行顺序：
  * 1. afterGetSourceData  —— 转换执行前触发，拿到扁平化源数据行，适合源数据预校验/拦截；
  * 2. afterCreateTarget   —— 目标单创建完成后触发（字段映射前），适合自动填充分录行；
- * 3. afterFieldMapping   —— 每对"源→目标"映射完成后逐一触发，适合逐单补值/动态新增分录行；
- * 4. afterCreateLink     —— 建立单据关联后触发，适合防止重复下推/关联数据清理；
+ * 3. afterFieldMapping   —— 字段映射完成后触发，事件携带目标集合，适合遍历补值/动态新增分录行；
+ * 4. afterCreateLink     —— 目标单关联子实体记录源单信息后触发，适合补充关联携带数据；
  * 5. afterConvert        —— 整批转换完成后触发，可拿到全部目标单 + 源单行，适合跨单汇总/补字段/校验。
  * <p>
  * <b>注意：本文件覆盖转换插件"内部"生命周期；外部编程式下推/链路追踪请看 BotpTracePushSample。</b>
@@ -103,11 +103,11 @@ public class SampleConvertPlugin extends AbstractConvertPlugIn {
     }
 
     // ===================================================================
-    //  三、afterFieldMapping —— 每对映射逐一触发，映射后补值
+    //  三、afterFieldMapping —— 字段映射完成后，遍历目标集合补值
     // ===================================================================
 
     /**
-     * 特点：每对「源→目标」映射完成后逐一触发，目标单已有映射值，适合逐单补值。
+     * 特点：字段映射完成后触发，目标集合可能含多张单据，需遍历处理，不能按单对映射事件理解。
      * <p>
      * 可用数据：
      * - e.getTargetExtDataEntitySet().FindByEntityKey(entityName) → 目标单数组
@@ -115,8 +115,8 @@ public class SampleConvertPlugin extends AbstractConvertPlugIn {
      * - 目标单字段已完成映射赋值
      * <p>
      * 与 afterConvert 的区别：
-     * - afterFieldMapping 逐对映射触发 → 逐单补值/动态新增分录行
-     * - afterConvert 整批触发 → 跨单汇总/拆分/合并
+     * - afterFieldMapping 位于字段赋值后 → 补值/动态新增分录行
+     * - afterConvert 位于转换流程末尾 → 对生成的目标数据包作最终调整
      * <p>
      * 适合操作：简单字段补值、清空并重建分录行、源单行程展开为目标多行
      * <p>
@@ -141,13 +141,13 @@ public class SampleConvertPlugin extends AbstractConvertPlugIn {
     // ===================================================================
 
     /**
-     * 特点：源单→目标单关联关系（lk 表）已写入，可据此做去重/清理。
+     * 特点：内存中的目标单关联子实体已记录源单信息，目标数据包尚未保存入库。
      * <p>
      * 可用数据：
      * - e.getTargetExtDataEntitySet().getExtDataEntityMap().get(entityName) → 目标单列表
-     * - 关联关系已建立，可查询 lk 表判断是否重复下推
+     * - 本次来源信息应从目标数据包读取；查库只能检查此前已保存的下推记录
      * <p>
-     * 适合操作：防止重复下推（查已下推记录 → removeIf 移除重复行）
+     * 适合操作：依据当前来源补充携带数据；历史去重需另行核对已保存记录，不能据此认定本次关联已落库
      * <p>
      * 实战场景：暂估应付单多次下推时扣款项只需首次携带
      */
@@ -164,7 +164,7 @@ public class SampleConvertPlugin extends AbstractConvertPlugIn {
 
         for (ExtendedDataEntity targetExt : targetBills) {
             DynamicObject targetBill = targetExt.getDataEntity();
-            // TODO 查询已下推记录 → entries.removeIf(...) 移除重复行
+            // TODO 按本次内存来源信息补充携带数据；历史下推记录与本次未保存数据分开核对
         }
     }
 

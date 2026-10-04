@@ -32,7 +32,7 @@ try (AlgoContext ignored = Algo.newContext()) {
 static DataSet queryDataSet(String algoKey, String entityName,
         String selectFields, QFilter[] filters, String orderBy)
 static DynamicObjectCollection query(String entityName,
-        String[] selectFields, QFilter[] filters)
+        String selectFields, QFilter[] filters)
 ```
 `selectFields` 语法:`"field"`、`"field alias"`、`"material.number no"`(ORM 路径+别名)、`"'PCS' unit"`(字符串常量)、`"0.0 rate"`(数字常量)、`"CASE WHEN ... END x"`。
 
@@ -78,7 +78,7 @@ DataSet[] splitByFilter(String[] exprs, boolean includeOthers)
 ```java
 RowMeta getRowMeta()
 boolean isEmpty()
-DataSet copy()                                   // 遍历前必须 copy
+DataSet copy()                                   // 需保留原数据供后续消费时，遍历前复制
 void close()
 ```
 
@@ -88,14 +88,18 @@ GroupbyDataSet sum(String field)
 GroupbyDataSet max(String field)
 GroupbyDataSet min(String field)
 GroupbyDataSet avg(String field)
-GroupbyDataSet count(String field)
-GroupbyDataSet countDistinct(String field)
+GroupbyDataSet count()                           // COUNT(1)，输出列为 count
+GroupbyDataSet count(String alias)               // COUNT(1)，参数是输出别名，不是计数字段
+GroupbyDataSet countDistinct(String[] exprs)
+GroupbyDataSet countDistinct(String[] exprs, String alias)
 GroupbyDataSet maxP(String orderField, String valueField)   // 按 orderField 最大行的 valueField
 GroupbyDataSet minP(String orderField, String valueField)
 GroupbyDataSet groupConcat(String srcField, String alias, String separator)
-GroupbyDataSet agg(String expr, String alias)
+GroupbyDataSet agg(CustomAggFunction<?> func, String expr, String alias)
 DataSet finish()
 ```
+
+计数与自定义聚合签名见 [Cosmic V7.0.1 GroupbyDataSet](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/algo/GroupbyDataSet.html)。`groupBy().count("amount")` 仍统计组内行数，只把输出列命名为 `amount`；[DataSet.count(String field, boolean distinct)](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/algo/DataSet.html) 才按指定字段统计非 NULL 值，返回 `int` 并消费数据集，不能将两者互换。
 
 ## Row `kd.bos.algo.Row`
 ```java

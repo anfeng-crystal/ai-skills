@@ -13,7 +13,7 @@
 | 左树右表列表 | `AbstractTreeListPlugin` | `@cosmic/bos-core/kd/bos/list/plugin` | 同标准列表 |
 | 操作服务 | `AbstractOperationServicePlugIn` | `@cosmic/bos-core/kd/bos/entity/plugin` | onPreparePropertys → onAddValidators → beforeExecuteOperationTransaction → beginOperationTransaction → endOperationTransaction → afterExecuteOperationTransaction |
 | 报表界面 | `AbstractReportFormPlugin` | `@cosmic/bos-core/kd/bos/report/plugin` | verifyQuery → beforeQuery → afterQuery → processRowData → packageData |
-| 调度任务 | `AbstractTask` | `@cosmic/bos-core/kd/bos/schedule/executor` | execute(唯一) |
+| 调度任务 | `AbstractTask` | `@cosmic/bos-core/kd/bos/schedule/executor` | execute（主执行入口） |
 
 选型:界面加载/字段联动/控件状态→表单或单据;列表过滤/批量→列表;保存/提交/审核前后→操作;报表查询/DataSet→报表。基类与注册场景必须匹配,单据不能用 `AbstractFormPlugin`。
 

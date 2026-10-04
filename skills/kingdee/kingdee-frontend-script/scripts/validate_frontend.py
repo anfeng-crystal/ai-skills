@@ -71,9 +71,82 @@ def validate_javascript(text: str, path: str) -> list[Issue]:
     return issues
 
 
+def mask_css_comments(text: str) -> str:
+    """Mask comments, respecting string/escape/url tokens and source offsets."""
+    def consume_escape(start: int) -> tuple[str, int]:
+        cursor = start + 1
+        if cursor == len(text):
+            return "\ufffd", cursor
+        if text[cursor] in "0123456789abcdefABCDEF":
+            end = cursor
+            while end < min(cursor + 6, len(text)) and text[end] in "0123456789abcdefABCDEF":
+                end += 1
+            value = int(text[cursor:end], 16)
+            char = chr(value) if 0 < value <= 0x10FFFF and not 0xD800 <= value <= 0xDFFF else "\ufffd"
+            if end < len(text) and text[end] in " \t\n\r\f":
+                end += 2 if text.startswith("\r\n", end) else 1
+            return char, end
+        return text[cursor], cursor + 1
+
+    masked = list(text)
+    quote: str | None = None
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if quote:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+        elif char in ("'", '"'):
+            quote = char
+        elif text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            end = len(text) if end == -1 else end + 2
+            for offset in range(index, end):
+                if text[offset] not in "\r\n":
+                    masked[offset] = " "
+            index = end
+            continue
+        elif char.isalnum() or char in "_-\\" or ord(char) >= 128:
+            # Consume a name as a unit: escaped quotes/slashes are not delimiters.
+            name: list[str] = []
+            cursor = index
+            while cursor < len(text):
+                current = text[cursor]
+                if current == "\\" and cursor + 1 < len(text) and text[cursor + 1] not in "\r\n\f":
+                    decoded, cursor = consume_escape(cursor)
+                    name.append(decoded)
+                elif current.isalnum() or current in "_-" or ord(current) >= 128:
+                    name.append(current)
+                    cursor += 1
+                else:
+                    break
+            if "".join(name).lower() == "url" and cursor < len(text) and text[cursor] == "(":
+                cursor += 1
+                while cursor < len(text) and text[cursor] in " \t\r\n\f":
+                    cursor += 1
+                if cursor < len(text) and text[cursor] not in "\"'":
+                    # Inside an unquoted URL, /* is URL content, not a comment.
+                    while cursor < len(text):
+                        if text[cursor] == "\\":
+                            _, cursor = consume_escape(cursor)
+                        elif text[cursor] == ")":
+                            cursor += 1
+                            break
+                        else:
+                            cursor += 1
+            index = max(cursor, index + 1)
+            continue
+        index += 1
+    return "".join(masked)
+
+
 def validate_css(text: str, path: str) -> list[Issue]:
+    text = mask_css_comments(text)
     issues: list[Issue] = []
-    for match in re.finditer(r"(?m)^\s*@[A-Za-z_-][A-Za-z0-9_-]*", text):
+    for match in re.finditer(r"(?m)^[^\S\r\n]*@[A-Za-z_-][A-Za-z0-9_-]*", text):
         issues.append(Issue("CSS001", "自定义样式不支持 at-rule", path, line_number(text, match.start())))
 
     for match in re.finditer(r"\$(?=[.\[>])", text):

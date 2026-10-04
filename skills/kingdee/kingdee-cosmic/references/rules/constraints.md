@@ -36,7 +36,8 @@ A 层规则是影响事实准确性、插件上下文、事件阶段和交付正
 15. **[A3.1] 数据访问红线**：查询必须参数化；`DataSet` 使用完必须关闭；禁止把 SQL/KSQL 条件当字符串随意拼接。（→ `STYLE-011`, `STYLE-012`, `RESOURCE-004`）
 16. **[A3.2] 性能红线**：禁止在循环中访问数据库、Redis、`view.updateView()`。（→ `STYLE-014`, `STYLE-015`, `STYLE-016`）
 17. **[A3.3] 日志红线**：统一使用 `kd.bos.logging.Log`；禁止 `printStackTrace()`。（→ `STYLE-009`）
-18. **[A3.4] 异常红线**：业务流程中的业务异常不得直接用 `RuntimeException` 伪装。（→ `STYLE-018`）
+
+异常体系统一属于 B 层推荐，见 [coding-preferences.md](coding-preferences.md) 的 B1.28；`STYLE-018` 提示核对异常语义，不因出现 JDK 参数/状态异常就阻断交付。
 
 ## A4. 与 B/C 层的边界
 

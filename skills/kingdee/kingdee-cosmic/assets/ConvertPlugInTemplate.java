@@ -169,7 +169,7 @@ public class ConvertPlugInTemplate extends AbstractConvertPlugIn {
 
     /**
      * 触发时机：系统字段映射完成后。
-     * 参数要点：e.getSourceDataEntity()/e.getTargetDataEntity() 分别为源/目标对象。
+     * 参数要点：e.getTargetExtDataEntitySet() 为目标集合；源单行由目标扩展数据取得，并通过 e.getFldProperties() 取字段值。
      * 典型用途：在系统映射结果上补值或覆盖字段。
      */
     @Override
@@ -205,9 +205,9 @@ public class ConvertPlugInTemplate extends AbstractConvertPlugIn {
     // ===== 关联关系与收尾阶段 =====
 
     /**
-     * 触发时机：记录来源/去向关联关系前。
-     * 参数要点：可通过 e.setCancel(true) 取消关系写入。
-     * 典型用途：按条件取消关联关系写入。
+     * 触发时机：在目标单关联子实体中记录源单信息前。
+     * 参数要点：可通过 e.setCancel(true) 取消本次内存关联信息的生成。
+     * 典型用途：按条件取消关联信息；持久关联及反写在后续保存目标单时处理。
      */
     @Override
     public void beforeCreateLink(BeforeCreateLinkEventArgs e) {
@@ -217,7 +217,7 @@ public class ConvertPlugInTemplate extends AbstractConvertPlugIn {
     }
 
     /**
-     * 触发时机：记录关联关系后。
+     * 触发时机：目标单关联子实体记录源单信息并重算反写控制字段后，目标数据包尚未保存入库。
      * 参数要点：e 提供关联链路上下文，可追加同步逻辑。
      * 典型用途：基于已生成关联关系做数据同步携带。
      */

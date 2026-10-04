@@ -33,12 +33,15 @@
 | 在 UI 插件中做重查询/复杂事务 | UI 插件应保持轻量 | 移至操作插件或服务层 |
 | 在 `initialize()` 中注册监听或写 UI 状态逻辑 | 生命周期不对，可能失效或错时执行 | 在 `registerListener` 注册，在 `afterBindData` 处理界面状态 |
 | 在 `registerListener` 中调用 `model.getValue(...)` | 此时数据尚未绑定 | 推迟到 `afterBindData` |
-| 在 `beforeBindData` / `afterBindData` 中 `setValue` 或改数据包 | 绑定阶段禁止改数据 | 改到 `createNewData`、`propertyChanged`、保存前等正确事件 |
-| 在 `afterCreateNewData` 中期望触发 `propertyChanged` | 此时赋值不触发 | 在 `afterBindData` 中处理级联 |
+| 在 `beforeBindData` 中 `setValue` 或改数据包 `[B层]` | 修改字段值会置数据修改标志，退出可能提示未保存；其他数据变更需核对目标接口 | 新建默认值和初始计算优先放 `afterCreateNewData`；绑定前设置精度等视图属性，数据变更按目的核对修改标志影响 |
+| 在 `afterBindData` 中 `setValue` 或改数据包 | 此事件用于绑定后的界面状态，不用于修改字段值 | 根据已有字段值设置可见、可用等状态；新建初始化放 `afterCreateNewData`，交互联动放 `propertyChanged` |
+| 在 `afterCreateNewData` 中期望触发 `propertyChanged` | 此时赋值不触发 | 在 `afterCreateNewData` 显式完成初始计算；交互时由 `propertyChanged` 调用相同业务计算 |
 | 仅 `implements Listener` 不注册监听 | 监听不会生效 | 在 `registerListener` 中调用 `add*Listener` |
 | 对继承型插件 `@Override` 不调 `super.xxx()` | 基类初始化逻辑不执行 | 继承型必须先调 `super`；接口型无需 |
 | 直接修改 `EntityMetadataCache` 返回的元数据对象 | 缓存对象是单例，污染全局 | `clone` 后再修改 |
 | 用其他实体 `createInstance()` 的对象给引用属性赋值 `→ SCENE-010` | 引用对象类型可能不一致 | 使用属性复杂类型或当前实体元数据创建对象 |
+
+绑定事件的具体放置策略与官方依据见[生命周期放置策略](../event-lifecycle.md#放置策略)。
 
 ## 可扫描坏味道黑名单
 
@@ -68,5 +71,5 @@
 | 数据库方言 SQL（如 `limit` / `rownum` / `nvl` / `isnull`） | 跨库兼容性差 | 使用 KSQL 或平台查询接口 | `[A层]` → `STYLE-012` |
 | `SerializationUtils.toJsonString(args)` 直接打印页面对象、事件对象、数据对象 | JSON 序列化成本高，且容易把大对象整包打进日志 | 只按需提取关键字段打印 | `[B层]` |
 | `printStackTrace()` | 日志无统一上下文，不利于检索与定位 | 使用 `logger.error("问题描述", e)` | `[A层]` → `STYLE-009` |
-| `throw new RuntimeException(...)` / `throw new IllegalArgumentException(...)` / `throw new IllegalStateException(...)` | 业务异常类型不统一 | 改为 `KDBizException`，包装时保留原始 `cause` | `[A层]` → `STYLE-018` |
+| `throw new RuntimeException(...)` / `throw new IllegalArgumentException(...)` / `throw new IllegalStateException(...)` | 需核对业务拒绝与程序参数/状态错误的语义 | 业务异常推荐 `KDException` 体系（如 `KDBizException` 或合适子类）；通用参数错误保留既有合同，包装保留 `cause`，不机械替换 | `[B层]` → `STYLE-018` |
 | `"关于" + name + "的第" + times + "次答疑"` 这类中文词条拼接 | 翻译后语序不可控 | 使用完整句模板 + `String.format(ResManager.loadKDString(...), ...)` | `[B层]` |

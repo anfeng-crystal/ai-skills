@@ -1,6 +1,6 @@
 ---
 name: kingdee-sql-and-data
-description: "校验金蝶 KSQL、生成预置数据/DDL，或核对与变更数据库数据；ISCB SQL/DML 服务流程交 iscb-script。"
+description: "校验金蝶 KSQL、生成预置数据/DDL、填充平台数据导入模板，或核对与变更数据库数据；ISCB SQL/DML 服务流程交 iscb-script。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -14,6 +14,7 @@ metadata:
 ## 触发与路由
 
 - 处理 KSQL 兼容性、预置数据脚本、项目 KSQL 配置、只读数据核对、元数据到 DDL 和已批准的数据变更契约。
+- 平台导出的数据导入 Excel 由本 skill 负责字段、状态、引用和导入合同，工作簿操作复用当前表格能力；填充、解析检查、实际导入分别按任务授权执行。先读 [导入模板回填](references/import-workbook.md)，不把系统模板当普通报表重排。
 - 字段到物理表/列、类型和 dbRoute 的事实先交 `kingdee-metadata-analyzer`；ISCB 参数化 SQL 或 DML 服务流程交 `iscb-script`。
 - Java 插件实现、KingScript 和安全 POC 分别交 `kingdee-cosmic`、`kingdee-kingscript`、`kingdee-security-review`。
 - 平台/KSQL 特有函数或语法生成前，复用任务已确认的苍穹版本与目标数据库类型/版本，从目标项目或适用版本的官方依据核对；不能把 8.0 资料默认套到 7.0，也不能把苍穹版本与数据库版本混同。本地语法校验或 DDL 生成通过只证明其检查范围；未知条目仅暂停依赖它的实现，继续独立取证和标明状态的审阅稿，不新增数据库执行授权。
@@ -62,6 +63,7 @@ python3 "$SQL_SKILL_ROOT/scripts/ksql_generate/cli.py" generate --type coderule 
 ## 门禁与失败
 
 - 表/列、类型、dbRoute、方言和字段映射没有元数据证据时不得猜；未知类型不得静默回退为 `VARCHAR(255)`。
+- 字典更新先闭合“业务字段 → 实际引用实体 → 编码字段 → 已确认转换 → 外部接口值”链路；同名或近义字典不等价。目标对象纠正后重算修改清单，不把已改另一张表计入完成。
 - 生产数据先按“元数据库 → entity/field/entry 映射 → 目标业务库/物理表 → 窄化范围”取证；同一物理表上的不同实体、阶段或布局不能互相代替。
 - 生产更新计划或批准执行前必须读 `references/approved-data-change.md` 并通过 `validate_change_contract.py`。组织/基础资料映射缺失时默认保留旧外键或停止该行；不可空列不得写 `NULL`。
 - 字符串展示字段与外键映射分别定义阶段范围；某阶段不更新展示字符串，不代表其它阶段或共用外键也不更新，反之亦然。

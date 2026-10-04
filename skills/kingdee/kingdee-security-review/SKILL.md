@@ -1,6 +1,6 @@
 ---
 name: kingdee-security-review
-description: "审查金蝶云苍穹安全问题与 OpenAPI 鉴权，或在授权范围内验证漏洞线索；普通插件排错不触发。"
+description: "审查金蝶云苍穹安全问题、OpenAPI 鉴权与 MCP 服务范围，或在授权范围内验证漏洞线索；普通插件排错不触发。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -46,10 +46,12 @@ Read `references/modes.md` when the user asks for verification, active testing, 
 
 Resolve the requested findings to an evidence-backed status and report scope limits. Load the following references only for the corresponding work; a static audit does not require POC preparation.
 
+MCP 服务注册、租户/账套暴露范围或导入限制审阅，按需读 [MCP 注册与范围](references/mcp-registration-scope.md)；仅客户端工具发现和参数问题交 `kingdee-openapi-client`，不自动升级为主动安全验证。
+
 1. Identify mode, target repo/path, endpoint or finding list, and whether network access is requested.
 2. For API endpoint work, read `references/openapi-audit.md`; confirm endpoint location, handler method, request parameters, and auth/filter chain before rating severity.
 3. When a claim comes from a community article, project snippet, external report or old POC, read `references/evidence-sources.md` and treat it as a candidate until target-version evidence confirms it.
-4. For vulnerability classes and static checks, read `references/security-controls.md`; cite sink, taint source, sanitizer, kill switch, and missing control.
+4. For vulnerability classes and static checks, read `references/security-controls.md`; cite sink, taint source, sanitizer, kill switch, and missing control. 批量角色/功能权限变更审阅只按需读其中 [批量权限证据](references/security-controls.md#批量权限证据)，区分关系变化与最终有效权限。
 5. For verification and payload handling, read `references/poc-policy.md` and `references/target-scope.md`.
 6. For page, operation, OpenAPI, or plugin-entry scope, read `references/metadata-security-scope.md` and prefer a `kingdee-metadata-analyzer` metadata contract before active verification.
 7. Write findings with `scripts/report_writer.py` when a structured report is requested. Reports default to redacted targets, tenants, sessions, and raw evidence; raw evidence requires an explicit destination and user approval.

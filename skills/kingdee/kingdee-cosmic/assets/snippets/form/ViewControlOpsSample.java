@@ -122,6 +122,8 @@ public class ViewControlOpsSample extends AbstractFormPluginExt {
     public void beforeClosed(BeforeClosedEvent e) {
         super.beforeClosed(e);
         if ("true".equalsIgnoreCase(getPageCache().get(PAGE_CACHE_SKIP_DIRTY_CHECK))) {
+            // BillView 数据变更检查：V8.0.1 SDK 索引中 false 为不检测，复用时按目标 SDK 核对。
+            // 此设置不取消关闭或保存数据；取消关闭使用 setCancel(true)。
             e.setCheckDataChange(false);
         }
     }

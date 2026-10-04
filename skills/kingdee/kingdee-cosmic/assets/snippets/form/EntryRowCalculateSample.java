@@ -15,6 +15,7 @@
 package kd.cd.common.snippets.form;
 
 import kd.bos.dataentity.entity.DynamicObjectCollection;
+import kd.bos.entity.datamodel.RowDataEntity;
 import kd.bos.entity.datamodel.events.AfterAddRowEventArgs;
 import kd.bos.entity.datamodel.events.AfterDeleteRowEventArgs;
 import kd.bos.entity.datamodel.events.PropertyChangedArgs;
@@ -54,14 +55,19 @@ public class EntryRowCalculateSample extends AbstractFormPluginExt {
     public void afterAddRow(AfterAddRowEventArgs e) {
         super.afterAddRow(e);
         if (ENTRY_KEY.equals(e.getEntryProp().getName())) {
-            int rowIndex = getModel().getEntryCurrentRowIndex(ENTRY_KEY);
             getModel().beginInit();
-            getModel().setValue(FIELD_QTY, BigDecimal.ZERO, rowIndex);
-            getModel().setValue(FIELD_PRICE, BigDecimal.ZERO, rowIndex);
-            getModel().setValue(FIELD_TAX_RATE, BigDecimal.ZERO, rowIndex);
-            getModel().setValue(FIELD_AMOUNT, BigDecimal.ZERO, rowIndex);
-            getModel().setValue(FIELD_TAX_AMOUNT, BigDecimal.ZERO, rowIndex);
-            getModel().endInit();
+            try {
+                for (RowDataEntity row : e.getRowDataEntities()) {
+                    int rowIndex = row.getRowIndex();
+                    getModel().setValue(FIELD_QTY, BigDecimal.ZERO, rowIndex);
+                    getModel().setValue(FIELD_PRICE, BigDecimal.ZERO, rowIndex);
+                    getModel().setValue(FIELD_TAX_RATE, BigDecimal.ZERO, rowIndex);
+                    getModel().setValue(FIELD_AMOUNT, BigDecimal.ZERO, rowIndex);
+                    getModel().setValue(FIELD_TAX_AMOUNT, BigDecimal.ZERO, rowIndex);
+                }
+            } finally {
+                getModel().endInit();
+            }
             recalcEntrySummary();
         }
     }

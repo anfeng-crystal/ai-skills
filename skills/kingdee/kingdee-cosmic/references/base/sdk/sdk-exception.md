@@ -1,64 +1,86 @@
-# 异常处理 (Exception Handling)
+# 异常、错误码与多语言提示
 
-## TL;DR
-- 适用：平台异常体系、错误码定义、多语言异常抛出与封装。
-- 先抓：业务异常统一走 `KDException` / `ErrorCode`，先区分业务错误和系统错误。
-- 跳转：日志记录不是本页；事务回滚边界要配合操作/事务文档一起看。
-- 继续读全文：当你要定义错误码类、封装底层异常或规范前端提示时。
+## 入口与真实合同
 
-## 概述
-苍穹平台提供了统一的异常处理规范，要求所有的业务和系统异常均通过 `KDException` 或其子类进行表达。核心原则是：统一异常类型、错误码全局唯一、多语言支持以及精准的异常捕获。
+适用：业务拒绝、系统异常包装、错误码和多语言消息；日志写法见 `sdk-log.md`，事务回滚按实际操作/事务入口处理。以下 API 以本次实际 7.0 JAR 核验，并与官方 V7.0.1 Javadoc 分开记录。
 
-## 核心类
-- **`kd.bos.exception.KDException`**: 平台所有异常的基类。
-- **`kd.bos.exception.KDBizException`**: 业务逻辑异常（通常直接继承自 `KDException`，用于在前端显示友好提示）。
-- **`kd.bos.exception.ErrorCode`**: 错误码定义类，包含唯一的错误代码和多语言消息模板。
+官方定制化规范推荐使用 `KDException`，允许自定义子异常。`KDException extends RuntimeException`，`KDBizException extends KDException`；这是平台异常体系，不表示所有 Java 异常天然都是其子类。工具类已有的参数/状态异常合同不需机械替换。
 
-## 常用 API 方法
-- `new ErrorCode(String code, String message)`: 构造错误码。格式建议：`云.应用.变量名`。
-- `new KDException(ErrorCode code, Object... args)`: 抛出带错误码和格式化参数的异常。
-- `new KDException(Throwable cause, ErrorCode code, Object... args)`: 封装原始异常并抛出。
-- `exception.getErrorCode()`: 获取异常中的错误码对象。
+|入口|用途|
+|---|---|
+|`new ErrorCode(String code, String message)`|错误代码和默认模板，支持 String.format 格式参数；不是自动完成多语言资源绑定。|
+|`new KDException(ErrorCode, Object...)`|模板与参数构成异常。|
+|`new KDException(Throwable, ErrorCode, Object...)`|包装并保留原始 cause。|
+|`new KDBizException(ErrorCode, Object...)` / cause-first 重载|业务拒绝，构造器均在实际 7.0 中存在。|
+|`exception.getErrorCode()`|返回 ErrorCode 对象；字符串代码再取 `getCode()`。|
+|`exception.getArgs()`|模板参数；不是已经格式化的消息。|
 
-## 示例代码
-### 1. 定义错误码类
+错误码在产品内保持唯一，按产品云/应用/错误语义命名。`ErrorCode.getMessage()` 是默认模板，`KDException.getMessage()` 才按参数格式化。本机 7.0 使用 `%s`，多个参数可用 `%1$s`、`%2$s`；`{0}` 不会按 MessageFormat 替换。参数类型/数量不匹配时，本机实现可能回退原模板，不能把“不抛格式异常”当作提示正确。
+
+## 消息、cause 与入口处理
+
+对外提示应包含业务语义及可执行的下一步；底层诊断留在 cause 和受控日志中。把 `e.getMessage()` 填进业务模板仍会把底层消息带出，换成 `KDException` 不会自动清理内容。
+
+只捕获需要处理、转换或补偿的异常；已符合入口合同的 `KDException` 可以重抛。选择表单、操作、任务或 OpenAPI 的实际处理合同，核对谁显示、谁写日志、谁序列化错误；不能从异常类型推断一定弹出友好窗口或平台一定自动记日志。若处理后不再上抛，应记录必要原因与诊断，避免无声吞错，也避免每一层重复打印同一堆栈。
+
+## 多语言示例：读取模板后只格式化一次
+
+`kd.bos.dataentity.resource.ResManager` 在实际 7.0 中提供：
+
+- `String loadKDString(String defaultValue, String key, String project, Object... args)`。
+- `String getKDString(String key, String project, Object... args)`。
+
+多语言资源名、Key 和 UTF-8 资源内容须按实际工程配置。示例在每次构造错误时取得当前语言模板；不把已解析的当前语言文本缓存为静态常量。调用 ResManager 时不传动态参数，再交异常构造器格式化一次，避免把已格式化且可能含 `%` 的文本再次作为模板。
+
+`my-module` 是待替换的示例资源标识，不是已经存在的翻译包。`doComplexTask` 为调用方实现的业务动作；不存在的订单应由业务检查明确调用 `orderNotFound`，空编号单独使用必填错误。
+
 ```java
-public class MyModuleErrorCode {
-    private static ErrorCode create(String code, String message) {
-        return new ErrorCode("my.module." + code, message);
+import kd.bos.dataentity.resource.ResManager;
+import kd.bos.exception.ErrorCode;
+import kd.bos.exception.KDException;
+import kd.bos.exception.KDBizException;
+
+public abstract class OrderProcessor {
+    private static final String RESOURCE = "my-module";
+
+    private static ErrorCode code(String key, String defaultTemplate) {
+        String template = ResManager.loadKDString(defaultTemplate, key, RESOURCE);
+        return new ErrorCode("my.module." + key, template);
     }
-    // 使用 %s 作为动态参数占位符
-    public final static ErrorCode orderNotFound = create("orderNotFound", "订单【%s】不存在或已删除。");
-    public final static ErrorCode dataProcessError = create("dataProcessError", "数据处理失败：%s");
+
+    public static KDBizException orderNotFound(String billNo) {
+        return new KDBizException(code("orderNotFound",
+                "订单【%s】不存在或已删除，请核对单据编号。"), billNo);
+    }
+
+    public void processOrder(String billNo) {
+        if (billNo == null || billNo.trim().isEmpty()) {
+            throw new KDBizException(code("billNoRequired", "请填写订单编号。"));
+        }
+        try {
+            doComplexTask(billNo);
+        } catch (KDException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new KDException(e, code("dataProcessError",
+                    "订单处理失败，请联系管理员并提供单据编号。"));
+        }
+    }
+
+    protected abstract void doComplexTask(String billNo) throws Exception;
 }
 ```
 
-### 2. 抛出与捕获异常
-```java
-public void processOrder(String billNo) {
-    if (StringUtils.isBlank(billNo)) {
-        // 直接抛出业务异常
-        throw new KDBizException(MyModuleErrorCode.orderNotFound, billNo);
-    }
+这条路径保留错误码、当前语言模板、动态业务参数和原始 cause；只创建异常不保证真实翻译资源、外部错误配置、前端展示或接口输出已经生效。日志不得以对外消息代替完整诊断；业务逻辑判断也不要比较翻译后的提示文本。
 
-    try {
-        doComplexTask();
-    } catch (KDException e) {
-        // 关注的业务异常，再次往上抛（无需记录日志，平台会自动处理显示）
-        throw e;
-    } catch (Exception e) {
-        // 系统级异常（如网络、IO），封装为业务异常再抛出，并可在此记录日志
-        throw new KDException(e, MyModuleErrorCode.dataProcessError, e.getMessage());
-    }
-}
-```
+## `ErrorCode.of` 的版本边界
 
-## 实践建议
-1. **业务异常优先**：业务逻辑校验失败时，应优先抛出 `KDBizException`，这样前端会自动拦截并以友好弹窗形式展示 `message`。
-2. **错误码规范**：错误码应保持产品全局唯一，且对应的消息应在多语言资源文件中配置。
-3. **按需捕获**：只 catch 那些你真正需要处理（如回滚、补偿、转换）的异常，其他异常任其向上抛出到框架层统一处理。
+官方 V7.0.1 公开五参 `of(errorCode, project, key, desc, staticResource)`，其注释限定 BOS 静态资源多语言改造场景；不能当作所有二开工程的通用入口。本机实际 7.0 JAR 只有已标 `@Deprecated` 的四参 `of(String,String,String,String)`，五参负编译失败。不要直接搬另一版本重载，也不因四参可编译就作为新推荐。普通构造器的 `getLangMessage()` 在本机为 null，只能证明未通过它绑定该资源描述，不否定平台外部配置或响应层的其他本地化处理。
 
-## 常见坑位
-1. **吞掉异常不记录日志**：如果 catch 了异常且没有再次抛出，必须使用 `LogFactory` 记录详细堆栈，否则问题将极难定位。
-2. **UI 显示非业务语言**：严禁直接将 `SQLException` 等底层堆栈信息抛给前端展示，必须封装为用户可理解的业务语义。
-3. **乱用 Exception 基类**：尽量避免直接 `throw new Exception()`，这会导致框架无法精准区分系统错误和业务校验。
+## 依据与验证边界
+
+- [定制化开发规范 3.11](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=218063485690097920&id=498888207505798912&productLineId=29)，更新 2025-12-23：业务提示、cause 保留与处理/重抛。
+- [多语言开发规范 3.2](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=218063485690097920&id=241181198532529920&productLineId=29&lang=zh-CN)，更新 2026-09-15：资源、占位符与静态提示语处理。
+- [ErrorCode](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/exception/ErrorCode.html)、[KDException](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/exception/KDException.html) · 官方 V7.0.1 Javadoc。
+
+最终示例用实际 7.0 最小依赖/JDK 8 离线编译。消息格式、cause 与默认资源描述已执行纯本地异常实例探针；没有运行真实资源翻译、平台日志、前端、OpenAPI 或事务业务。

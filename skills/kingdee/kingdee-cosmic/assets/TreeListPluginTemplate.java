@@ -9,8 +9,6 @@ import kd.bos.form.control.events.TreeNodeEvent;
 import kd.bos.list.events.BeforeShowBillFormEvent;
 import kd.bos.list.events.BuildTreeListFilterEvent;
 import kd.bos.list.plugin.AbstractTreeListPlugin;
-import kd.bos.orm.query.QCP;
-import kd.bos.orm.query.QFilter;
 
 import java.util.EventObject;
 
@@ -32,8 +30,6 @@ public class TreeListPluginTemplate extends AbstractTreeListPlugin {
         // this.getModel();
     }
 
-    private static final String FIELD_GROUP = "group.id";
-    private static final String TREE_NODE_ALL = "0";
     private static final String RES_APP_ID = "kd-cd-common-template";
 
     // ===== 核心事件 =====
@@ -94,10 +90,11 @@ public class TreeListPluginTemplate extends AbstractTreeListPlugin {
     @Override
     public void buildTreeListFilter(BuildTreeListFilterEvent e) {
         super.buildTreeListFilter(e);
-        // 生成过滤条件
-        QFilter filter = new QFilter("fieldKey", QCP.equals, "value");
-        e.addQFilter(filter);
-        e.setCancel(true);   // 略过系统内置的分组过滤条件
+        // 默认保留系统分组过滤。追加业务条件时，替换字段和值后启用：
+        // e.addQFilter(new kd.bos.orm.query.QFilter(
+        //         "fieldKey", kd.bos.orm.query.QCP.equals, "value"));
+        // 当前点击节点：e.getNodeId()，其类型应与目标字段一致。
+        // 只有完整提供替代分组条件时才调用 e.setCancel(true)。
     }
 
     /**

@@ -29,6 +29,8 @@
 
 上述消息 API 和结构均须由目标版本模板或运行探针确认。平台预置的 `__init__` 页面消息是否自动发送属于版本合同；不要在控件里重复伪造。真实页面联调时记录收到的原始脱敏结构，再固定目标版本测试。
 
+指令就绪还依赖 DOM：[官方高级技巧篇](https://vip.kingdee.com/knowledge/329617446174701824?productLineId=29&isKnowledge=2&lang=zh-CN)的自定义事件章节（变更记录 V4.0.007，2026-09-26 核验）要求 `init` 给 `model.dom` 加载非空页面元素后，`handleDirective` 才能接收指令。异步加载模板时，`init` 返回不代表所需 DOM 已就绪；调用方按实际目标元素或约定的就绪信号等待，并覆盖“资源未完成、加载后、加载前已销毁”的测试。不要用直接调用 `handleDirective` 的单元测试冒充平台指令分发已通过。
+
 官方进阶篇明确 `getControl` 接收页面控件 `key`，不是方案 `schemaId`；`KDApi.register` 接收方案 ID。配置文件现有字段名为 `schemeId`，对应官方 `schemaId`，不要因此重命名既有配置 schema。
 
 ## 已证实的服务端版本合同
@@ -39,7 +41,7 @@ Cosmic V8.0.1 SDK 可证实 `IFormView.addCustomControls`、`loadCustomControlMe
 
 - 为每个方法/事件保存最小 JSON 样例：名称、方向、必填字段、类型、空值、最大量级、错误结果。
 - 不直接信任服务端或页面消息；解析失败应显示可诊断的非敏感状态，不执行任意 HTML/脚本。
-- 频繁 `update`、重复初始化和销毁后迟到 Promise 必须安全；异步回调先检查实例是否已释放。
+- 频繁 `update`、重复初始化和销毁后迟到 Promise 必须安全；成功与失败回调均检查实例是否已释放、是否仍属当前渲染。模板 Promise 及资源加载器返回的 Promise 要处理拒绝；当前实例显示非敏感失败状态，旧请求不覆盖新界面，并测试重新初始化恢复。
 - 第三方库只能进入已审查许可证、版本、完整性和目标 CSP 的本地资源；默认模板不带 jQuery、Vue、React 或 CDN。
 
 ## 版本证据

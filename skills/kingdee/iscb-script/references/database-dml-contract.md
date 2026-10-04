@@ -59,6 +59,7 @@ python3 scripts/dml_service_flow.py generate --baseline <current.dts> --sql-file
 - 只更新指定服务流程的指定 Script 节点，保留其他记录、资源、连接 ID 和节点。
 - DML 仅允许单条参数化 INSERT/UPDATE/DELETE；UPDATE/DELETE 强制包含 WHERE。
 - 强制提供独立 `SELECT COUNT...` 预检、参数类型、最大影响行数、回滚方案和授权引用。
+- 预检必须返回单个非负计数；保留数据库返回的数值，不先用 `I(...)` 转成 32 位整数，否则大计数会溢出并绕过 `max_rows`。空结果和负计数在写入前停止；超限后的异常不等于数据库已自动回滚，事务与恢复仍按目标合同验证。
 - `inspect` 只返回脱敏结构摘要；`generate` 要求契约中 `approved=true`，只写用户给定的新输出路径，不导入、不发布、不执行。此项批准仅授权本地生成，不代替导入、发布或数据库执行批准。
 - 输出已存在时必须显式传 `--overwrite`；基线文件永不原地覆盖。
 

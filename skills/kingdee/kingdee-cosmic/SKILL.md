@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic
-description: "开发、修复或审查金蝶云苍穹 Java 插件与服务端 OpenAPI；报表、脚本和外部 OpenAPI 调用使用各自专用 skill。"
+description: "开发、修复或审查金蝶云苍穹 Java 插件、服务端 OpenAPI 与工作流配置；报表、脚本和外部 OpenAPI 调用使用各自专用 skill。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -32,7 +32,7 @@ metadata:
 1. 只处理金蝶云苍穹 Java 二开、插件、配置、诊断、代码核查或改造任务，以及服务端 OpenAPI 开发。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；外部 OpenAPI 调用用 `kingdee-openapi-client`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
 2. 纯 Java 语法、类型、泛型、集合或编译错误可直接分析，不要无意义触发元数据查询。
 3. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先复用当前任务已确认且仍匹配目标环境的 analyzer inventory/quick cache；缺失、过期或范围不足时再交 `kingdee-metadata-analyzer` 做取证。
-4. 移动端、派生表单、页面元素或生产行为链路问题，不能只看实体 quick-query；要求 analyzer 全景分析并核对 `pageElement`、`formPage`、派生表单和插件挂载链。
+4. 移动端或派生表单的页面行为问题，以及页面元素或生产行为链路问题，不能只看实体 quick-query；要求 analyzer 全景分析并核对 `pageElement`、`formPage`、派生表单和插件挂载链。仅确认工作流功能是否支持某客户端时，先读对应功能说明；进入页面行为或挂载诊断后再按上述要求取证。
 5. 工程骨架或 `COSMIC_HOME` 资源包交 `kingdee-cosmic-devtools`；本地启动、模块构建和部署沿用当前仓库流程。登录态交 `kingdee-cosmic-login`，KSQL/数据脚本交 `kingdee-sql-and-data`。运行日志/Trace 分析交 `kingdee-observability`，专项测试执行交 `kingdee-testing`。
 6. 纯报表插件取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析和 Algo API 精确签名，转 `kingdee-report`；本 skill 只保留轻量路由和概览。
 
@@ -49,8 +49,14 @@ metadata:
 1. 明确任务类型、目标对象、插件类型、事件点、事务边界、环境口径和验证方式。
 2. 依赖目标环境元数据的问题，把元数据取证交给 `kingdee-metadata-analyzer`；本 skill 并行查源码、同类实现、模板、snippet 和运行时堆栈。
 3. 按需读取最小资料集：插件/配置选型 `rules/decision-matrix.md`；API 速查 `rules/cheat-sheet.md`；插件类型 `references/plugin-types-cheatsheet.md`；BOTP `references/botp-convert.md`；DynamicObject `references/dynamic-object.md`；生命周期 `references/event-lifecycle.md`；工作流/布局元数据包 `references/workflow-metadata-change.md`；DataSet 概览 `references/query-dataset.md`；Cache/MQ `references/cache-mq-runtime.md`；异常诊断与复核 `references/error-review-patterns.md`。
+   标准单据列表/模板导出的 CSV/XLSX、容量或数值格式问题，先读 [导出格式合同](references/list-export-format.md)。
+   流程任务主题引用长日期缺少时分秒、下拉字段只显示编码、移动待办列表与审批页主题不一致，或钉钉撤销重提后仍显示旧主题时，读 [任务主题显示与配置来源](references/workflow-task-subject.md)，核对配置来源、版本与第三方限制；文档绕行方案不替代业务授权。
 4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。
+   提交后自动审核、紧接提交调用审核或提示“单据已在流程中流转，不能审核”时，按需读 [提交与寻址合同](references/workflow-submit-audit.md)，区分版本和异步寻址状态。
+   指定参与人未生效、驳回目标参与人待定、会审加签、会签保留人工审批、驳回后重复审批人、参与人解析/显示顺序、发起人与审批人相同处理或跳过条件冲突的只读诊断/改造，按需读 [参与人与节点行为](references/workflow-participant-behavior.md)。
 5. 页面事件已覆盖验收路径时，不默认追加保存、操作、接口或批量链路兜底；只有需求明确覆盖绕过页面事件的入口时才扩展链路。
+   动态表单回填分录时，读 [弹窗与分录合同](references/dialog-entry-contract.md)；字段配置、回调及配套部署必须使用同一份已确认映射。
+   按单据内容定制水印时，读 [表单水印合同](references/base/plugin/plugin-form.md#按单据内容生成水印)，核对事件回填、单据标识和输出入口。
 6. 按改动验证：平台调用或 Java 逻辑变更完成受影响模块的编译、场景/资源静态检查及适用测试；已有检查覆盖当前差异时不重复运行。仅注释/格式修改检查差异即可。检查入口与降级方式见 `rules/post-check.md`，不能以静态结果冒充编译或运行通过。
 7. 收口按 `rules/post-check.md` 给出依据、改动、验证和风险。
 

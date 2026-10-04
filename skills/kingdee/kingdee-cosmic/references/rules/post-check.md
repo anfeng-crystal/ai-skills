@@ -97,9 +97,10 @@ python3 "$KINGDEE_COSMIC_SKILL_ROOT/scripts/cosmic-post-check.py" <生成的文�
   - `API-003`：类名解析到白名单包但知识库无记录 → WARNING
 - `SCENE-*` 与 `RESOURCE-*` 中既有明显硬错误，也可能包含偏治理的 warning；解释结果时要结合上下文，不要机械套标签。
 - 需要按 A 层（ERROR）处理的 SCENE/STYLE/RESOURCE 规则 ID，统一定义在 [a-layer-rules.json](a-layer-rules.json)（单一可信源），`cosmic-post-lint.py` 在运行时自动加载。
-- 当前列表：`SCENE-010`、`STYLE-009`、`STYLE-011`、`STYLE-012`、`STYLE-014`、`STYLE-015`、`STYLE-016`、`STYLE-018`、`RESOURCE-004`。如需新增/移除，直接编辑 JSON 文件即可，无需改脚本代码。
+- 当前列表：`SCENE-010`、`STYLE-009`、`STYLE-011`、`STYLE-012`、`STYLE-014`、`STYLE-015`、`STYLE-016`、`RESOURCE-004`。如需新增/移除，直接编辑 JSON 文件即可，无需改脚本代码。
 - `RESOURCE-004` 认可直接 `close()`、`DataSet` try-with-resources、返回/后续 DataSet 消费，以及词法作用域覆盖声明的 `try (AlgoContext ... = Algo.newContext())`；把上下文创建放在别的方法里不作为静态豁免。
 - `STYLE-015` 仅对可证明的有界主键游标分页放行：同一方法内必须有 `id > cursor`、`id asc`、有限页大小，并从本页末行推进同一 cursor；普通循环查询仍是 ERROR。
+- `STYLE-018` 为 B 层 WARNING：只提示核对异常语义，保留通用工具的参数/状态异常合同；平台业务异常推荐 `KDException` 体系，包装时保留 `cause`。不得将官方推荐自动升级为 ERROR。
 - `VERIFY-*` 默认不作为当前交付阻断项；只有在 `--strict` 或用户明确要求治理时，才应提高关注度。
 
 ## 修复示例

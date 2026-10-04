@@ -10,6 +10,8 @@ description: "通过离线日志或已授权的只读查询，诊断金蝶云苍
 
 - Use this skill for runtime logs, Trace reconstruction, slow SQL/N+1, exception, thread, or GC evidence.
 - Route Java source fixes to `kingdee-cosmic`, test execution to `kingdee-testing`, and ISC DSL or mapping changes to `iscb-script`; diagnose ISC execution logs here.
+- For workflow stalls or Job backlog, read `references/workflow-job-backlog.md` on demand. Route database-record checks to `kingdee-sql-and-data` with their own exact read-only scope; a log-query plan does not authorize database access.
+- 字段值、分录行数、操作提示来源或方法输入输出难以从现有日志解释时，按需读 [实体运行监控](references/entity-runtime-monitor.md)。先分析已有证据；启用监听及业务重现分别需要任务范围覆盖，不属于只读日志查询。
 
 ## 模式与契约
 
@@ -24,7 +26,7 @@ An approved query plan authorizes every read inside its exact bounds; do not ask
 ## 工作流
 
 1. For `offline`, preserve the input and analyze it directly.
-2. For query modes, read `references/query-contract.md`, validate a non-secret plan with `scripts/validate_query_plan.py`, then use only a currently configured connector or task-provided client. This skill contains no login or network client.
+2. For log or monitor query modes, read `references/query-contract.md`, validate a non-secret plan with `scripts/validate_query_plan.py`, then use only a currently configured connector or task-provided client. This skill contains no login or network client; database-record queries use the routed skill's contract instead.
 3. Keep configured task credentials in the active client/process only. Never echo, save, cache, or copy credentials, cookies, tokens, browser state, or internal URLs into plans or reports.
 4. Analyze retrieved records with `scripts/analyze_logs.py`; never copy raw candidate scripts or disable TLS verification.
 5. Distinguish source facts, derived evidence, and diagnostic inference. Complete the requested diagnosis with the narrowest supported conclusion, its evidence and remaining gaps; do not claim root cause from a single correlated symptom or require every diagnostic category for every request.

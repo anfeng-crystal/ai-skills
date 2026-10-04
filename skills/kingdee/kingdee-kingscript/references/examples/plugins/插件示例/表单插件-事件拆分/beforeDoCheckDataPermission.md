@@ -1,40 +1,26 @@
-# beforeDoCheckDataPermission - 数据权限校验前置处理
+# beforeCheckDataPermission - 数据权限校验前置处理
 
 ## 基本信息
 
 | 属性 | 说明 |
 |------|------|
-| 所属接口 | `AbstractFormPlugin` |
+| 所属接口 | `IFormPlugin`，由 `AbstractFormPlugin` 继承 |
 | 触发时机 | 执行数据权限校验前触发 |
-| 方法签名 | `beforeDoCheckDataPermission(e: BeforeDoCheckDataPermissionArgs): void` |
+| 方法签名 | `beforeCheckDataPermission(e: BeforeDoCheckDataPermissionArgs): void` |
 
-## 说明
+参数类名中的 `Do` 不属于回调名。参数对象提供明确的取消、跳过检查与取消原因接口，不是可任意 `put` 键值的 Map。
 
-这个事件适合在权限校验前补充上下文、决定是否跳过某些临时场景，或者给权限服务附加识别信息。它不是通用的“绕过权限”入口，应谨慎使用。
-
-## 业务场景
-
-共享查询看板允许管理员切换查看组织数据。插件在校验前先写入当前选中组织，保证权限校验使用正确的组织上下文。
-
-## 完整示例代码
+## 事件入口
 
 ```typescript
-import { AbstractFormPlugIn } from "@cosmic/bos-core/kd/bos/form/plugin";
+import { AbstractFormPlugin } from "@cosmic/bos-core/kd/bos/form/plugin";
 import { BeforeDoCheckDataPermissionArgs } from "@cosmic/bos-core/kd/bos/form/events";
 
-class PermissionPreparePlugin extends AbstractFormPlugIn {
-
-  beforeDoCheckDataPermission(e: BeforeDoCheckDataPermissionArgs): void {
-    super.beforeDoCheckDataPermission(e);
-
-    const selectedOrg = this.getModel().getValue("fqueryorg");
-    const isAdminView = this.getModel().getValue("fisadminview") === true;
-
-    e.put("queryOrg", selectedOrg);
-
-    if (isAdminView) {
-      e.put("viewMode", "admin");
-    }
+/** 数据权限校验入口；默认保留平台及其他插件已有的校验决定。 */
+class PermissionPreparePlugin extends AbstractFormPlugin {
+  /** 接收平台事件；项目权限规则未提供时，不设置取消或跳过标志。 */
+  beforeCheckDataPermission(e: BeforeDoCheckDataPermissionArgs): void {
+    super.beforeCheckDataPermission(e);
   }
 }
 
@@ -42,8 +28,16 @@ let plugin = new PermissionPreparePlugin();
 export { plugin };
 ```
 
-## 注意事项
+## 共享查询看板的实施要求
 
-- 只有确实理解权限链路时再在这里加逻辑。
-- 不要把权限缺失问题简单处理成“全部放行”。
-- 传入的附加参数要和后续权限逻辑约定一致。
+共享看板按 `fqueryorg` 选择组织，并用 `fisadminview` 表示页面查询模式。若后续权限实现需要 `queryOrg`、`viewMode`，应先确认该实现实际读取的上下文入口与类型；`BeforeDoCheckDataPermissionArgs` 没有通用 `put` 方法。仅从页面读取这两个字段，不能证明组织上下文已经传入权限服务，也不能把页面开关当作管理员权限依据。
+
+保留组织切换需求，但须由项目既有权限模型核验可查看组织，再按已确认的权限扩展接口传递上下文。上述入口只保留默认验权，不实现组织上下文传递。
+
+## 取消与跳过的区别
+
+- 拦截当前操作：`setCancel(true)`，可配合 `setCancelMessage(...)` 给出原因。
+- 明确授权的本次数据权限例外：`setSkipCheckDataPermission(true)`；其他权限和校验仍按各自规则执行。
+- 不主动把取消状态设回 `false`，避免覆盖其他插件的决定。
+
+参数和角色示例见 [BeforeDoCheckDataPermissionArgs](../../../../sdk/classes/BeforeDoCheckDataPermissionArgs.md) 与 [表单插件的数据权限事件](../表单插件.md#37-beforecheckdatapermission)。使用前核对目标版本声明和项目权限模型。

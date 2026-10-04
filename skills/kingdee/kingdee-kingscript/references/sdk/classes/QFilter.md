@@ -44,10 +44,12 @@
 
 ## 高价值规则
 
-- 单个 `QFilter` 内部的参数，要优先按运行时要求准备类型
-- 多个 `QFilter` 组合时，外层通常使用 TypeScript 数组
-- `in` 场景不要默认传 JS 原生数组，优先检查是否应使用 `ArrayList`
+- 对目标声明中的 `QFilter(property: string, cp: string, value: any)`，`any` 不表示内部值会自动深转换；`in` 条件值应按 Java 集合语义构造，例如 `ArrayList`
+- 查询方法明确把外层 `filters` 声明为 `QFilter[]` 时，外层传 KingScript 原生数组；不要连同内层值一起改成 Java List
+- 如果目标参数声明为 Java 集合，则按该集合类型传值；先核对具体重载，不能把某个接口的浅转换规则套到所有入参
 - 编辑器类型通过，不代表运行时类型一定兼容
+
+这是接口层浅转换与对象内部参数的区别：`QFilter[]` 是查询接口直接接收的数组，而 `QFilter` 构造参数中的 `value` 是内部 Java 对象值。依据：[官方《KingScript参数类型问题》](https://vip.kingdee.com/knowledge/872078625867767808)（更新于 2026-08-03，未标具体补丁）。文中某个 `queryDataSet` 重载仅为示例，使用时仍按目标声明确认参数个数。
 
 ## 示例代码
 
@@ -89,8 +91,8 @@ let datas = BusinessDataServiceHelper.load("bd_currency", "name", filters);
 - 把 Java 容器和 TS 数组的使用层级搞反了
 
 建议排查顺序：
-1. 检查单个 `QFilter` 内部的值是否需要 Java 类型
-2. 检查外层 filters 是否是数组
+1. 出现 `ParameterSetter.set`、`JSArrayObject` 类转换或 `PolyglotMap` 不可序列化时，先定位实际传入 Java API 的值及所在层；这些特征是排查线索，不单独证明根因
+2. 检查 `in` 的内层值是否为 Java 集合，并核对外层 filters 的目标声明；不要用 `as` 或 `any` 掩盖运行时对象类型
 3. 检查操作符和参数类型是否匹配
 
 ## 相关文档

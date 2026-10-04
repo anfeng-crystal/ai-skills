@@ -2,71 +2,42 @@
 
 ## 基本信息
 
-- 名称：`BeforeFieldPostBackEvent`
 - Java 类名：`kd.bos.form.events.BeforeFieldPostBackEvent`
-- TS 导出名：`BeforeFieldPostBackEvent`
-- 所属模块：`@cosmic/bos-core`
-- 所属包：`kd/bos/form/events`
-- 类型：字段回传前事件参数
-- 来源：
-  - TS 声明：待按本地 `@cosmic/bos-core` 中 `kd/bos/form/events` 相关声明核对
-  - 相关示例：[beforeFieldPostBack.md](../../examples/plugins/插件示例/表单插件-事件拆分/beforeFieldPostBack.md)
-  - Javadoc：Cosmic V8.0.1
+- TS 导出：`@cosmic/bos-core/kd/bos/form/events` 中的 `BeforeFieldPostBackEvent`
+- 事件：`AbstractFormPlugin.beforeFieldPostBack(e)`
+- 使用点证据：实际 7.0 构件 `bos-form-metadata` 的脚本声明与事件类，以及 `bos-form-mvc` 的 `FormController.postFieldState` 调用链；目录版本不代表统一补丁号，其他目标须核对自己的依赖。
 
-## 用途概述
+## 用途与取消边界
 
-用于客户端字段值变化准备回传服务器之前的拦截和控制，常见于录单性能优化和非关键字段回传裁剪。
+服务端收到客户端字段值后，在字段控件将值写入模型之前进行合法性检查。此时请求已经到达服务端。`setCancel(true)` 拒绝的是本次模型更新，不能减少已经发生的网络请求，也不保证被拒绝的输入在保存时会自动重传。
 
-## 典型场景
-
-- 备注、说明类字段变化不回传服务器
-- 关键联动字段仍保持正常回传
-- 按字段 key、当前行和当前值决定是否取消回传
+[官方事件总览](https://vip.kingdee.com/knowledge/474603833067386624)将该事件用于输入合法性检查。备注字段减少即时更新应配置真实控件 `FieldEdit.setFireEvtUp(false)`，并先确认业务依赖；不能将普通文本输入全部取消来代替即时更新配置。
 
 ## 常用方法
 
-| 方法 | 作用 | 关键参数 | 返回值 | 说明 |
-|------|------|----------|--------|------|
-| `getKey` | 获取控件或字段标识 | 无 | `String` | 判断当前回传字段 |
-| `getValue` | 获取本次值 | 无 | `Object` | 可按值做轻量判断 |
-| `getRowIndex` | 获取实体行号 | 无 | `int` | 分录字段常用 |
-| `getParentRowIndex` | 获取父实体行号 | 无 | `int` | 多级分录时使用 |
-| `setCancel` | 取消回传 | `boolean` | `void` | `true` 后服务端对应联动不会触发 |
+| 方法 | 返回类型（脚本） | 含义 |
+|------|----------------|------|
+| `getKey()` | string | 控件 key，不自动等于实体字段 key |
+| `getValue()` | any | 本次输入值，按真实字段类型解释 |
+| `getRowIndex()` | number | 行索引 |
+| `getParentRowIndex()` | number | 父行索引 |
+| `isCancel()` | boolean | 当前取消状态 |
+| `setCancel(boolean)` | void | 拒绝本次提交模型，保留其他插件已有取消 |
+| `setValue(any)` | void | 事件对象有此方法；本次控制器仍传原局部值给 postBack，不能据此承诺改值生效 |
 
-## 运行时注意事项
-
-- 取消回传后，服务端 `propertyChanged` 不会针对该字段触发。
-- 只适合对纯录入、纯展示字段做裁剪，不要误伤联动计算字段。
-- 该事件关注的是“是否回传”，不是“是否保存”；保存时字段值仍可能整体提交。
-
-## 常见搭配
-
-- 搭配类：`AbstractFormPlugin`
-- 搭配示例：[beforeFieldPostBack.md](../../examples/plugins/插件示例/表单插件-事件拆分/beforeFieldPostBack.md)
-- 搭配 FAQ：
-  - 字段回传怎么关掉
-  - 为啥关掉后联动不跑了
+本事件没有 `getFieldKey()` 或 `getRow()`。`FieldEdit.getFieldKey()` 是字段控件的方法；行及父行索引的适用含义由目标控件决定。
 
 ## 常见错误
 
-### 1. 取消了关键字段回传
-
-高概率原因：
-- 只按字段类型判断，没有看业务联动
-- 没梳理服务端依赖关系
-
-### 2. 以为取消回传等于取消保存
-
-高概率原因：
-- 混淆了页面交互阶段和最终保存阶段
+- 把服务端合法性校验当成浏览器发请求之前的优化：会拒绝有效输入，且没有省掉已发生的请求。
+- 把不执行本次 `FieldEdit.postBack` 写成全局永久禁用 `propertyChanged`：后续其他模型赋值仍可能触发事件。
+- 宣称取消后最终一定保存或一定不保存：需核对后续是否再次提交该值及实际保存链，当前 API 不提供这两种保证。
+- 主动 `setCancel(false)` 覆盖其他插件的拒绝，或按控件名称猜字段依赖。
 
 ## 相关示例
 
-- [beforeFieldPostBack.md](../../examples/plugins/插件示例/表单插件-事件拆分/beforeFieldPostBack.md)
+[字段提交边界与八个文本控件即时更新配置](../../examples/plugins/插件示例/表单插件-事件拆分/beforeFieldPostBack.md)。实际网络、分录分页和保存重开仍需目标平台验证。
 
 ## 关键词
 
-- 中文关键词：字段回传、回传前事件、性能优化、页面录入
-- 英文关键词：`BeforeFieldPostBackEvent`
-- 常见别名：字段回传拦截、字段回传事件
-- 常见报错词：联动不触发、字段回传过多、页面卡顿
+字段回传、模型更新、即时更新、合法性检查、联动不触发、`BeforeFieldPostBackEvent`、`setFireEvtUp`

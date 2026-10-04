@@ -4,6 +4,8 @@ import kd.bos.cache.CacheFactory;
 import kd.bos.cache.DistributeSessionlessCache;
 import kd.bos.dataentity.entity.DynamicObject;
 import kd.bos.dataentity.entity.DynamicObjectCollection;
+import kd.bos.dataentity.metadata.IDataEntityProperty;
+import kd.bos.dataentity.serialization.SerializationUtils;
 import kd.bos.entity.cache.AppCache;
 import kd.bos.entity.cache.IAppCache;
 import kd.bos.logging.Log;
@@ -17,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -97,45 +99,102 @@ public class SampleCacheUsage {
             CacheFactory.getCommonCacheFactory().getDistributeSessionlessCache("kdcd_biz_cache");
 
     /**
-     * 场景：缓存基础资料映射表（如维度成员数据）。
-     * 查询时先查缓存，未命中则从 DB 查询后回填。
+     * 缓存已审核且启用的小型基础资料映射表；目标实体须具有 status、enable 字段。
+     * 查询投影原样交给 QueryServiceHelper，以返回属性名作为 JSON 字段名；不自行拆分表达式。
+     * id 用作外层 Map 的键，投影中的其他字段/别名不得占用 id。
+     * 超过条数或字节边界时拒绝缓存，不截断业务结果；大集合应改用过滤或分页查询。
      *
      * @param formId       表单标识（如 "bcm_model"、"bos_org"）
-     * @param selectFields 需要缓存的字段
-     * @param cacheKey     缓存 key（建议 formId + 业务标识）
-     * @param ttlSeconds   过期时间（秒），一般 180~600
-     * @return key=id, value=字段 JSON 串
+     * @param selectFields 查询投影（如 "number,name" 或已核验的表达式及别名），无需重复选择 id
+     * @param cacheKey     业务隔离标识，须包含当前应用所需的租户/数据中心及业务范围
+     * @param ttlSeconds   正数有效期（秒）；源数据更新后须按同一投影 key 失效
+     * @return key=id, value=查询返回字段的 JSON 对象串（不含外层 id）
      */
     public Map<String, String> getCachedModelData(
             String formId, String selectFields, String cacheKey, int ttlSeconds) {
-        String namespacedKey = "model_data:" + formId + ":" + cacheKey;
+        String namespacedKey = ModelData.cacheKey(formId, selectFields, cacheKey, ttlSeconds);
 
-        // 1. 先查缓存
         Map<String, String> cached = distCache.getAll(namespacedKey);
-        if (!cached.isEmpty()) {
+        if (cached != null && !cached.isEmpty()) {
             return cached;
         }
 
-        // 2. 缓存未命中，查询数据库
         QFilter filter = new QFilter("status", QCP.equals, "C")
                 .and(new QFilter("enable", QCP.equals, "1"));
+        // 多取一行用于检查溢出，禁止把被截断的结果当成完整映射缓存。
+        DynamicObjectCollection rows = QueryServiceHelper.query(
+                formId, "id," + selectFields, new QFilter[]{filter}, "id", ModelData.MAX_ROWS + 1);
+        Map<String, String> dataMap = ModelData.toMap(rows);
+        if (!dataMap.isEmpty()) {
+            distCache.put(namespacedKey, dataMap, ttlSeconds);
+        }
+        // 此示例不存空 Hash；不存在结果的负缓存与热点回源锁需按调用场景补齐。
+        return dataMap;
+    }
 
-        DynamicObjectCollection dataCollection = QueryServiceHelper.query(
-                formId, "id," + selectFields, new QFilter[]{filter});
+    /** 小型映射缓存的投影标识、字段序列化与容量边界。 */
+    static final class ModelData {
+        static final int MAX_ROWS = 1000;
+        static final int MAX_BYTES = 1024 * 1024;
 
-        // 3. 构建缓存 Map
-        Map<String, String> dataMap = new HashMap<>();
-        for (DynamicObject item : dataCollection) {
-            String id = item.getString("id");
-            // 可以存 JSON 或简单值
-            dataMap.put(id, item.getString(selectFields));
+        private ModelData() {
         }
 
-        // 4. 写入缓存（带 TTL）
-        distCache.put(namespacedKey, dataMap, ttlSeconds);
-        log.info("分布式缓存写入：size={}, ttl={}s", dataMap.size(), ttlSeconds);
+        static String cacheKey(String formId, String selectFields, String scope, int ttlSeconds) {
+            requireText(formId, "formId");
+            requireText(selectFields, "selectFields");
+            requireText(scope, "cacheKey");
+            if (ttlSeconds <= 0) {
+                throw new IllegalArgumentException("ttlSeconds must be positive");
+            }
+            // 长度前缀避免分隔符歧义；完整投影参与摘要，字段和别名不同不能复用旧值。
+            String identity = formId.length() + ":" + formId
+                    + selectFields.length() + ":" + selectFields + scope.length() + ":" + scope;
+            try {
+                byte[] digest = MessageDigest.getInstance("SHA-256")
+                        .digest(identity.getBytes(StandardCharsets.UTF_8));
+                return "model_data:v2:" + Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+            } catch (NoSuchAlgorithmException e) {
+                throw new AssertionError("SHA-256 is unavailable", e);
+            }
+        }
 
-        return distCache.getAll(namespacedKey);
+        static Map<String, String> toMap(Iterable<DynamicObject> rows) {
+            Map<String, String> values = new LinkedHashMap<>();
+            long bytes = 0;
+            int rowCount = 0;
+            for (DynamicObject row : rows) {
+                if (++rowCount > MAX_ROWS) {
+                    throw new IllegalArgumentException("Model data exceeds row limit; use a filtered or paged query");
+                }
+                String id = row.getString("id");
+                requireText(id, "row.id");
+                if (values.containsKey(id)) {
+                    throw new IllegalArgumentException("Model data contains duplicate id: " + id);
+                }
+                Map<String, Object> fields = new LinkedHashMap<>();
+                for (IDataEntityProperty property : row.getDynamicObjectType().getProperties()) {
+                    if (!"id".equalsIgnoreCase(property.getName())) {
+                        fields.put(property.getName(), row.get(property));
+                    }
+                }
+                String json = SerializationUtils.toJsonString(fields);
+                // 统计本次写入键和值的 UTF-8 字节量；不代表 Redis 总内存占用。
+                bytes += id.getBytes(StandardCharsets.UTF_8).length
+                        + json.getBytes(StandardCharsets.UTF_8).length;
+                if (bytes >= MAX_BYTES) {
+                    throw new IllegalArgumentException("Model data exceeds byte limit; use a filtered or paged query");
+                }
+                values.put(id, json);
+            }
+            return values;
+        }
+
+        private static void requireText(String value, String name) {
+            if (value == null || value.trim().isEmpty()) {
+                throw new IllegalArgumentException(name + " must not be blank");
+            }
+        }
     }
 
     /**
@@ -205,7 +264,7 @@ public class SampleCacheUsage {
     // ===================================================================
     //
     //  AppCache:
-    //  - 应用级缓存，同一 JVM 实例内共享
+    //  - 应用级分布式缓存；7.0 AppCacheImpl 使用 DistributeSessionlessCache
     //  - 共享状态建议显式 TTL；无 TTL 只用于已有稳定失效机制的场景
     //  - 适合：配置项、票据、临时状态
     //  - 用法：AppCache.get("命名空间") → put/get

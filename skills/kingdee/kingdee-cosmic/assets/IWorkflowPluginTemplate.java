@@ -3,8 +3,8 @@ package kd.cd.common;
 import kd.bos.workflow.api.AgentExecution;
 import kd.bos.workflow.component.approvalrecord.IApprovalRecordItem;
 import kd.bos.workflow.engine.extitf.IWorkflowPlugin;
-import kd.cd.core.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,16 +15,18 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
 
     /**
      * 触发时机: 在需要了解当前插件可访问上下文能力时调用。
-     * 参数要点: 无入参；仅展示当前插件可通过 this. 访问的方法能力。
+     * 参数要点: execution 是各工作流事件传入的上下文对象。
      * 典型用途: 作为模板提示，指导在各事件内选择正确的上下文 API。
      */
-    private void getContextSample() {
+    private void getContextSample(AgentExecution execution) {
         // execution.getBusinessKey();
         // execution.getEntityNumber();
         // execution.getCurrentFlowElement();
         // execution.getVariable("amount");
         // execution.setVariable("lastNodeName", "财务审核");
-        // execution.setAssigneeList(new java.util.ArrayList<>());
+        // execution.getCurrentTaskResult(kd.bos.workflow.api.constants.WFTaskResultEnum.auditMessage);
+        // execution.getStartUserId();
+        // 参与人由 calcUserIds 返回 List<Long>，不调用上下文 setter。
     }
 
     private static final String VAR_AMOUNT = "amount";
@@ -38,11 +40,13 @@ public class IWorkflowPluginTemplate implements IWorkflowPlugin {
      */
     @Override
     public List<Long> calcUserIds(AgentExecution execution) {
-        List<Long> userIds = CollectionUtils.newArrayList();
+        List<Long> userIds = new ArrayList<>();
+        // 这是业务配置的流程变量，不等同于框架 execution.getStartUserId()。
         Object starter = execution.getVariable(VAR_START_USER);
         if (starter instanceof Number) {
             userIds.add(((Number) starter).longValue());
         }
+        // 空集合明确表示本次未算出用户；由当前调用入口/流程配置处理。
         return userIds;
     }
 

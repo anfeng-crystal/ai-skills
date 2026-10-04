@@ -1,7 +1,5 @@
 package kd.cd.common;
 
-import kd.bos.entity.BillEntityType;
-import kd.bos.entity.LinkSetItemElement;
 import kd.bos.entity.botp.plugin.AbstractWriteBackPlugIn;
 import kd.bos.entity.botp.plugin.args.AfterBuildSourceBillIdsEventArgs;
 import kd.bos.entity.botp.plugin.args.AfterCalcWriteValueEventArgs;
@@ -48,7 +46,7 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
 
     /**
      * 触发时机: 反写执行前，框架准备目标单字段阶段。
-     * 参数要点: e.getFieldKeys() 为后续反写读取字段集合。
+     * 参数要点: e.getFieldKeys() 为后续反写读取字段集合；本事件早于 setContext，目标类型取 e.getMainType()。
      *
      */
 
@@ -114,8 +112,9 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
     }
 
     /**
-     * 触发时机: 执行反写规则前。
-     * 参数要点: 可做最终拦截和环境准备。
+     * 触发时机: 分析当前反写公式前；同一规则可按公式多次触发。
+     * 参数要点: e.getRule()/getRuleItem() 分别是当前规则/公式；setCancel(true) 仅取消当前公式。
+     * 每次 setContext 会重置取消标记，取消整条规则需对其各公式逐次判断。
      */
 
     @Override
@@ -148,8 +147,9 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
     }
 
     /**
-     * 触发时机: 关行前。
-     * 参数要点: 可校验关行条件并拦截。
+     * 触发时机: 当前源单行关行处理前。
+     * 参数要点: setCancel(true) 跳过该行本次关闭条件计算、状态填写及 afterCloseRow。
+     * 取消并非强制关闭，也不撤销此前的反写值或取消整个保存。
      */
     @Override
     public void beforeCloseRow(BeforeCloseRowEventArgs e) {
@@ -192,8 +192,8 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
     }
 
     /**
-     * 触发时机: 保存事务提交前。
-     * 参数要点: 适合同事务内最后修正。
+     * 触发时机: 反写逻辑处理完毕、开启保存事务前。
+     * 参数要点: 可预读待保存的第三方数据，不能把本事件视为保存事务内。
      */
     @Override
     public void beforeSaveTrans(BeforeSaveTransEventArgs e) {
@@ -203,7 +203,7 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
 
     /**
      * 触发时机: 保存来源单前。
-     * 参数要点: 可校验来源单最终写入数据。
+     * 参数要点: e.isNewThread() 为 true 时属于跨库异步保存，不能靠抛异常回滚反写。
      */
 
     @Override
@@ -214,7 +214,7 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
 
     /**
      * 触发时机: 保存来源单后。
-     * 参数要点: 可进行后置日志、状态同步。
+     * 参数要点: e.isNewThread() 为 true 时不能假设与目标单处于同一可回滚事务。
      */
     @Override
     public void afterSaveSourceBill(AfterSaveSourceBillEventArgs e) {
@@ -243,44 +243,4 @@ public class WriteBackPlugInTemplate extends AbstractWriteBackPlugIn {
         this.getCurrLinkSetItem();
     }
 
-    // ===== 上下文与元信息 =====
-
-    /**
-     * 获取当前关联关系项。
-     * 注意: 模板示例返回 null，实际使用时需根据业务逻辑实现。
-     */
-    @Override
-    public LinkSetItemElement getCurrLinkSetItem() {
-        super.getCurrLinkSetItem();
-        return null;
-    }
-
-    /**
-     * 获取目标单据类型。
-     * 注意: 模板示例返回 null，实际使用时需根据业务逻辑实现。
-     */
-    @Override
-    public BillEntityType getTargetSubMainType() {
-        super.getTargetSubMainType();
-        return null;
-    }
-
-    /**
-     * 获取操作类型。
-     * 注意: 模板示例返回 null，实际使用时需根据业务逻辑实现。
-     */
-    @Override
-    public String getOpType() {
-        super.getOpType();
-        return null;
-    }
-
-    /**
-     * 设置上下文信息。
-     * 注意: 模板示例为空实现，实际使用时需根据业务逻辑实现。
-     */
-    @Override
-    public void setContext(BillEntityType targetSubMainType, String opType, LinkSetItemElement linkSetItem) {
-        super.setContext(targetSubMainType, opType, linkSetItem);
-    }
 }

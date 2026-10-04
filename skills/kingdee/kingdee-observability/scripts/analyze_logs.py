@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from output_guard import write_output
 from redact import redact_text, redact_value, sanitize_sql
 
 
@@ -52,20 +54,27 @@ def pick(event: dict[str, Any], alias: str, default: Any = None) -> Any:
     return default
 
 
-def parse_duration(value: Any, message: str) -> float | None:
-    if isinstance(value, bool):
+def finite_duration_ms(amount: int | float | str, unit: str = "ms") -> float | None:
+    try:
+        duration = float(amount) * (1000 if unit.lower() == "s" else 1)
+    except (OverflowError, ValueError):
         return None
-    if isinstance(value, (int, float)):
-        return float(value)
+    return duration if math.isfinite(duration) and duration >= 0 else None
+
+
+def parse_duration(value: Any, message: str) -> float | None:
+    duration = None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        duration = finite_duration_ms(value)
     if isinstance(value, str):
-        match = re.search(r"(\d+(?:\.\d+)?)\s*(ms|s)?", value, re.IGNORECASE)
+        match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(ms|s)?\s*", value, re.IGNORECASE)
         if match:
-            amount = float(match.group(1))
-            return amount * 1000 if (match.group(2) or "").lower() == "s" else amount
+            duration = finite_duration_ms(match.group(1), match.group(2) or "ms")
+    if duration is not None:
+        return duration
     match = DURATION_MARKER.search(message)
     if match:
-        amount = float(match.group(1))
-        return amount * 1000 if match.group(2).lower() == "s" else amount
+        return finite_duration_ms(match.group(1), match.group(2))
     return None
 
 
@@ -186,7 +195,8 @@ def build_trace_trees(events: list[dict[str, Any]], warnings: list[str]) -> list
             while node_id in nodes:
                 node_id = f"{base_id}#{suffix}"
                 suffix += 1
-            original_to_first.setdefault(base_id, node_id)
+            if event["spanId"]:
+                original_to_first.setdefault(event["spanId"], node_id)
             nodes[node_id] = {
                 "nodeId": node_id,
                 "spanId": event["spanId"],
@@ -302,8 +312,8 @@ def main() -> int:
     if args.source_mode == "prod-readonly" and not args.approval_ref:
         print("prod-readonly source mode requires --approval-ref", file=sys.stderr)
         return 2
-    if args.slow_sql_ms < 0 or args.n_plus_one_threshold < 2:
-        print("thresholds must be non-negative and N+1 repeats must be at least 2", file=sys.stderr)
+    if not math.isfinite(args.slow_sql_ms) or args.slow_sql_ms < 0 or args.n_plus_one_threshold < 2:
+        print("slow-SQL threshold must be finite and non-negative; N+1 repeats must be at least 2", file=sys.stderr)
         return 2
 
     path = Path(args.input).expanduser().resolve()
@@ -327,15 +337,11 @@ def main() -> int:
         return 2
 
     payload = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True)
-    if args.output:
-        output = Path(args.output).expanduser().resolve()
-        if output == path:
-            print("output must not overwrite input", file=sys.stderr)
-            return 2
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(payload, encoding="utf-8")
-    else:
-        print(payload)
+    try:
+        write_output(payload, path, args.output)
+    except (OSError, ValueError) as exc:
+        print(f"cannot write output: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 

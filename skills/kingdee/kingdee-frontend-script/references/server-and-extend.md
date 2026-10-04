@@ -5,6 +5,7 @@
 ## 前后端通信
 
 ### fetchData(前端 → 服务端)
+`fetchData` 与下文 `onCustomMsgEvent` 自 V7.0.2 引入，依据见 [页面脚本版本说明](events-and-api.md)。只有 7.0 大版本信息时不能默认可用；服务端接收签名另按目标 SDK/脚本声明核对。
 ```javascript
 this.fetchData('方法名', { 参数 }).then((result) => { /* 服务端返回 */ });
 ```
@@ -31,7 +32,7 @@ customEvent(e) {
 | | PC 端 | 移动端 |
 |---|---|---|
 | 入口 | `window.afterLoaded(cb)` / `window.KDPluginExtend` | `window.initKDPlugin()` + `loadjs(script, cb)` |
-| 执行 | 同步,didMount 时元素已就绪 | 异步加载,需 `onInit()` Promise 等控件就绪 |
+| 就绪判断 | 扩展资源入口与页面 `didMount` 不保证每个控件 DOM 就绪 | 异步加载资源后仍须判断页面/控件就绪 |
 | 判环境 | — | 检测 `window.initKDPlugin` 是否存在 |
 
 ```javascript
@@ -46,3 +47,5 @@ window.initKDPlugin = function () {                      // 移动端
 ```
 
 页面脚本(单据脚本编辑器内)入口为 `didMount()` / `willUnmount()`,`this` 直接指向页面脚本上下文。
+
+扩展 JS 的入口、资源加载完成和单个控件就绪是不同阶段；入口仍按目标项目脚手架核对。页面脚本在 PC 和移动端都有懒加载场景，依赖 DOM 时用 `wait()`，树/表格初始化后数据或 DOM 用 `onInit()`。不要把 PC 的 `didMount` 当成所有元素同步可用的保证，具体边界见 [生命周期](events-and-api.md#生命周期)。

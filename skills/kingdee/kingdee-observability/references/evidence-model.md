@@ -4,6 +4,8 @@
 
 The analyzer recognizes common variants of timestamp, trace/span IDs, parent span ID, service, logger, thread, level, duration, message, exception, SQL, and bind parameters. Missing fields remain unknown; do not infer them from array position except for deterministic display order.
 
+Duration values must be finite and non-negative after conversion to milliseconds: numeric fields use milliseconds, and a complete decimal string may have an `ms` or `s` suffix; invalid values (including booleans) remain unknown unless an explicit `duration`/`elapsed`/`cost`/`took` message marker supplies a valid duration. The slow-SQL threshold must also be finite and non-negative.
+
 ## Categories
 
 | Category | Evidence rule | Interpretation limit |

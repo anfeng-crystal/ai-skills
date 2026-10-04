@@ -7,76 +7,80 @@
 | 属性 | 说明 |
 |------|------|
 | 所属接口 | IDataModelChangeListener |
-| 触发时机 | 字段值被修改之前触发，可在此拦截并取消修改操作 |
+| 触发时机 | 字段值被修改之前触发，用于读取待变更值及前置通知或联动 |
 | 方法签名 | `beforePropertyChanged(e: PropertyChangedArgs): void` |
 
 ## 说明
 
-在字段值实际写入数据模型之前触发的事件回调。通过该方法可以获取字段的新值和旧值，进行前置校验，若不满足业务规则可调用 `e.setCancel(true)` 阻止本次修改。
+在字段值实际写入数据模型之前触发。字段标识来自 `e.getProperty().getName()`，待变更的新值、旧值和行号来自 `e.getChangeSet()` 中各条 `ChangeData`。该参数没有 `setCancel`；本事件的提示或 `return` 不会取消后续赋值，也不能据此承诺界面恢复旧值。
 
 ## 参数说明
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | e | PropertyChangedArgs | 事件参数对象 |
-| e.getPropertyName() | string | 获取被修改的字段标识 |
-| e.getNewValue() | any | 获取即将设置的新值 |
-| e.getOldValue() | any | 获取修改前的旧值 |
-| e.getRowIndex() | number | 获取分录行索引（单据头字段为 -1） |
-| e.setCancel(boolean) | void | 设置为 true 可取消本次修改 |
+| e.getProperty().getName() | string | 本次事件变更的字段标识 |
+| e.getChangeSet() | ChangeData[] | 当前字段的变更集合；批量变更时逐条处理 |
+| change.getNewValue() | any | 该条变更即将设置的新值 |
+| change.getOldValue() | any | 该条变更的旧值 |
+| change.getRowIndex() | number | 该条变更的行索引；单据头字段为 0，单据体从 0 开始 |
+| change.getDataEntity() | DynamicObject | 该条变更所在的数据包 |
 
 ## 业务场景
 
-采购订单中，单价修改前校验是否允许修改。当单据已审核时，不允许修改单价字段，防止已审核的采购订单被随意调价。
+在单价字段即将改成负数时提醒用户核对。本示例仅提示，不构成“禁止负数”或“审核后禁止修改”的硬约束；硬约束应选择目标版本已确认支持的校验或编辑控制路径。
 
 ## 完整示例代码
 
 ```typescript
 import { AbstractBillPlugIn } from "@cosmic/bos-core/kd/bos/bill";
 import { PropertyChangedArgs } from "@cosmic/bos-core/kd/bos/entity/datamodel/events";
+import { BigDecimal } from "@cosmic/bos-script/java/math";
 
 /**
- * 采购订单表单插件 - 已审核单据不允许修改单价
+ * 单价字段变更前提示；依赖目标声明及 price 的 Decimal 元数据。
+ * 仅展示页面提示，不取消赋值、不保存数据；不替代业务校验。
  */
-class PmPurorderPriceCheckPlugin extends AbstractBillPlugIn {
+class PmPurorderPriceHintPlugin extends AbstractBillPlugIn {
 
+  /**
+   * 读取本次 price 变更的各行新值；空值不提示，其他字段直接返回。
+   * 事件参数和变化集由数据模型提供，return 仅结束当前回调。
+   */
   beforePropertyChanged(e: PropertyChangedArgs): void {
     super.beforePropertyChanged(e);
 
-    const fieldKey = e.getPropertyName();
+    const fieldKey = e.getProperty().getName();
+    if (fieldKey !== "price") {
+      return;
+    }
 
-    // 仅拦截单价字段的修改
-    if (fieldKey === "price") {
-      // 获取单据头的审核状态
-      const billStatus = this.getModel().getValue("billstatus") as string;
-
-      // C 表示已审核状态
-      if (billStatus === "C") {
-        // 阻止修改
-        e.setCancel(true);
-        this.getView().showTipNotification("已审核的采购订单不允许修改单价");
-        return;
-      }
-
-      // 额外校验：新单价不能为负数
-      const newPrice = e.getNewValue() as BigDecimal;
+    const messages: string[] = [];
+    for (const change of e.getChangeSet()) {
+      const rowIndex = change.getRowIndex();
+      const newPrice = change.getNewValue() as BigDecimal;
+      // 遍历全部变更行，汇总提示；空值不参与负数比较。
       if (newPrice != null && newPrice.compareTo(BigDecimal.ZERO) < 0) {
-        e.setCancel(true);
-        this.getView().showTipNotification("单价不能为负数");
-        return;
+        messages.push("第 " + (rowIndex + 1) + " 行单价即将改为负数，请核对");
       }
+    }
+
+    if (messages.length > 0) {
+      this.getView().showTipNotification(messages.join("；"));
     }
   }
 }
 
-let plugin = new PmPurorderPriceCheckPlugin();
+let plugin = new PmPurorderPriceHintPlugin();
 export { plugin };
 ```
 
 ## 注意事项
 
-- `e.getNewValue()` 获取即将设置的新值，`e.getOldValue()` 获取修改前的旧值
-- `e.setCancel(true)` 可阻止本次字段值变更，界面上的值会恢复为修改前的状态
-- 此方法在值实际写入数据模型前触发，适合做前置校验拦截
-- 插件类不能定义类属性，所有变量应在方法内部声明为局部变量
-- 必须调用 `super.beforePropertyChanged(e)` 以确保父类逻辑正常执行
+- `price` 在示例中是单据体 Decimal 字段，复用前核对实际字段标识与类型；行索引从 0 开始，界面提示的序号才加 1。
+- `PropertyChangedArgs` 没有直接获取新旧值、行号或取消赋值的方法。通过 `ChangeData` 读取新旧值和行；不将其他事件的 `setCancel` 套入本事件。
+- 逐条处理 `getChangeSet()`，不要只处理第一条；需要比较修改前后值时读取同一条 `change.getOldValue()` / `change.getNewValue()`。
+- 初始化阶段不触发本事件，包括在 `afterCreateNewData` 中改值；初始化逻辑须按对应生命周期处理。
+- 插件类不能定义类属性，所有变量应在方法内部声明为局部变量；保留 `super.beforePropertyChanged(e)` 调用。
+
+依据：[官方 beforePropertyChanged 事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=228912833529089024&productLineId=29)（2026-07-31 11:59 更新，正文未标完整版本范围）。本地 `@cosmic/bos-core` 声明包 `1.0.0`（buildTime `2025-11-12 15:28:03`）与 `7.0` 标记 JAR 均确认上述参数与取值 API，且未提供取消方法；声明包号和 JAR 标签不等于产品补丁号，也不证明所有目标版本或 KingScript 引擎兼容。

@@ -226,11 +226,11 @@ import kd.bos.exception.KDBizException;
 import kd.bos.logging.Log;
 import kd.bos.logging.LogFactory;
 
-// 业务异常（统一使用 KDBizException）
+// 业务异常示例（按语义选用 KDException 子类）
 throw new KDBizException(new ErrorCode("myModule", "errCode001"), "业务描述");
 
 // 包装异常（保留原始 cause）
-throw new KDBizException(new ErrorCode("myModule", "errCode002"), e);
+throw new KDBizException(e, new ErrorCode("myModule", "errCode002"));
 
 // 日志记录（插件内直接使用内置 log）
 log.info("操作完成: billNo={}", billNo);

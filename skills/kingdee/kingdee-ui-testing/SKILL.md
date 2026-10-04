@@ -42,6 +42,9 @@ Read `references/execution-contract.md` before browser execution and `references
 - `safe-smoke` and `prod-safe-smoke` forbid input, select-value changes, upload, save, create, update, delete, submit, audit, unaudit, enable/disable, workflow action, and cleanup.
 - Treat a click as read-only only when its declared effect is navigation, tab/dialog open/close, pagination, or inspection and no business state changes.
 - Assert before and after state by stable business identifiers; do not rely only on toast text.
+- 动态表单回填测试从真实父页打开：按变更影响验证缺必录不关闭且不新增/改行、补齐后回填、再次编辑回显、取消不改原行。固定值/隐藏字段、布尔 `false`、基础资料和金额分别按字段合同断言；只测独立预览或只测成功路径不能覆盖回填与必录门禁。
+- 布局修改检查空/短内容与必要的换行内容，覆盖整页相邻字段、上下段及按钮；只证明 DOM 存在或查看局部截图不能证明布局协调。隐藏元素可能仍在 DOM，应断言不可见而非不存在。
+- 用户同时操作或已在当前弹窗录入时，先识别最新可见状态，保留其内容；改用已授权独立测试页或停止冲突动作，不覆盖用户输入。未执行场景明确记录，不将其写成通过。
 - Do not infer page identity from a shared physical table, entity name, window title, or similar-looking fields. Evidence from the wrong `formId`/`pageType` is `blocked_wrong_page`, not passed.
 - Never force-overwrite user testcases. Write only the requested output path.
 

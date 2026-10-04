@@ -1,63 +1,64 @@
 # 线程池 (Unified Thread Pool)
 
-## TL;DR
-- 适用：平台统一线程池和携带 `RequestContext` 的异步任务执行。
-- 先抓：优先用平台线程池 API，不要直接 new JDK 线程池。
-- 跳转：只是恢复上下文本身看 `adv/request-context.md`；定时作业则看 `plugin-task.md`。
-- 继续读全文：当你要创建线程池、提交任务或处理返回值/上下文传递时。
+## 选路
 
-## 概述
-苍穹平台提供了统一的线程池管理机制，用于替代原生的 JDK 线程池。使用平台线程池可以确保线程生命周期的安全管理、自动清理线程变量，并支持将 `RequestContext` (请求上下文) 自动传递到异步线程中。
+平台内异步任务使用 `kd.bos.threads.ThreadPools` 创建/提交，复用命名线程池以纳入平台生命周期管理。只恢复上下文见 [请求上下文](../../adv/request-context.md)；需要持久任务、调度、重试和完成追踪时使用相应任务机制，不能用进程内线程池承诺可靠交付。
 
-## 核心类
-- **`kd.bos.threads.ThreadPools`**: 获取和创建线程池的工厂类。
-- **`kd.bos.threads.ThreadPool`**: 平台封装的线程池接口。
+## API 与上下文（V7.0.1 / 实际 7.0）
 
-## 常用 API 方法
-### 快速执行
-- `executeOnceIncludeRequestContext(String name, Runnable runnable)`: 携带当前上下文执行一次异步任务。
+|能力|已核签名|说明|
+|---|---|---|
+|单次执行|`ThreadPools.executeOnce(String name, Runnable task)`|实际 7.0 会携带当前上下文，不因缺少 Include 字样就判为无上下文|
+|固定池|`ThreadPools.newFixedThreadPool(String name, int size)`|返回 `ThreadPool`|
+|缓存池|`ThreadPools.newCachedThreadPool(String name, int coreSize, int maxSize)`|返回 `ThreadPool`，明确容量|
+|执行|`void ThreadPool.execute(Runnable task)`|使用提交线程的请求上下文|
+|显式上下文|`void execute(Runnable task, RequestContext context)`|只传授权范围内且适用于任务的上下文|
+|结果任务|`<T> Future<T> submit(Callable<T> task)`|另有 `submit(Callable<T>, RequestContext)`|
+|关闭|`void ThreadPool.close()`|不继承 AutoCloseable；本地实现 shutdown 并注销名称，不等待全部任务完成|
 
-### 创建线程池
-- `newCachedThreadPool(String name, int coreSize, int maxSize)`: 创建可缓存线程池。
-- `newFixedThreadPool(String name, int size)`: 创建固定大小线程池。
+实际 7.0 的普通 `execute` / `submit` 在提交时调用 `RequestContextCreator.createForThreadPool`，执行时恢复；复制租户、账套、用户、组织、语言等选定属性。它不是完整 Web Session、页面模型、任意 ThreadLocal 或调用方事务的传播合同。`executeIncludeRequestContext` 两个实例重载仍存在但在该 JAR 标记 Deprecated，内部委托 `execute`；`ThreadPools.executeOnceIncludeRequestContext` 也存在，不把实例重载的弃用状态推广到所有同名方法。
 
-### 提交任务
-- `execute(Runnable task)`: 提交任务。
-- `executeIncludeRequestContext(Runnable task)`: 提交任务并携带上下文。
-- `submit(Callable<T> task)`: 提交带返回值的任务。
+## 共享池与结果处理
 
-## 示例代码
+以下完整示例只演示提交入口，线程数 `5` 是示例容量，需按业务负载选择。返回 `Future` 便于调用者记录实际成功/失败；方法返回 Future 只说明得到任务句柄，不等于业务已完成。
+
 ```java
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import kd.bos.threads.ThreadPool;
 import kd.bos.threads.ThreadPools;
 
-public class ThreadDemo {
-    // 1. 建议将线程池定义为静态常量（全局共享）
-    private static final ThreadPool pool = ThreadPools.newFixedThreadPool("MyBizPool", 5);
+public final class ThreadDemo {
+    private static final ThreadPool POOL =
+            ThreadPools.newFixedThreadPool("MyBizPool", 5);
 
-    public void runAsyncTask() {
-        // 2. 提交携带上下文的异步任务
-        pool.executeIncludeRequestContext(() -> {
-            // 在此异步线程中可以正常调用 RequestContext.get()
-            doComplexBusiness();
-        });
+    private ThreadDemo() { }
+
+    public static <T> Future<T> submit(Callable<T> task) {
+        return POOL.submit(Objects.requireNonNull(task, "task"));
     }
-    
-    public void runOnce() {
-        // 3. 简单场景：单次快速异步
-        ThreadPools.executeOnceIncludeRequestContext("SingleTask", () -> {
-            log.info("异步执行中...");
-        });
+
+    // 适合无需返回值的短任务；任务自身需有明确失败记录/上报路径。
+    public static void runOnce(Runnable task) {
+        ThreadPools.executeOnce("MyBizOnce", Objects.requireNonNull(task, "task"));
     }
 }
 ```
 
-## 实践建议
-1. **优先携带上下文**：在业务逻辑中，务必使用 `xxxIncludeRequestContext` 系列方法，否则异步线程中无法获取用户信息、账套信息及进行数据库操作。
-2. **全局化维护**：线程池应作为类的静态成员变量，严禁在方法内部频繁创建和关闭线程池。
-3. **命名规范**：创建线程池时必须指定有业务语义的 `name`，以便在 `monitor` 监控中定位问题。
+- 要等待结果时，在合适的协调线程对 `Future.get(timeout, unit)` 处理 `ExecutionException`、`TimeoutException` 和 `InterruptedException`；中断应恢复标记或向上抛出。超时/取消不保证工作线程已停止，也不撤销已写业务数据；避免在请求线程无限等待或在同一满载池内等待其子任务。
+- `execute` / `runOnce` 没有 Future，调用方外层 catch 不能承接随后任务体抛出的异常。需显式设计任务内失败记录与业务状态；不要仅在调用处记“成功”。
+- 复用有明确所属生命周期的池；不要每次方法调用都创建/关闭一个新池。共享池由其管理者在停止接收新任务后统一关闭，业务调用者不随意 close。不能用 `ThreadPool` 的 try-with-resources，也不能把 close 当 awaitTermination。
+- 若自定义 JDK `ExecutorService`，先核目标 `ThreadLifeCycleManager.wrapExecutorService` 适配及关闭责任，再接入平台管理；普通业务优先直接用平台工厂。使用 ThreadLocal 后在 finally remove，不依赖线程复用时自动清理兜底。
 
-## 常见坑位
-1. **直接 new Thread**：严禁在代码中直接使用 `new Thread().start()`，这会导致上下文丢失且线程不可控。
-2. **拒绝策略**：平台线程池对阻塞队列做了优化，默认不会丢失任务，但在高负载下可能会阻塞提交线程，需注意响应时间。
-3. **内存泄露**：虽然平台会自动清理线程变量，但如果在异步线程中使用 `ThreadLocal` 存储了大对象且未手动移除，仍存在泄露风险。
+## 容量、拒绝与恢复边界
+
+实际 7.0 固定池使用有界队列，缓存池使用 `SynchronousQueue`。高负载下默认拒绝处理可能阻塞提交线程，也可能抛异常；池已关闭时存在直接返回、不执行提交任务的实现分支。因此不能承诺“默认不会丢任务”或“调用没报错就已可靠接收”。避免并发关闭与提交，需要可靠交付时另有持久记录和可核对的处理状态。
+
+官方指南有“100 次 / 505 秒”描述，但本地 7.0 的容量等待循环本身不递增该拒绝次数，不能推导固定等待上限。具体容量、队列和拒绝行为以目标构建和实际配置为准；不把该文章数值当接口 SLA，不为排错自动修改 MC。
+
+上下文能恢复不代表可直接捕获活页面、可变 `DynamicObject` 或事务内未提交数据跨线程共享。按业务确定独立输入、数据重新读取时机和事务边界；提交/执行失败后先核持久状态再决定重试，避免重复业务动作。
+
+## 依据与验证
+
+[官方线程池指南](https://vip.kingdee.com/knowledge/318771871749696000)（更新 2026-07-30 12:37）提供生命周期、上下文和队列说明；精确签名与上下文合同对照 [V7.0.1 ThreadPool](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/threads/ThreadPool.html)、[ThreadPools](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/threads/ThreadPools.html) 及实际 `bos-framework-7.0.jar`。本卡为 Java 8 离线编译和实现核验，未运行线程池饱和、关闭竞态、上下文隔离或任务业务验收。

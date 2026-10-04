@@ -90,19 +90,23 @@ package kd.cd.common.demo;
 
 import kd.cd.common.plugin.AbstractBillPlugInExt;
 import kd.cd.common.entity.EntityUtils;
+import kd.bos.entity.operate.result.OperationResult;
 import kd.bos.form.events.AfterDoOperationEventArgs;
 
 public class MyBillPlugin extends AbstractBillPlugInExt {
     @Override
     public void afterDoOperation(AfterDoOperationEventArgs e) {
         super.afterDoOperation(e);
-        if ("audit".equals(e.getOperationKey())) {
+        OperationResult result = e.getOperationResult();
+        if ("audit".equals(e.getOperateKey()) && result != null && result.isSuccess()) {
             String billNo = getValue(EntityUtils.getBillNoKey(getBillFormId()));
             log.info("单据 {} 审核成功", billNo);
         }
     }
 }
 ```
+
+操作标识只说明执行了哪种操作；成功提示须检查结果，不能把进入 `afterDoOperation` 当作成功。官方 [AfterDoOperationEventArgs](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/form/events/AfterDoOperationEventArgs.html) 的方法是 `getOperateKey()`；[OperationResult.isSuccess()](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/entity/operate/result/OperationResult.html) 会计入校验失败及错误信息。依据为 Cosmic V7.0.1；目标签名仍按 `SKILL.md` 核验，批量操作还需分别处理成功项与失败项。
 
 ### 操作插件模板
 ```java

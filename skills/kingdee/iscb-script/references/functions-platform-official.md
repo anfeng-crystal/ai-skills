@@ -22,7 +22,9 @@
 - `StartEventDataCopy`：补偿启动方案事件触发。
 - `NotifyDataCopyEventHandler`：集成事件通知。
 - `FilterEvaluator`：事件触发过滤条件。
-- `EAS_BOTP` / `IERP_BOTP`：EAS 或当前账套单据下推。
+- `EAS_BOTP`：EAS 单据下推。
+
+`IERP_BOTP` 的参数、单目标单限制及复杂转换入口见 `functions-platform-services.md` 的 BOTP 小节；不能按名称类推 `EAS_BOTP` 签名。
 
 ## 命名空间
 

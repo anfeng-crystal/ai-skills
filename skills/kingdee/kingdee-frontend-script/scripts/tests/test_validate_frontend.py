@@ -29,6 +29,44 @@ class FrontendValidatorTest(unittest.TestCase):
         codes = {issue.code for issue in MODULE.validate_path(FIXTURES / "style-invalid.css")}
         self.assertEqual({"CSS001", "CSS002", "CSS003"}, codes)
 
+    def test_css_documentation_and_disabled_examples_are_ignored(self) -> None:
+        text = """/**
+ * 如需使用平台主题色，可以使用'***themeColor***'来代指。
+ * 以下写法仅用于说明，不应执行。
+@media screen { $.field { color:themeColor; } }
+*/
+$ { color:'themeColor'; }
+"""
+        self.assertEqual([], MODULE.validate_css(text, "commented.css"))
+
+    def test_css_findings_keep_original_lines_after_comments(self) -> None:
+        text = "/*\n @media screen {}\n*/\n@media screen {}\n$.field {color:themeColor;}"
+        findings = MODULE.validate_css(text, "active.css")
+        self.assertEqual({("CSS001", 4), ("CSS002", 5), ("CSS003", 5)},
+                         {(item.code, item.line) for item in findings})
+
+    def test_comment_delimiters_inside_strings_do_not_hide_live_rules(self) -> None:
+        for value in ('"/*"', "'/*'", r'"\"/*"', r"'\'/*'"):
+            with self.subTest(value=value):
+                text = "$ { content:" + value + "; color:themeColor; } /* real comment */"
+                self.assertEqual(["CSS003"], [item.code for item in MODULE.validate_css(text, "quoted.css")])
+
+    def test_unquoted_url_and_escaped_slash_do_not_hide_live_rules(self) -> None:
+        values = ("url(/assets/*icon.svg)", "URL(/assets/*icon.svg)",
+                  r"u\72l(/assets/*icon.svg)", r"url(/assets/\)/*icon.svg)",
+                  r"prefix\/*suffix")
+        for value in values:
+            with self.subTest(value=value):
+                text = "$ { --asset:" + value + "; }\n@media screen {}\n$.field {color:themeColor;}"
+                findings = MODULE.validate_css(text, "url-or-escape.css")
+                self.assertEqual({("CSS001", 2), ("CSS002", 3), ("CSS003", 3)},
+                                 {(item.code, item.line) for item in findings})
+
+    def test_escaped_quote_outside_string_does_not_hide_real_comment(self) -> None:
+        text = r'$ .icon\" { color: red; } /* themeColor */' + "\n@media screen {}"
+        self.assertEqual([("CSS001", 2)],
+                         [(item.code, item.line) for item in MODULE.validate_css(text, "escaped-selector.css")])
+
     def test_space_path_and_windows_separator_are_supported(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

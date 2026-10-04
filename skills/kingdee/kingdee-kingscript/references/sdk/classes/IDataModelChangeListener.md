@@ -20,7 +20,7 @@
 
 ## 典型场景
 
-- `beforePropertyChanged` 中阻止非法赋值
+- `beforePropertyChanged` 中读取待变更值，做前置通知或联动
 - `propertyChanged` 中根据新值联动金额、税额或状态
 - 分录删除、移动、批量填充后重算合计
 - 通过 `isSupportBatchPropChanged()` 打开批量值更新能力
@@ -29,7 +29,7 @@
 
 | 方法 | 作用 | 关键参数 | 返回值 | 说明 |
 |------|------|----------|--------|------|
-| `beforePropertyChanged` | 字段变更前拦截 | `PropertyChangedArgs` | `void` | 可取消本次修改 |
+| `beforePropertyChanged` | 字段变更前通知或联动 | `PropertyChangedArgs` | `void` | 从 `getProperty()` / `getChangeSet()` 读取字段与各行变更；无 `setCancel` |
 | `propertyChanged` | 字段变更后联动 | `PropertyChangedArgs` | `void` | 常与 `ChangeData` 配合读取变化集 |
 | `initPropertyChanged` | 初始化阶段字段变更 | `PropertyChangedArgs` | `void` | 下推、复制、引入时常见 |
 | `beforeDeleteRow` / `afterDeleteRow` | 删除分录前后处理 | 对应事件参数 | `void` | 常用于校验与重算 |
@@ -38,10 +38,13 @@
 
 ## 运行时注意事项
 
-- `propertyChanged` 支持批量触发，不要默认只处理第一条变更。
+- `beforePropertyChanged` / `propertyChanged` 都通过 `getChangeSet()` 读取变化集合，不要默认只处理第一条变更。
+- `beforePropertyChanged` 的 `PropertyChangedArgs` 没有取消 API，页面提示或回调 `return` 不阻止赋值；硬约束应使用目标已确认支持的校验或编辑控制路径。初始化阶段（包括 `afterCreateNewData` 中改值）不触发该前置事件。
 - 不建议在 `propertyChanged` 中回滚字段值，容易和其他已触发逻辑冲突。
 - `initPropertyChanged` 和用户交互触发的 `propertyChanged` 不是同一个时机。
 - TS 声明存在不代表所有事件在当前插件类型和页面场景都一定触发。
+
+前置事件依据：[官方 beforePropertyChanged](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=228912833529089024&productLineId=29)（2026-07-31 11:59 更新，未标完整版本范围），及本地 `@cosmic/bos-core` 声明包 `1.0.0`（buildTime `2025-11-12 15:28:03`）、`7.0` 标记 JAR。这里只核对该事件合同，不将卡片的 V8.0.1 来源或本地 JAR 标签视作所有事件/目标补丁的兼容证明。
 
 ## 常见搭配
 

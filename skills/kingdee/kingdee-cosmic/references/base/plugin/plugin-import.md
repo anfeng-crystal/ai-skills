@@ -27,23 +27,21 @@
 
 ## 插件内上下文方法
 
-以下更适合作为导入插件的上下文/工具方法，不建议继续按“事件”理解：
-
-- `getContext()`：获取导入上下文。
-- `getLogger()`：获取导入日志对象。
-- `getBatchSize()`：读取当前批次大小。
-- `refreshHeartbeat()`：刷新任务心跳。
-- `call()`：导入任务执行入口包装。
+- 行数据从 `ImportBillData.getData()` 取得，日志使用事件传入的 `ImportLogger`。
+- 批次大小通过 `getBatchImportSize()` 配置；原生目标 7.0 基类没有 `getContext()`、`getLogger()`、`getBatchSize()`，不要由普通表单插件推演这些接口。
+- `refreshHeartbeat()` 是任务心跳方法，`call()` 是框架任务入口；不是业务事件，也不要在 `save` 中递归调用 `call()`。
 
 ```java
 Map<String, Object> billData = data.getData();
+// 移除一张不合格单据前，记录原始行号与该单据覆盖的物理行数。
 logger.log(data.getStartIndex(), "错误信息").fail();
-return super.save(rowdatas, logger);
+logger.signTotalRow(data.getEndIndex() - data.getStartIndex() + 1);
+// 在迭代器中移除该单据，完成本批筛选后，再 return super.save(rowdatas, logger)。
 ```
 
 ## 其他扩展点
 
-- `beforeSave(...)`：保存前批次预校验。
+- `beforeSave(...)`：保存前批次预校验；目标 7.0 默认实现还执行平台无效单据过滤，覆盖时保留对应父类处理。
 - `resolveExcel()`：Excel 解析扩展。
 - `importData()`：导入主流程扩展。
 - `getDefaultImportType()` / `getDefaultKeyFields()`：默认导入配置扩展。
@@ -58,12 +56,16 @@ return super.save(rowdatas, logger);
 
 1. 导入校验优先集中在 `save(...)`。
 2. 大数据量场景要明确 `getBatchImportSize()` 和 `isForceBatch()`。
-3. 对失败行必须写 `ImportLogger`，方便用户回溯。
-4. 优先过滤非法数据后再复用 `super.save(...)`。
+3. 自定义移除失败单据时，先按 `getStartIndex()` 记录失败，再以 `getEndIndex() - getStartIndex() + 1` 调用 `signTotalRow`；不能把导入批次重排后的序号当 Excel 原行号。保留行范围，否则被移除单据不会进入后续默认结果统计。
+4. `super.save(...)` 会执行实际保存。先校验并过滤，再调用一次并原样返回结果；不能先调用它再删非法行，也不能丢弃结果后返回 `null`。
+5. 本地 7.0 的默认 `save` 对空批直接返回 `null`，`buildResult` 跳过该结果；这个 `null` 不表示框架将再次默认保存。全部被拒绝时由前面逐单日志说明原因，模板继续调用默认保存方法让它处理空批。
 
 ## 常见坑位
 
-- 把 `call()`、`refreshHeartbeat()`、`getContext()` 这种上下文能力写成“事件说明”。
+- 用其他插件类型的上下文 getter 代替实际入参，或把框架任务入口当业务回调。
 - 直接抛异常中断整批导入，导致可导入数据也丢失。
 - 不记录失败日志，用户无法定位错误行。
 - 批次过大导致内存抖动或请求超时。
+## 依据与范围
+
+[save 事件](https://vip.kingdee.com/knowledge/226286566404892160)（2026-07-31 12:00）展示先过滤再返回默认保存结果；正文 3.2 的“非暂存”描述与案例及代码相反，不照搬该句。[插件基类](https://vip.kingdee.com/knowledge/226283585832256256)（2024-04-17 20:53）说明批次、保存和导入主流程。两篇正文未标注精确 SDK 版本；上述调用顺序、空批和统计行为另由实际 7.0 JAR 核验。模板已做 Java 8 编译检查，未执行真实导入、WebAPI 保存或错误文件生成。

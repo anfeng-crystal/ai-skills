@@ -16,11 +16,16 @@
 
 
 - 基类：`kd.bos.entity.report.AbstractReportListDataPlugin`
+- 挂载：报表设计器的【报表】→【报表列表】→【查询插件】。
 
 ## 核心事件
 
 - `query(ReportQueryParam queryParam, Object selectedObj)`：报表查询入口，返回 `DataSet`。
 - `getColumns(List<AbstractReportColumn> columns)`：调整显示列定义，控制隐藏、顺序、宽度、冻结等属性。
+
+`query` 是抽象方法，直接实现取数，不调用 `super.query(...)`。`getColumns` 的基类实现直接返回入参；模板可直接处理并返回 `columns`，无需调用 `super.getColumns(...)`。输入可能含 `ReportColumnGroup`，修改字段列前先判断 `instanceof ReportColumn`，保留分组及其子列，不能将每个 `AbstractReportColumn` 强转为字段列。
+
+依据：[官方报表取数插件帮助](https://vip.kingdee.com/knowledge/225993397708629504)、[官方报表界面插件帮助的列类型检查示例](https://vip.kingdee.com/knowledge/225997720761664000)，并已用本地 7.0 SDK 编译及混合列对象验证。帮助正文未声明最低适用版本；其他版本仍需核对目标 SDK。此验证未覆盖平台挂载、查询取数或导出。
 
 ## 插件内上下文方法
 

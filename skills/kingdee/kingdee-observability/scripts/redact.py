@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from output_guard import write_output
+
 
 REDACTED = "[REDACTED]"
 SENSITIVE_KEY_PARTS = {
@@ -58,8 +60,15 @@ IPV4 = re.compile(r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])")
 IPV6 = re.compile(r"(?i)(?<![\w:])(?=[0-9a-f:]*:[0-9a-f:]*:)[0-9a-f:]+(?![\w:])")
 EMAIL = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 URL_HOST = re.compile(r"(?i)\b(https?://)([^/\s]+)")
+# Bearer/Basic contain a scheme plus one credential. Header separators stay on
+# one line; matched quoted values retain their legacy multiline coverage.
+# Complex unquoted schemes keep the legacy single-token fallback below.
+AUTHORIZATION_PAIR = re.compile(
+    r"(?i)([\"']?authorization[\"']?)([ \t]*[:=][ \t]*)(?:(?:bearer|basic)[ \t]+)?"
+    r"(\"(?:\\[\s\S]|[^\"\\])*\"|'(?:\\[\s\S]|[^'\\])*'|[^\s,;}]+)"
+)
 SECRET_PAIR = re.compile(
-    r"(?i)([\"']?(?:password|passwd|secret|token|cookie|authorization|csrf|session)[\"']?)(\s*[:=]\s*)(\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
+    r"(?i)([\"']?(?:password|passwd|secret|token|cookie|csrf|session)[\"']?)(\s*[:=]\s*)(\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
 )
 IDENTIFIER_PAIR = re.compile(
     r"(?i)([\"']?(?:tenant(?:id)?|account(?:id)?|user(?:id|name)?|person(?:id)?|employee(?:id)?|mobile|phone|email|clientip|remoteip|host(?:name)?)[\"']?)(\s*[:=]\s*)(\"[^\"]*\"|'[^']*'|[^\s,;}]+)"
@@ -96,6 +105,9 @@ def redact_text(value: str) -> str:
     value = EMAIL.sub("[REDACTED_EMAIL]", value)
     value = IPV4.sub("[REDACTED_IP]", value)
     value = IPV6.sub(redact_ipv6, value)
+    value = AUTHORIZATION_PAIR.sub(
+        lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", value
+    )
     value = SECRET_PAIR.sub(
         lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", value
     )
@@ -149,18 +161,18 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        redacted = redact_value(load_json(Path(args.input).expanduser().resolve()))
+        path = Path(args.input).expanduser().resolve()
+        redacted = redact_value(load_json(path))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         print(f"cannot redact input: {exc}", file=sys.stderr)
         return 2
 
     payload = json.dumps(redacted, ensure_ascii=False, indent=2, sort_keys=True)
-    if args.output:
-        output = Path(args.output).expanduser().resolve()
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(payload, encoding="utf-8")
-    else:
-        print(payload)
+    try:
+        write_output(payload, path, args.output)
+    except (OSError, ValueError) as exc:
+        print(f"cannot write output: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 

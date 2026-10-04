@@ -41,11 +41,12 @@ class FakeElement {
   }
 }
 
-async function createHarness({ deferTemplates = false } = {}) {
+async function createHarness({ deferTemplates = false, deferFiles = false } = {}) {
   const source = await readFile(new URL('../src/index.js', import.meta.url), 'utf8');
   const action = new FakeElement();
   const status = new FakeElement();
   const calls = { files: [], invokes: [], messages: [], removed: 0 };
+  const pendingFiles = [];
   const pendingTemplates = [];
   let registeredId;
   let Control;
@@ -71,6 +72,12 @@ async function createHarness({ deferTemplates = false } = {}) {
     },
     loadFile(path, model, callback) {
       calls.files.push(path);
+      if (deferFiles) {
+        return new Promise((resolve, reject) => pendingFiles.push({
+          reject,
+          resolve() { callback(); resolve(); }
+        }));
+      }
       callback();
     },
     getTemplateStringByFilePath(path) {
@@ -91,7 +98,7 @@ async function createHarness({ deferTemplates = false } = {}) {
       calls.messages.push({ type, payload });
     }
   };
-  return { action, calls, Control, dom, model, pendingTemplates, registeredId, status };
+  return { action, calls, Control, dom, model, pendingFiles, pendingTemplates, registeredId, status };
 }
 
 function flushPromises() {
@@ -184,4 +191,53 @@ test('unmounts the previous binding before rebuilding', async () => {
   harness.action.emit('click');
   assert.equal(harness.calls.invokes.length, 1);
   assert.equal(harness.calls.messages.length, 1);
+});
+
+test('handles a template rejection without exposing its details and can re-init', async () => {
+  const harness = await createHarness({ deferTemplates: true });
+  const control = new harness.Control(harness.model);
+  control.init({});
+  harness.pendingTemplates[0].reject(new Error('private-resource-location'));
+  await flushPromises();
+  assert.equal(harness.dom.textContent, '控件资源加载失败，请重新打开页面。');
+  assert.equal(harness.action.listenerCount('click'), 0);
+
+  control.init({ data: 'recovered' });
+  harness.pendingTemplates[1].resolve('<section data-role="root"></section>');
+  await flushPromises();
+  assert.equal(harness.status.textContent, 'recovered');
+  assert.equal(harness.action.listenerCount('click'), 1);
+});
+
+test('handles a resource loader rejection before the template is requested', async () => {
+  const harness = await createHarness({ deferFiles: true });
+  const control = new harness.Control(harness.model);
+  control.init({});
+  harness.pendingFiles[0].reject(new Error('private-style-location'));
+  await flushPromises();
+  assert.equal(harness.dom.textContent, '控件资源加载失败，请重新打开页面。');
+  assert.deepEqual(harness.calls.files, ['./css/control.css']);
+});
+
+test('consumes late rejections without changing a disposed or rebuilt instance', async () => {
+  const harness = await createHarness({ deferFiles: true, deferTemplates: true });
+  const control = new harness.Control(harness.model);
+  control.init({});
+  harness.pendingFiles[0].resolve();
+  control.destoryed();
+  harness.pendingTemplates[0].reject(new Error('late-template'));
+  await flushPromises();
+  assert.equal(harness.dom.innerHTML, '');
+  assert.equal(harness.dom.textContent, undefined);
+
+  control.init({ data: 'obsolete' });
+  control.init({ data: 'current' });
+  harness.pendingFiles[2].resolve();
+  harness.pendingTemplates[1].resolve('<section data-role="root"></section>');
+  await flushPromises();
+  harness.pendingFiles[1].reject(new Error('late-stylesheet'));
+  await flushPromises();
+  assert.equal(harness.status.textContent, 'current');
+  assert.equal(harness.action.listenerCount('click'), 1);
+  assert.equal(harness.dom.textContent, undefined);
 });

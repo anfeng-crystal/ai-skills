@@ -31,5 +31,8 @@
 
 ## 5. DataSet 单次消费
 - DataSet 单次消费:遍历后即被消费。需遍历后再复用时先 `.copy()`(遍历副本,原 DataSet 仍可返回)。
+- `Row` 是行访问器，不能把迭代所得的 `Row` 引用缓存成结果列表；需要保留时复制本次所需字段值。`count`、`cache` 等 Action 会消费并关闭相应 DataSet，返回给报表引擎的结果不能提前消费；分清输入、派生结果与最终返回值的资源所有权。
 - AlgoKey 必须唯一:同插件多查询用 `this.getClass().getName() + "_suffix"` 区分。
 - 表达式里 NULL 比较用 `IS NULL`,禁 `= null`。
+
+本节 `Row`/Action 语义来自 [Algo简介](https://dev.kingdee.com/open/detail/sdk/2377816588901431296)（Cosmic V8.0.1，更新于 2026-06-16，2026-09-26 已读正文）。该页区分单 Java 进程 Algo 与分布式 AlgoX；不要据支持 MapReduce 就把 Algo 当成分布式执行。目标版本仍按入口核验，此页不替代逐个重载和报表引擎资源交接的目标合同。

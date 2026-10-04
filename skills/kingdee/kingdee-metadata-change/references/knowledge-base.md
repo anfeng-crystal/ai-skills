@@ -6,7 +6,7 @@
 
 1. 同环境 current 有效：离线继续，不探测数据库。
 2. current 缺失但有已验证同环境快照：从快照本地重新固化，不连接数据库。
-3. 两者都没有：仍可 inspect、比较和收集包内证据；模型、父容器、身份或绑定证据不足的写入阻塞。
+3. 两者都没有：仍可 inspect、比较和收集包内证据；可据可信目标包制作本地候选，标明模型、父容器或绑定等待验证项；知识库验证器仍要求完整知识，不伪填其通过状态。
 4. 只有在知识确需刷新且已获得只读访问授权时才连接元数据库。不得用其他环境知识替代。
 
 ## 刷新来源
@@ -49,8 +49,8 @@
 5. 控件再查“控件类型 + 宿主 ModelType + 页面 ModelType + 语义父容器” profile；基础资料、单据、列表、移动端和报表互不默认兼容。
 6. 控件字段绑定查同业务对象字段类型及 `binding-matrix`，不能只验证字段名存在。
 7. `OperationKey` 先查表单 `EntityId` 对应实体及其继承链中的 `Operations/Operation/Key`；找不到实体操作时，只接受 `binding-matrix` 中同模型、同节点类型、同操作键的实际标准表单动作。
-8. 修改值检查属性实际值形态；插入新属性按实际子节点顺序定位。
-9. 新增平台候选检查精确身份合同；数据库终态只证明身份字段存在，不证明 agent 能生成身份。
+8. 修改值检查属性适用性、值形态和目标实际枚举；插入新属性按实际子节点顺序定位。`observed_common_properties` 仅为样本交集，不是必填合同；`examples` 不是默认值或完整枚举，不能据此补必录或锁定配置。
+9. 新增候选检查精确身份合同、格式和引用；`generation.status=unverified` 仅表示平台算法未知，不作为本地候选的前置禁令。旧快照中要求 DEV 创建的 reason 不覆盖 [本地新增](local-addition.md) 流程；无需改写已签哈希的知识文件。
 
 ## 内部查询命令
 
@@ -74,7 +74,7 @@ python3 scripts/metadata_knowledge.py side-show <knowledge-dir> form_l
 python3 scripts/metadata_knowledge.py mainentity-show <knowledge-dir> --model-type BillFormModel
 ```
 
-`status=observed` 只表示目标环境标准模板中有实际完整实例；业务需求、基线血缘、平台身份、权限和运行结果仍分别验证。`unsupported` 表示不能由 agent 生成；已在可信业务包中合法存在的自定义节点可保留，但新增属性或移动仍需精确证据。
+`status=observed` 只表示目标环境标准模板中有实际完整实例；业务需求、基线血缘、平台身份、权限和运行结果仍分别验证。`unsupported` 表示当前知识/执行器没有覆盖该结构，须补查目标包或同版本依据，不等于平台禁止本地生成；已在可信业务包中合法存在的自定义节点可保留，但新增属性或移动仍需精确证据。
 
 ## 只读刷新
 

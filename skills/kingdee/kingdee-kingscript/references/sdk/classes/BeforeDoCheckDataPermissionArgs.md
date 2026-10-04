@@ -9,13 +9,13 @@
 - 所属包：`kd/bos/form/events`
 - 类型：数据权限校验前事件参数
 - 来源：
-  - TS 声明：待按本地 `@cosmic/bos-core` 中 `kd/bos/form/events` 相关声明核对
+  - TS 声明：已核验 7.0 构件中的 `kd/bos/form/events` 导出；其他补丁仍按目标声明确认
   - 相关示例：[beforeDoCheckDataPermission.md](../../examples/plugins/插件示例/表单插件-事件拆分/beforeDoCheckDataPermission.md)
   - Javadoc：Cosmic V8.0.1
 
 ## 用途概述
 
-用于操作执行前控制数据权限检查，可决定是否跳过验证、是否取消当前行为，以及给出取消原因。
+用于 `beforeCheckDataPermission(e: BeforeDoCheckDataPermissionArgs)` 事件。回调由 `IFormPlugin` 声明，参数类名中的 `Do` 不属于回调名。可决定是否跳过本次数据权限检查、取消当前行为或给出取消原因；参数对象没有 `getFormId()` 和通用 `put()` 方法。
 
 ## 典型场景
 
@@ -30,8 +30,8 @@
 | `getSource` | 获取事件源 | 无 | `Object` | 常见为 `FormOperate` |
 | `getListSelectedData` | 获取列表选择行 | 无 | `ListSelectedRowCollection` | 列表多选场景常用 |
 | `isSkipCheckDataPermission` | 是否跳过权限检查 | 无 | `boolean` | 读取当前策略 |
-| `setSkipCheckDataPermission` | 设置跳过权限检查 | `boolean` | `void` | 需谨慎使用 |
-| `setCancel` | 取消当前行为 | `boolean` | `void` | 与提示信息配合使用 |
+| `setSkipCheckDataPermission` | 设置跳过权限检查 | `boolean` | `void` | 只跳过本次数据权限检查，不代表其他校验放行 |
+| `setCancel` | 取消当前行为 | `boolean` | `void` | 取消会导致相关权限校验失败，可配合取消原因 |
 | `setCancelMessage` | 设置取消原因 | `String` | `void` | 让用户知道被拦截原因 |
 
 ## 运行时注意事项

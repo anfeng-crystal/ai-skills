@@ -29,7 +29,7 @@
 ## 插件与生命周期
 
 - `propertyChanged` | 字段变更事件入口。 | 1 次 | 代表类：IDataModelChangeListener
-- `beforePropertyChanged` | 字段变更前拦截入口。 | 1 次 | 代表类：IDataModelChangeListener
+- `beforePropertyChanged` | 字段变更前通知/联动入口，参数不提供取消赋值 API。 | 1 次 | 代表类：IDataModelChangeListener
 - `afterLoadData` | 数据加载后处理。 | 3 次 | 代表类：IBillPlugin, IPrintPlugin, WorkflowDesigner
 - `beforeDoOperation` | 表单操作前拦截。 | 3 次 | 代表类：IFormPlugin, IMobOperationDataTransferPlugin
 - `afterDoOperation` | 表单操作后处理。 | 2 次 | 代表类：IFormPlugin

@@ -9,9 +9,10 @@
 - 所属包：`kd/bos/entity/datamodel/events`
 - 类型：字段变化记录对象
 - 来源：
-  - TS 声明：待按本地 `@cosmic/bos-core` 中 `kd/bos/entity/datamodel/events` 相关声明核对
+  - TS 声明：已核对 `@cosmic/bos-core` 1.0.0（包构建时间 2025-11-12）的 `kd/bos/entity/datamodel/events` 导出与 `RowDataEntity` 继承；包版本不代表平台版本，使用时仍按目标声明核对
   - 相关示例：[propertyChanged.md](../../examples/plugins/插件示例/表单插件-事件拆分/propertyChanged.md)
   - Javadoc：Cosmic V8.0.1
+  - [官方 propertyChanged 事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=228917111786574080&productLineId=29)：2026-07-31 更新，正文未标完整版本范围
 
 ## 用途概述
 
@@ -19,7 +20,7 @@
 
 ## 典型场景
 
-- 遍历变化集，按字段名决定是否联动计算
+- 从事件 `e.getProperty().getName()` 识别字段，再逐条处理变化集
 - 读取当前分录行索引，回写当前行金额或税额
 - 比较新旧值，决定是否提示或跳过重复处理
 - 在复杂分录结构里通过父行索引定位上级数据
@@ -38,7 +39,8 @@
 
 - 返回值通常是 Java 侧对象，不要想当然按 JS 原生类型处理。
 - `rowIndex` 和 `parentRowIndex` 的含义依赖当前实体结构，不能跨实体硬套。
-- 变化集可能一次包含多行多字段，不要写成单字段单行假设。
+- 一次事件通过 `PropertyChangedArgs.getProperty()` 指明变化字段，`getChangeSet()` 可包含该字段的多条变更；逐条读取行号与新旧值，不只处理首条。
+- `ChangeData` 的行号、父行号和数据包方法来自 `RowDataEntity`；不要把字段名读取写成 `change.getPropertyName()`。其他事件参数须按其声明核对，不能套用此类的接口。
 
 ## 常见搭配
 

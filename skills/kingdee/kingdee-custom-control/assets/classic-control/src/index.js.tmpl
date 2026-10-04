@@ -49,7 +49,14 @@
 
     _render: function (renderGeneration) {
       var self = this;
-      KDApi.loadFile('./css/control.css', this.model, function () {
+      var onLoadError = function () {
+        if (self._disposed || renderGeneration !== self._renderGeneration) {
+          return;
+        }
+        self._unmount();
+        self.model.dom.textContent = '控件资源加载失败，请重新打开页面。';
+      };
+      var loading = KDApi.loadFile('./css/control.css', this.model, function () {
         if (self._disposed || renderGeneration !== self._renderGeneration) {
           return;
         }
@@ -63,8 +70,11 @@
           self.model.dom.innerHTML = markup;
           self._bind();
           self._applyData(self._latestData);
-        });
+        }).catch(onLoadError);
       });
+      if (loading && typeof loading.catch === 'function') {
+        loading.catch(onLoadError);
+      }
     },
 
     _bind: function () {

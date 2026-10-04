@@ -37,6 +37,12 @@
 - `afterBuildDrawFilter`：// 选单条件生成后，追加插件过滤条件
 - `afterConvert`：// 转换流程最后事件，做最终修正
 
+`afterFieldMapping` 接收目标扩展数据集合 `getTargetExtDataEntitySet()` 和源字段属性映射 `getFldProperties()`，不提供 `getSourceDataEntity()` / `getTargetDataEntity()`。一次事件的集合可能含多张目标单；按目标遍历，再从 `ConvertConst.ConvExtDataKey_SourceRows` 取得对应源行，用字段属性映射读取拉平后的字段值，不能按单对源目标事件处理。
+
+`afterCreateLink` 表示源单信息已填入目标单的内存关联子实体，转换本身不保存目标单；后续保存时才记录持久关联关系及反写。此时查询关联表只能核对此前已保存的记录，不能据此判定本次关联已经入库。
+
+依据：[官方《单据转换插件手册》](https://vip.kingdee.com/knowledge/407843593324576256)，正文适用版本为 4.0.004 以上；具体事件签名仍须匹配目标项目 SDK。
+
 ## 插件内上下文方法
 
 ```java

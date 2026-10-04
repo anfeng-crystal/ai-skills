@@ -38,6 +38,10 @@
 
 ## 可核验的官方入口
 
+缺少具体文档入口时，从 [开发者门户](https://dev.kingdee.com/index/home) 查版本化 SDK，或从 [苍穹帮助中心](https://developer.kingdee.com/knowledge/atlas?productLineId=29) 按领域定位正文；两者均由 [金蝶苍穹官网](https://www.kingdee.com/products/cosmic_platform.html) 导航链接确认。官网产品介绍只用于发现入口，不用于确认 API。公开取文遇到登录墙/空壳时复用用户已授权的浏览器会话；不提取 Cookie，也不把搜索摘要当正文。
+
+官方资料也可能冲突：对同一能力，先比较具体产品、认证/运行模式、补丁变更记录与正文适用范围，再核对目标依赖。不能仅凭门户页的更新时间、版本标签或搜索排序覆盖明确的变更记录。仍无法消歧时保留双方来源，将争议结论标为 `unconfirmed`，不把两版说明拼成新合同。
+
 - [SDK说明](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=218063299277852928&id=636240150510611968&type=Knowledge&productLineId=29&lang=zh-CN) 指向开发者门户；实际进入页面后仍须核对标题、产品和版本。门户页面有具体版本，不以入口名推定当前最新版本。
 - [RequestContext：Cosmic V8.0.1](https://dev.kingdee.com/sdk/Cosmic%20V8.0.1/javadoc/kd/bos/context/RequestContext.html) 可确认该版公开 `public long getCurrUserId()`；该页未列 `getUserId()`，不能据此推断后者在哪个旧版本废弃。
 - [OperationServiceHelper 官方知识](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=255694431574577408&id=255644921388790272&type=Knowledge&productLineId=29&lang=zh-CN) 同时列出 `Object[] ids` 和 `DynamicObject[] dataEntities` 的四参数入口。不能把存在替代重载解释成旧参数形态必然无效；精确版本继续回到目标 SDK。

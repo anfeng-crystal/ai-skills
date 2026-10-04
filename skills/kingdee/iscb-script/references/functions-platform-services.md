@@ -59,6 +59,13 @@ var result = InvokeHandlerClass(cn, "msvc://isc.iscb.IscTestService.targetHandle
 
 ---
 
+### BOTP 下推：先区分单目标单与复杂转换
+
+- `IERP_BOTP(sourceEntityNumber, targetEntityNumber, sourceId, options?)` 返回目标单 ID；可选第四参是 Map，已确认的键为 `proxy_user`、`ruleId`。该入口只能生成一张目标单，转换结果为多张时会抛异常；不能把它当批量返回 ID 列表的接口。
+- 需要按分录或生成多张目标单时，官方案例使用 `ConvertService.pushAndSave`：参数对象先 `FastJsonFormat`，通过 `invokeMicroService` 调用，再用 `flatObjectToMapOrList` 整理结果。`selectedRows` 的 `pkv` 是源单主键，按分录还需 `eek`（源单据体标识）和 `epkv`（源分录主键），不能把分录 ID 填到 `pkv`。应用路由必须匹配实际插件部署位置，不把案例中的 `bos/bos` 固定为所有工程合同。
+- 检查 `success`、实际 `targetBillIds` 和 `billReports` 中的失败信息；有目标 ID 不代表整批成功，不能据此无条件继续成功分支。返回结构与业务通过条件分别核对，保留部分失败诊断。
+- 依据：[集成服务调用苍穹 BOTP 的方法案例](https://vip.kingdee.com/knowledge/261906779293195776?productLineId=29&isKnowledge=2&lang=zh-CN)，正文更新于 2026-07-30，核验于 2026-09-26；未声明最低产品版本。这里只确认案例合同，执行会生成/保存单据，仍按目标版本及当前任务写入授权处理；本地 engine 校验不证明 BOTP 平台调用成功。
+
 ## 2. 业务系统服务
 
 ### $service(cn, serviceName, params, proxyUser?) -> Object
@@ -239,15 +246,17 @@ var result = invokeMicroService('isc', 'iscb', 'IscFlowService',
 ### start2(number, params) -> Long
 异步执行服务流程（Map 参数），返回实例 ID。
 
-### executeServiceFlow(flowAlias, params, withProcInst?) -> Map
+### executeServiceFlow(flowAlias, params, withProcInst) -> Map
 执行引入的服务流程（在脚本中直接调用）。
-- `flowAlias`：导入的服务流程别名
+- `flowAlias`：当前上下文已引入的服务流程别名变量，不是同名字符串
 - `params`：参数（Array/Map/单值）
-- `withProcInst`：是否返回流程实例信息（Boolean）
+- `withProcInst`：是否需要流程实例（Boolean，必填）；7.0.1 运行包要求恰好三个入参，不能省略第三参。
 ```javascript
 var result = executeServiceFlow(flow_demo, [1, 2], true);
 // result: {output: {c: 3}, id: 1387508114353294336}
 ```
+
+按[官方帮助手册入口说明](https://vip.kingdee.com/knowledge/224487940049444864)进入目标版本的集成帮助，查阅 `executeServiceFlow` 条目；7.0.1 随附帮助与原生函数校验均要求上述三参。
 
 ### StartEventServiceFlow(flowNumber, param, proxyUser, isSync) -> Map
 触发事件型服务流程。

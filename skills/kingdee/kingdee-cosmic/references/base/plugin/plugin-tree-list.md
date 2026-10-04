@@ -37,15 +37,20 @@
 - `getView()` / `getModel()`：访问页面视图和数据模型。
 
 ```java
+import kd.bos.entity.datamodel.ITreeModel;
+import kd.bos.list.ITreeListView;
+
 ITreeListView treeListView = this.getTreeListView();
 ITreeModel treeModel = this.getTreeModel();
-Object currentNodeId = treeListView.getCurrentNodeId();
+Object currentNodeId = treeModel.getCurrentNodeId();
 ```
+
+当前节点由 `ITreeModel` 提供；`ITreeListView` 用于访问树模型、树控件及刷新能力。`setCurrentNodeId(...)` 只设置模型状态，不会同步前端焦点，需另用树控件的焦点 API。参见官方帮助[视图模型](https://vip.kingdee.com/knowledge/225179627017052160?productLineId=29&isKnowledge=2&lang=zh-CN)与[数据模型](https://vip.kingdee.com/knowledge/225181724320046848?productLineId=29&isKnowledge=2&lang=zh-CN)。
 
 ## 其他扩展点
 
 - `setTreeListView(...)`：树列表视图模型注入阶段，偏框架上下文准备，不建议与业务事件并列。
-- `nodeClickFilter()`：返回点击节点时附加到右表的过滤条件，更适合作为过滤扩展点理解。
+- `nodeClickFilter()`：返回非空条件时，基类会将其加入右表过滤并取消系统分组过滤；只需追加条件时，在 `buildTreeListFilter(...)` 中调用 `e.addQFilter(...)`，不取消系统过滤。
 - `setCustomerParam()`：树列表自定义参数构建扩展。
 - `expendTreeNode(...)`：有的文档或版本中会出现，但官方说明更推荐统一在 `refreshNode(...)` 处理中做懒加载。
 
@@ -58,7 +63,7 @@ Object currentNodeId = treeListView.getCurrentNodeId();
 
 ## 实践建议
 
-1. 树节点驱动右表过滤优先放在 `buildTreeListFilter(...)`。
+1. 树节点驱动右表过滤优先放在 `buildTreeListFilter(...)`，当前点击节点用 `e.getNodeId()`。保留系统分组过滤时只追加条件；`e.setCancel(true)` 会略过系统内置分组过滤，只在插件完整提供替代条件时使用。模板中的占位条件需替换后启用。
 2. 需要树模型时通过 `getTreeModel()` 访问，不要把它当成事件。
 3. 懒加载场景优先统一放在 `refreshNode(...)` 处理。
 4. 打开详情页前如需透传来源信息，可放在 `beforeShowBill(...)`。

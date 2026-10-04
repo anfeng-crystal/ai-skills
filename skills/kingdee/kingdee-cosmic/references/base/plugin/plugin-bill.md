@@ -33,11 +33,13 @@
 ## 核心事件
 
 - `afterLoadData(EventObject e)`：// 单据数据加载完成后触发，适合做加载后初始化
-- `beforeDoOperation(EventObject e)`：// 操作执行前触发，适合做前置校验/参数整理
-- `afterDoOperation(EventObject e)`：// 操作执行后触发，适合做结果提示/刷新协同
-- `propertyChanged(EventObject e)`：// 字段值变更后触发，适合做联动赋值
+- `beforeDoOperation(BeforeDoOperationEventArgs e)`：// 操作执行前触发，适合做前置校验/参数整理
+- `afterDoOperation(AfterDoOperationEventArgs e)`：// 操作执行后触发；成功提示先检查操作结果
+- `propertyChanged(PropertyChangedArgs e)`：// 字段值变更后触发，适合做联动赋值
 
 说明：单据插件同时支持动态表单全套事件（生命周期与交互事件与 `plugin-form.md` 一致）。
+
+上列参数类型见官方 Cosmic V7.0.1 [IFormPlugin](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/form/plugin/IFormPlugin.html) 和 [IDataModelChangeListener](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/entity/datamodel/events/IDataModelChangeListener.html)。操作事件参数位于 `kd.bos.form.events`，字段事件参数位于 `kd.bos.entity.datamodel.events`；不能统一写成 `EventObject`，否则没有覆盖目标事件。生成代码仍核对目标依赖。
 
 ## 插件内上下文方法
 

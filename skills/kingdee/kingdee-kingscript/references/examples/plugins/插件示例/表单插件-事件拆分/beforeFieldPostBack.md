@@ -1,86 +1,73 @@
-# beforeFieldPostBack - 客户端字段值变动回传事件
+# beforeFieldPostBack - 字段值提交模型前事件
 
 ## 基本信息
 
 | 属性 | 说明 |
 |------|------|
 | 所属接口 | AbstractFormPlugin |
-| 触发时机 | 客户端字段值发生变动准备回传服务器之前触发，可在此拦截不必要的回传请求 |
+| 触发时机 | 服务端已收到客户端字段回传，准备交给字段控件写入模型之前 |
 | 方法签名 | `beforeFieldPostBack(e: BeforeFieldPostBackEvent): void` |
 
 ## 说明
 
-当客户端（浏览器端）字段值发生变动，准备将变更回传到服务器端之前触发的事件回调。通过该方法可以控制哪些字段的值变更需要回传服务器处理，哪些不需要。对于不需要服务端处理的字段值变更，可以取消回传以减少网络请求，提升界面操作性能。
+此事件用于检查本次输入是否允许进入模型，不是浏览器发送请求前的网络拦截器。[官方 KingScript 事件总览](https://vip.kingdee.com/knowledge/474603833067386624)将其定义为字段提交模型前的合法性检查。已核实的 7.0 构件中，`FormController.postFieldState` 收到字段数据后派发事件，仅未取消时调用 `FieldEdit.postBack`，后者再写入模型。
+
+`e.setCancel(true)` 拒绝本次模型更新。不能把它用于“暂不联动但保证最终保存”的备注字段优化：本次请求已经到达服务端，被拒绝的值也没有因此获得稍后必定重传的保证。需要降低字段即时更新时，应配置字段的即时更新属性；本例使用真实 `FieldEdit.setFireEvtUp(false)`，实际网络与保存行为仍要在目标页面验证。
 
 ## 参数说明
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| e | BeforeFieldPostBackEvent | 事件参数对象 |
-| e.getFieldKey() | string | 获取发生变动的字段标识 |
-| e.setCancel(boolean) | void | 设置为 true 可取消本次回传，字段值变更不会发送到服务器 |
+| API | 类型 | 含义 |
+|-----|------|------|
+| e | BeforeFieldPostBackEvent | 从 `@cosmic/bos-core/kd/bos/form/events` 导入 |
+| e.getKey() | string | 控件标识；不自动等于实体字段标识 |
+| e.getValue() | any | 本次输入，声明原样为通用类型；按真实字段类型解释 |
+| e.getRowIndex() / e.getParentRowIndex() | number / number | 行与父行索引，适用含义由目标控件决定 |
+| e.isCancel() / e.setCancel(boolean) | boolean / void | 读取或设置本次模型更新取消状态；保留其他插件已有取消 |
 
-## 业务场景
+`getFieldKey()` 属于 `FieldEdit`，不是本事件的方法。事件虽然有 `setValue`，本次核实的控制器仍把原局部值交给 `postBack`；不能仅凭该 setter 存在承诺输入替换有效。需要改值时另核目标版本实际调用链。
 
-采购订单中有多个文本类备注字段（如行备注、内部备注、物流备注），这些字段的值变更不需要触发服务端联动计算。通过拦截这些字段的回传请求，减少不必要的网络交互，提高用户录单效率。同时保留关键字段（如数量、单价、物料）的回传，确保联动计算正常触发。
+## 业务场景与前提
+
+保留采购订单中八个普通文本字段的录入能力，关闭它们的即时更新：行备注、内部备注、物流备注、描述、单据头备注、收货地址、联系人、联系电话。数量、单价、物料、供应商和币别保持原来的联动配置。只有这些文本字段确实不参与即时校验、计算或其他业务依赖时才采用该配置；联系人等名称本身不能证明没有依赖。
+
+下列标识是本例的页面控件 key，要求实际绑定到相应的 `FieldEdit` 普通文本字段。布局缺少某控件时跳过；存在但类型不符应先修正配置，不用强制转换掩盖。`beforeFieldPostBack` 不重写，因此正常文本录入不被本例取消，父类和其他插件的校验仍按原链执行。
 
 ## 完整示例代码
 
 ```typescript
 import { AbstractBillPlugIn } from "@cosmic/bos-core/kd/bos/bill";
-import { BeforeFieldPostBackEvent } from "@cosmic/bos-core/kd/bos/form/events";
+import { FieldEdit } from "@cosmic/bos-core/kd/bos/form/field";
+import { EventObject } from "@cosmic/bos-script/java/util";
 
 /**
- * 采购订单表单插件 - 控制字段值变更回传策略以提升性能
+ * 采购订单文本字段的即时更新配置。
+ * 控件标识和纯文本字段依赖须先按目标元数据核实；保留字段正常回传模型的路径。
  */
 class PmPurorderPostBackControlPlugin extends AbstractBillPlugIn {
-
-  beforeFieldPostBack(e: BeforeFieldPostBackEvent): void {
-    super.beforeFieldPostBack(e);
-
-    const fieldKey = e.getFieldKey();
-
-    // 定义不需要回传服务器的字段列表
-    // 这些字段的值变更不涉及服务端联动计算
-    const skipPostBackFields = [
-      "entryremark",       // 行备注
-      "internalremark",    // 内部备注
-      "logisticsremark",   // 物流备注
-      "description",       // 描述信息
-      "headremark",        // 单据头备注
-      "deliveryaddress",   // 收货地址（纯文本）
-      "contactperson",     // 联系人
-      "contactphone"       // 联系电话
+  /** 数据绑定后配置8个无需即时联动的文本字段，不取消正常录入回传。 */
+  afterBindData(e: EventObject): void {
+    super.afterBindData(e);
+    const deferredControls = [
+      "entryremark", "internalremark", "logisticsremark", "description",
+      "headremark", "deliveryaddress", "contactperson", "contactphone"
     ];
-
-    // 判断当前变动字段是否在跳过列表中
-    for (let i = 0; i < skipPostBackFields.length; i++) {
-      if (fieldKey === skipPostBackFields[i]) {
-        // 取消回传，减少不必要的服务端请求
-        e.setCancel(true);
-        return;
+    for (let i = 0; i < deferredControls.length; i++) {
+      // 示例前提：这些标识对应目标页面的 FieldEdit 文本控件。
+      const edit = this.getView().getControl(deferredControls[i]) as FieldEdit;
+      if (edit != null) {
+        edit.setFireEvtUp(false);
       }
     }
-
-    // 以下字段值变更需要正常回传服务器（默认行为，无需额外处理）：
-    // - qty（数量）：触发金额联动计算
-    // - price（单价）：触发金额联动计算
-    // - material（物料）：触发带出物料属性
-    // - supplier（供应商）：触发带出供应商信息
-    // - currency（币别）：触发汇率联动
+    // qty、price、material、supplier、currency 保持原有即时更新配置。
   }
 }
-
 let plugin = new PmPurorderPostBackControlPlugin();
 export { plugin };
 ```
 
 ## 注意事项
 
-- 必须调用 `super.beforeFieldPostBack(e)` 以确保父类逻辑正常执行
-- `e.setCancel(true)` 取消回传后，服务端的 `propertyChanged` 等事件将不会针对该字段触发
-- 只应对纯展示或纯录入字段（如备注、描述）取消回传，不要对参与联动计算的字段取消
-- 取消回传不影响字段值的最终保存，保存操作时所有字段值仍会完整提交到服务器
-- 在分录行较多、字段较多的单据中，合理使用此方法可以显著提升录单效率
-- 如果某个字段的 `propertyChanged` 事件中有重要业务逻辑，不应取消该字段的回传
-- 插件类不能定义类属性，所有变量应在方法内部声明为局部变量
+- 需要拒绝非法输入时，才在 `beforeFieldPostBack` 核对控件、行和真实值后设置取消；不要主动 `setCancel(false)` 清除他人的拒绝。
+- 关闭即时更新不等于关闭所有网络请求、服务端校验或 `propertyChanged`；也不保证任意布局、分录分页、其他插件组合下最终保存结果。验收应覆盖输入、焦点离开、关键字段联动、翻页及保存重开。
+- 本例保留 `super.afterBindData(e)`；重复绑定重新应用该控件配置，不修改关键字段的既有值或配置。
+- 真实声明编译仅验证本次使用点；未运行平台控件派发、Java 字符串桥接、网络流量或保存流程。

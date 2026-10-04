@@ -1070,163 +1070,50 @@ MC管理控制台 → 应用管理 → 元数据管理
 
 ## 案例九：苍穹开发环境文件下载乱码
 
-### 问题现象
-本地调试苍穹应用时，使用 `this.getView().download(url)` 方法下载文件，文件名出现乱码。
+### 问题现象与证据范围
 
-### 分析过程
+本地 IDEA 调试环境使用 `this.getView().download(url)` 下载成功，但文件名乱码。原社区作者在 `gradle.properties` 增加 `-Dfile.encoding=UTF-8`，刷新 Gradle 并重启调试工程后解决。这是具体开发环境案例，不能据此断言所有乱码都来自 JVM，也不能把 IDE 缓存清理或数据库字符集修改当成必需修复。
 
-**1. 问题定位**
-- 现象：文件下载功能正常，但文件名显示乱码
-- 代码：`this.getView().download(url)`
-- 环境：本地IDEA开发环境
-- 推测：字符编码问题
+### 排查与修复
 
-**2. 排查方向**
-文件名乱码通常由以下原因导致：
-- HTTP响应头编码设置不正确
-- 浏览器解析编码与服务器不一致
-- JVM启动参数未指定字符集
-- IDE字符集配置问题
+1. 对照原始文件名、生成的下载 URL、实际响应中的文件名与浏览器保存结果，区分源字符串已损坏、URL 重复编码、服务端文件名响应和客户端解析问题。
+2. 若证据指向调试进程默认编码，检查真正启动苍穹进程的 JVM 参数；确认项目启动方式后添加或合并 `-Dfile.encoding=UTF-8`，保留原参数。Gradle Daemon 与被启动的应用可能不是同一个 JVM，配置文件中有参数不能代替运行进程核验。
+3. 按当前项目方式刷新 Gradle、重启调试工程，再验证中文、空格、加号和后缀均能正确显示。只有构建/缓存另有异常证据时再执行清理；重启沿用用户授权与项目约定。
+4. 用真实服务返回的 URL 验证下载，不凭空拼造 `/download?fileName=...`。已有文件服务 URL 应按其合同使用，避免对整个 URL 或普通文件名重复编码。
 
-**3. 确认根因**
-经排查，问题出在IDEA的Gradle配置：
-- Gradle运行时的JVM未指定UTF-8编码
-- 导致HTTP响应中的文件名编码错误
-- 浏览器接收到错误的编码格式，显示乱码
+### 从内存内容发起下载
 
-### 根因
-IDEA使用Gradle运行项目时，默认未指定`-Dfile.encoding=UTF-8`参数，导致JVM使用系统默认编码（Windows下通常是GBK），与HTTP协议要求的UTF-8编码不一致，造成文件名乱码。
+本地 7.0 实际 JAR 的 `IFormView.download` 接收 `String` URL，不接收 `InputStream`；没有原示例的 `addClientCall(ClientCall.of("setHeader", ...))` 路径。生成文件可使用临时文件缓存取得 URL，再交给视图。
 
-### 解决方案
+官方附件文档第3节说明 `saveAsUrl(String filename, InputStream in, int timeout)` 的文件名是普通名称，超时单位为秒，返回临时相对 URL；`saveAsFullUrl` 返回完整 URL。`7200` 是文档中的两小时示例，实际有效期由业务需要决定；临时 URL 不能充当长期业务附件。
 
-**步骤1：修改Gradle配置**
-在项目根目录的 `gradle.properties` 文件中添加：
-```properties
-# 设置文件编码为UTF-8
-systemProp.file.encoding=UTF-8
-# 或者
-org.gradle.jvmargs=-Dfile.encoding=UTF-8
-```
+下面是表单插件内的方法片段；`logger` 沿用项目日志实例。异常使用 `kd.bos.exception.KDException` 与 `ErrorCode` 的 cause-first 构造；`example.file.downloadFailed` 仅为示例错误码，实际复用项目定义。移除手工编码后，catch 处理的是缓存、流关闭及视图调用异常，不再限于原来的 `UnsupportedEncodingException`。
 
-**步骤2：刷新Gradle项目**
-```
-IDEA → Gradle面板 → 点击刷新按钮（Reload All Gradle Projects）
-或者
-./gradlew --stop  # 停止Gradle Daemon
-./gradlew clean   # 清理构建缓存
-```
-
-**步骤3：重启工程**
-```
-IDEA → File → Invalidate Caches / Restart → Invalidate and Restart
-```
-
-**步骤4：验证修复**
 ```java
-// 测试代码
-String fileName = "测试文件_中文名称.xlsx";
-String encodedName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
-String url = "/download?fileName=" + encodedName;
-this.getView().download(url);
+import java.io.ByteArrayInputStream;
+import kd.bos.cache.CacheFactory;
+import kd.bos.cache.TempFileCache;
+import kd.bos.exception.ErrorCode;
+import kd.bos.exception.KDException;
+
+public void downloadFile(String fileName, byte[] content, int timeoutSeconds) {
+    try (ByteArrayInputStream input = new ByteArrayInputStream(content)) {
+        TempFileCache cache = CacheFactory.getCommonCacheFactory().getTempFileCache();
+        String url = cache.saveAsUrl(fileName, input, timeoutSeconds);
+        this.getView().download(url);
+    } catch (Exception e) {
+        logger.error("文件下载失败", e);
+        throw new KDException(e, new ErrorCode("example.file.downloadFailed", "文件下载失败"));
+    }
+}
 ```
 
-### 预防措施
-
-1. **项目初始化配置**
-   新建苍穹项目时，在`gradle.properties`中预设编码：
-   ```properties
-   # 字符编码设置
-   systemProp.file.encoding=UTF-8
-   systemProp.sun.jnu.encoding=UTF-8
-   
-   # JVM参数
-   org.gradle.jvmargs=-Dfile.encoding=UTF-8 -Xmx2048m
-   
-   # 控制台输出编码
-   systemProp.stdout.encoding=UTF-8
-   systemProp.stderr.encoding=UTF-8
-   ```
-
-2. **IDEA统一设置**
-   ```
-   File → Settings → Editor → File Encodings:
-   - Global Encoding: UTF-8
-   - Project Encoding: UTF-8
-   - Default encoding for properties files: UTF-8
-   - Transparent native-to-ascii conversion: ✓勾选
-   
-   File → Settings → Build, Execution, Deployment → Build Tools → Gradle:
-   - Gradle JVM: 选择与项目一致的JDK，并确保JDK默认编码为UTF-8
-   ```
-
-3. **代码层防御**
-   ```java
-   // 下载方法中显式指定编码
-   public void downloadFile(String fileName, byte[] content) {
-       try {
-           // 强制使用UTF-8编码文件名
-           String encodedFileName = URLEncoder.encode(fileName, "UTF-8")
-                   .replaceAll("\\+", "%20");
-           
-           // 设置响应头
-           this.getView().addClientCall(
-               ClientCall.of("setHeader", "Content-Disposition", 
-                   "attachment; filename*=UTF-8''" + encodedFileName)
-           );
-           
-           this.getView().download(new ByteArrayInputStream(content));
-       } catch (UnsupportedEncodingException e) {
-           logger.error("文件名编码失败", e);
-           throw new KDException("文件下载失败");
-       }
-   }
-   ```
-
-4. **团队规范**
-   ```markdown
-   项目配置检查清单：
-   - [ ] gradle.properties 包含 file.encoding=UTF-8
-   - [ ] IDEA文件编码设置为UTF-8
-   - [ ] 所有源代码文件使用UTF-8编码
-   - [ ] 数据库连接字符串指定charset=utf8
-   - [ ] 前端页面声明 charset=UTF-8
-   ```
+该路径保留原始文件名、内容和异常原因。这里的签名在实际本地 7.0 工件中已核对，不代表所有补丁、部署环境或浏览器均已验证；实现前仍匹配目标依赖。下载验收要核真实缓存访问、有效期、响应文件名与保存内容，编译成功不能证明乱码已修复。
 
 ### 相关参考
 
-- 金蝶云社区原文：[苍穹开发环境文件下载乱码问题排查](https://vip.kingdee.com/link/s/Z1wr8)
-
-### 类似问题排查
-
-如果上述方案未解决，可进一步检查：
-
-1. **浏览器编码设置**
-   ```
-   Chrome: 设置 → 外观 → 自定义字体 → 编码 → Unicode (UTF-8)
-   ```
-
-2. **服务器环境变量**
-   ```bash
-   # Linux服务器
-   export LANG=en_US.UTF-8
-   export LC_ALL=en_US.UTF-8
-   
-   # 验证
-   locale
-   ```
-
-3. **应用服务器配置**
-   ```bash
-   # Tomcat启动参数
-   CATALINA_OPTS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
-   ```
-
-4. **数据库编码**
-   ```sql
-   -- 检查数据库编码
-   SHOW VARIABLES LIKE 'character_set%';
-   -- 确保 character_set_database 和 character_set_connection 为 utf8mb4
-   ```
+- [附件二开常见问题汇总](https://vip.kingdee.com/knowledge/449213564277170432)：官方知识库，更新于 2024-07-10 15:14；第3节未给完整适用版本范围。
+- [文件名乱码解决案例](https://vip.kingdee.com/article/799231158956775680)：个人社区文章，编辑于 2026-01-14 10:59:17；仅作为开发环境编码线索，不作为平台 API 合同。
 
 ---
 
@@ -1910,73 +1797,58 @@ public void beforeDoOperation(BeforeDoOperationEventArgs args) {
 
 ## 案例二十四：表单插件 NullPointerException - afterDoOperation 生命周期
 
-### 场景描述
-表单插件在 `afterDoOperation` 方法中处理后续逻辑时抛出 `NullPointerException`，导致操作虽然成功但后续流程中断。
+### 场景与取证
 
-### 典型错误特征
-- **错误信息**：`java.lang.NullPointerException at com.example.FormPlugin.afterDoOperation(FormPlugin.java:120)`
-- **触发时机**：保存、提交、审核等操作成功后
-- **涉及生命周期**：`afterDoOperation` - 操作执行完成后的后处理阶段
+表单插件在操作完成后的 `afterDoOperation` 中访问操作结果、Model 字段或查询结果时出现 NPE。先从异常行确认具体空对象；事件名称不证明操作成功，也不能单凭查询返回 `null` 就认定事务未提交。
 
-### 根本原因
-在 `afterDoOperation` 阶段，常见 NPE 原因：
-1. **单据 ID 未生成**：新建单据保存后，`pkValue` 可能尚未刷新到 Model
-2. **操作结果未判断**：未检查操作是否真正成功就访问结果数据
-3. **事务未提交**：在事务提交前访问数据库，查询不到刚保存的数据
+官方事件说明明确：这是表单界面层回调，没有事务保护，绑定操作成功或失败都会触发。它用于根据操作结果控制界面；需要与保存一起成功或回滚的数据库写入应放在相应操作服务事务中，不在此回调同步补写数据库。
 
-### 解决方案
+1. 核对操作标识与 `OperationResult`，空结果或失败时不进入依赖成功的分支。
+2. 分别检查当前数据实体、主键和字段值。空主键只说明当前 Model 缺少可用标识；继续核页面是否已切换新增状态、操作类型及加载数据，不直接归因为“ID 延迟生成”。
+3. 只读查询返回空时检查实体、主键、数据中心、过滤条件、实际操作结果与执行链；需要事务诊断时定位真实边界，不用后台线程或新事务掩盖未知原因。
+4. `getView().updateView()` 是把数据重新绑定到前端控件，不是从数据库重新加载 Model。需要重新读取持久化数据时，按目标页面/操作的加载机制另行处理，避免覆盖尚未保存的界面输入。
 
-**错误代码示例**：
+### 正确代码示例
+
+目标页面包含 `billno` 字段；示例只显示当前页面信息，不更新数据库，也不承诺该实体仍是刚保存的那一张单据。
+
 ```java
-@Override
-public void afterDoOperation(AfterDoOperationEventArgs args) {
-    if ("save".equals(args.getOperationKey())) {
-        // 错误：未判断操作是否成功
-        Object pkValue = this.getModel().getDataEntity().getPkValue();
-        String billNo = this.getModel().getValue("billno").toString(); // NPE!
-        
-        // 错误：事务未提交就查询数据库
-        DynamicObject savedBill = BusinessDataServiceHelper.loadSingle(
-            pkValue, "bd_material"); // 查询不到，返回 null
-        String materialName = savedBill.getString("name"); // NPE!
+import kd.bos.dataentity.entity.DynamicObject;
+import kd.bos.entity.operate.result.OperationResult;
+import kd.bos.form.events.AfterDoOperationEventArgs;
+import kd.bos.form.plugin.AbstractFormPlugin;
+
+public class AfterSaveViewPlugin extends AbstractFormPlugin {
+    @Override
+    public void afterDoOperation(AfterDoOperationEventArgs args) {
+        super.afterDoOperation(args);
+        if (!"save".equals(args.getOperateKey())) {
+            return;
+        }
+        OperationResult result = args.getOperationResult();
+        if (result == null || !result.isSuccess()) {
+            return;
+        }
+        DynamicObject current = getModel().getDataEntity();
+        if (current == null || current.getPkValue() == null) {
+            getView().showMessage("保存操作已成功；当前页面没有可用的单据标识，请核对页面状态。");
+            return;
+        }
+        Object value = getModel().getValue("billno");
+        String billNo = value == null ? "" : value.toString();
+        getView().showMessage("保存操作已成功。当前页面单据编号：" + billNo);
     }
 }
 ```
 
-**正确代码示例**：
-```java
-@Override
-public void afterDoOperation(AfterDoOperationEventArgs args) {
-    if ("save".equals(args.getOperationKey())) {
-        // 正确：判断操作结果
-        OperationResult operationResult = args.getOperationResult();
-        if (!operationResult.isSuccess()) {
-            return; // 操作失败，不继续处理
-        }
-        
-        // 正确：从 Model 获取最新数据
-        Object pkValue = this.getModel().getDataEntity().getPkValue();
-        if (pkValue == null) {
-            return; // 新建单据可能尚未生成 ID
-        }
-        
-        // 正确：刷新 Model 后再访问
-        this.getView().updateView();
-        String billNo = this.getModel().getValue("billno") != null 
-            ? this.getModel().getValue("billno").toString() 
-            : "";
-        
-        // 正确：延迟查询或使用异步任务
-        // 如需查询数据库，建议在独立事务中或使用后台任务
-    }
-}
-```
+### API 与行为边界
 
-### 预防措施
-1. **afterDoOperation 必须判断操作结果**：`operationResult.isSuccess()` 检查
-2. **访问 pkValue 前判空**：新建单据的 ID 可能延迟生成
-3. **避免在 afterDoOperation 中查询数据库**：事务可能未提交，建议使用后台任务或消息队列
-4. **使用 `updateView()` 刷新 Model**：确保获取最新数据
+- 实际 7.0 `AfterDoOperationEventArgs` 位于 `kd.bos.form.events`；操作键方法是 `getOperateKey()`，不是 `getOperationKey()`。`getOperationResult()` 直接返回 `kd.bos.entity.operate.result.OperationResult`，不需改成 `Object` 或加猜测性强转。
+- 不对可能为 `null` 的 `getValue(...)` 直接调用 `toString()`，也不对未经判空的查询返回值调用 `getString(...)`；先核真实字段定义，空值判断不能补救错误字段标识。
+- `isSuccess()` 说明操作结果成功，不独立证明所有外围业务/异步任务完成，也不是任意调用链的数据库提交证明。外部通知的提交后入口及可靠送达沿用案例二十五，不能仅凭表单回调推断。
+- 需要只读查询时没有“所有 afterDoOperation 都禁止查询”的规则；要限制的是无事务保护的同步补写。只对真实异步操作另核其完成/结果合同；基础资料开启异步删除时，另读[异步删除的状态与结果](../base/plugin/plugin-operation.md#基础资料异步删除区分操作返回与物理删除)。
+
+依据：[afterDoOperation事件](https://vip.kingdee.com/knowledge/222756398046529280)，更新于 2024-04-22 15:02，未标适用版本，2026-10-02 已登录读取正文；[AfterDoOperationEventArgs · V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/form/events/AfterDoOperationEventArgs.html) 与 [IFormView · V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/form/IFormView.html) 补充方法及刷新语义，并已核实际 7.0 JAR。示例编译不能替代目标页面保存成功、失败、连续新增及字段空值的 UI 验证。
 
 ---
 
@@ -1999,7 +1871,7 @@ public void afterDoOperation(AfterDoOperationEventArgs args) {
 
 **错误代码示例**：
 ```java
-@Transactional
+// 假定调用方已开启主事务
 public void processOrder(DynamicObject order) {
     // 错误：在事务中调用外部接口
     SaveServiceHelper.save(new DynamicObject[]{order}); // 可能回滚
@@ -2012,40 +1884,62 @@ public void processOrder(DynamicObject order) {
 }
 ```
 
-**正确代码示例**：
+**事务与通知分开处理**：
+
+先确认事务由谁开启、是否存在外层事务及哪些数据库更新必须一起回滚。原先未注明来源的 `@Transactional` 不能证明私有方法调用建立了事务，更不能证明方法返回即提交；苍穹与 Spring 的同名注解需分别核实，不套用另一框架的代理结论。
+
+下例显式使用 `kd.bos.db.tx.TX.required`：无事务则新建，有事务则加入。异常时在资源关闭前标记回滚并重抛，保留 `KDException` 的 cause；`example.order.saveFailed` 仅为示例错误码，实际复用项目定义。`updateInventory` 必须参加同一物理库的当前事务，不能在内部另开独立事务或写外部系统。
+
 ```java
+import kd.bos.db.tx.TX;
+import kd.bos.db.tx.TXHandle;
+import kd.bos.exception.KDException;
+import kd.bos.exception.ErrorCode;
+
 public void processOrder(DynamicObject order) {
-    // 正确：先完成数据库事务
-    DynamicObject savedOrder = null;
     try {
-        savedOrder = saveOrderInTransaction(order);
+        saveOrderInTransaction(order);
     } catch (Exception e) {
-        // 事务回滚，不调用外部接口
-        throw new KDException("订单保存失败", e);
+        throw new KDException(e, new ErrorCode("example.order.saveFailed", "订单保存失败"));
     }
-    
-    // 正确：事务提交后再调用外部接口
-    if (savedOrder != null) {
+    // required可能加入外层事务，此处不发送通知。
+}
+
+private DynamicObject saveOrderInTransaction(DynamicObject order) {
+    try (TXHandle h = TX.required("example_order_save")) {
         try {
-            httpClient.post("https://external-api.com/notify", savedOrder);
-        } catch (Exception e) {
-            // 外部调用失败，记录日志或重试，但不回滚数据库
-            logger.error("外部通知失败，订单ID: " + savedOrder.getPkValue(), e);
+            SaveServiceHelper.save(new DynamicObject[]{order});
+            updateInventory(order);
+            return order;
+        } catch (Throwable e) {
+            h.markRollback();
+            throw e;
         }
     }
 }
 
-@Transactional
-private DynamicObject saveOrderInTransaction(DynamicObject order) {
-    SaveServiceHelper.save(new DynamicObject[]{order});
-    updateInventory(order);
-    return order;
+// 仅由已确认提交后的回调或任务调用；此方法本身不建立提交保障。
+private void notifyCommittedOrder(DynamicObject savedOrder) {
+    try {
+        httpClient.post("https://external-api.com/notify", savedOrder);
+    } catch (Exception e) {
+        logger.error("外部通知失败，订单ID: " + savedOrder.getPkValue(), e);
+        // 使用项目已有机制记录失败并重试或补偿。
+    }
 }
 ```
 
+这些是业务方法片段，`DynamicObject`、`SaveServiceHelper`、库存更新、HTTP 客户端和日志沿用项目实现。**通知方法必须接到真实提交后入口，不能紧接 `saveOrderInTransaction` 调用**。对操作插件，核对 [操作插件事件](../base/plugin/plugin-operation.md)，将允许独立失败的通知放到 `afterExecuteOperationTransaction(AfterOperationArgs)`，并按实际成功单据处理；需要随主操作回滚的更新保留在事务中。不要在保存操作自己的事件里递归保存同一单据。 若操作又被更外层调用事务包裹，需核对该组合的最外层实际提交时机，不能只凭回调名称放行通知。
+
+不要为使该方法提前返回“已提交”而换成 `TX.requiresNew()` 或随意调用 `commit()`；前者会另开事务，可能破坏与调用方一起回滚的要求。普通本地事务不支持跨物理库写或跨微服务节点事务，需要另外设计一致性方案。
+
+提交后调用还存在“数据库提交成功、通知发送前进程退出”的窗口；可靠送达要求在业务事务中记录待发送任务或复用已经验证的可靠发送机制，再做重试与幂等。仅写日志或把 HTTP 换成普通 MQ 发送都不自动消除该窗口。
+
+依据：[苍穹平台事务](https://vip.kingdee.com/knowledge/318764819463727872)（更新于 2026-07-30 12:36，未标版本）给出 TX 传播和回滚结构；[V7.0.1 操作插件 Javadoc](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/entity/plugin/IOperationServicePlugIn.html)区分提交后与写库后事件。示例用到的 TX、SaveServiceHelper 与异常签名已由本地 7.0 实际 JAR 核对；未运行数据库回滚、外层事务、通知和可靠送达，目标实现仍匹配依赖及真实调用链。
+
 ### 预防措施
 1. **事务边界明确**：数据库操作在一个事务，外部调用在事务外
-2. **使用消息队列解耦**：事务提交后发送 MQ 消息，消费者调用外部接口
+2. **可靠通知**：需要保证送达时复用事务内任务记录或已验证的可靠发送机制，消费端调用外部接口并处理重试
 3. **补偿机制**：外部调用失败时记录日志，通过定时任务或人工介入补偿
 4. **幂等性设计**：外部接口支持幂等，允许重复调用
 

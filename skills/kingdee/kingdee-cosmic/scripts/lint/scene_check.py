@@ -179,12 +179,20 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
 
         # SCENE-008: before/afterBindData 中修改数据对象
         if method_name in {"beforebinddata", "afterbinddata"} and BIND_MUTATION_PATTERN.search(code_line):
+            before_bind = method_name == "beforebinddata"
             issues.append(LintIssue(
                 file=filepath, line=lineno,
-                severity=Severity.ERROR,
+                severity=Severity.WARNING if before_bind else Severity.ERROR,
                 rule_id="SCENE-008",
-                message="禁止在 beforeBindData()/afterBindData() 中修改数据对象",
-                fix_hint="将 setValue/分录增删等数据变更挪到 createNewData、afterCreateNewData、propertyChanged 或正确的业务事件",
+                message=(
+                    "beforeBindData() 中存在数据变更：修改字段值会置数据修改标志，退出可能提示未保存"
+                    if before_bind else "不要在 afterBindData() 中修改字段值或数据对象"
+                ),
+                fix_hint=(
+                    "按目的核对事件：新建默认值和初始计算放 afterCreateNewData，交互联动放 propertyChanged；beforeBindData 用于参与绑定的视图属性，其他数据变更需核对目标接口与修改标志影响"
+                    if before_bind else
+                    "afterBindData 用于根据已有字段值设置可见、可用等界面状态；数据变更按目的放 afterCreateNewData、propertyChanged 或正确的业务事件"
+                ),
                 source_line=line.strip(),
             ))
 

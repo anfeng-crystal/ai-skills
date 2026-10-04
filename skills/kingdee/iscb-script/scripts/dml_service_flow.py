@@ -244,7 +244,13 @@ def build_node_script(dml: SqlSpec, precheck: SqlSpec, parameters: dict[str, Any
     dml_types = render_types(parameters["types"])
     max_rows = contract["max_rows"]
     return "\n".join([
-        f"var plannedCount = I(query_value({alias}, {precheck_sql}, {pre_params}, {pre_types}));",
+        f"var plannedCount = query_value({alias}, {precheck_sql}, {pre_params}, {pre_types});",
+        "if (plannedCount == null) {",
+        '    throw "precheck did not return a count";',
+        "}",
+        "if (plannedCount < 0) {",
+        '    throw "precheck returned a negative count";',
+        "}",
         f"if (plannedCount > {max_rows}) {{",
         f"    throw \"precheck count exceeds approved maximum {max_rows}\";",
         "}",

@@ -5,6 +5,7 @@ import kd.bos.dataentity.OperateOption;
 import kd.bos.dataentity.entity.DynamicObject;
 import kd.bos.dataentity.resource.ResManager;
 import kd.bos.dataentity.serialization.SerializationUtils;
+import kd.bos.entity.datamodel.RowDataEntity;
 import kd.bos.entity.datamodel.events.AfterAddRowEventArgs;
 import kd.bos.entity.datamodel.events.AfterDeleteEntryEventArgs;
 import kd.bos.entity.datamodel.events.AfterDeleteRowEventArgs;
@@ -61,7 +62,7 @@ import java.util.Set;
  * ─ 数据创建/绑定事件
  *   createNewData()           — 新增数据包创建前
  *   afterCreateNewData()      — 新增后设置默认值
- *   beforeBindData()          — 数据绑定前（禁止 setValue/UI 控制）
+ *   beforeBindData()          — 数据绑定前（调整参与绑定的视图属性）
  *   afterBindData()           — 数据绑定后，设置界面状态
  *   afterCopyData()           — 复制后清理字段
  *
@@ -243,16 +244,16 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
      * 触发时机: 数据绑定到表单前。
      * 参数要点:
      * - EventObject e: 通用事件参数。
-     * 典型用途: 数据绑定前的准备工作，如日志记录、状态标记。
-     * 注意: 禁止在此事件中修改数据对象（setValue/分录增删）和做 UI 控制（setEnable/setVisible）；
-     *       界面控制请放到 afterBindData，数据变更请放到 createNewData / propertyChanged 等正确事件。
+     * 典型用途: 调整参与绑定的精度等视图属性。
+     * 注意: 直接 setEnable/setVisible 的状态会被后续绑定清空，请放到 afterBindData；
+     *       在此改字段会置数据修改标志，新建默认值和初始计算放到 afterCreateNewData。
      *
      */
 
     @Override
     public void beforeBindData(EventObject e) {
         super.beforeBindData(e);
-        // 仅做轻量化准备，禁止 setValue / setEnable / setVisible。
+        // 本例只记录绑定前数据；新建赋值与直接控件状态分别放在对应事件。
         log.info("beforeBindData: billNo={}", getModel().getValue(FIELD_BILL_NO));
     }
 
@@ -431,9 +432,8 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
      * - PropertyChangedArgs e: 属性变更事件参数。
      * - ChangeData[] changeSet = e.getChangeSet(): 获取变更集合（通常一条，批量触发时可能多条）。
      * - String fieldKey = e.getProperty().getName(): 获取变更字段标识。
-     * - int rowIndex = changeSet[0].getRowIndex(): 获取变更行号。
-     * - Object newValue = changeSet[0].getNewValue(): 获取新值。
-     * - Object oldValue = changeSet[0].getOldValue(): 获取旧值。
+     * - 对每个 ChangeData change 读取 getRowIndex()、getNewValue()、getOldValue()；字段标识从 e.getProperty() 获取。
+     * - 只有已确认集合恰含一条时才可使用 changeSet[0]；批量联动需覆盖完整集合。
      * 典型用途: 字段联动、级联更新、计算字段。
      * 建议: 简单联动优先用公式；复杂逻辑才在此处理；保持轻量以避免重查询。
      *
@@ -443,7 +443,8 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     public void propertyChanged(PropertyChangedArgs e) {
         super.propertyChanged(e);
         // 字段联动：值改变后触发（保持轻量，避免重查询）。
-        // 当前分录变更行 index。
+        // 下例保留项目 helper 用法；适配批量联动前核对 helper 合同，并逐条处理完整变更集合。
+        // 当前分录与父分录行号按实体结构选择，不能相互替代。
         String name = e.getProperty().getName();
         int changedRowIndex = getChangedRowIndex(e);
         // 父分录变更行 index。
@@ -547,8 +548,9 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
      * 触发时机: 用户新增分录行后。
      * 参数要点:
      * - AfterAddRowEventArgs e: 新增行后事件参数。
-     * - e.getEntryKey(): 获取分录标识。
-     * - e.getRowIndex(): 获取新增行的行号。
+     * - e.getEntryProp(): 获取分录属性对象。
+     * - e.getRowDataEntities(): 获取本次实际新增行集合，逐行用 getRowIndex() 初始化。
+     * - e.getInsertRow(): 插入位置上下文，普通追加/批量事件可为 -1，不作为新增行号。
      * 典型用途: 新增行后的初始化逻辑（如设置默认值）。
      *
      */
@@ -556,15 +558,18 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     @Override
     public void afterAddRow(AfterAddRowEventArgs e) {
         super.afterAddRow(e);
-        getModel().setValue(KEY_1, 1, e.getInsertRow());
-        getModel().setValue(KEY_2, FILTER_VALUE_A, e.getInsertRow());
+        for (RowDataEntity row : e.getRowDataEntities()) {
+            int rowIndex = row.getRowIndex();
+            getModel().setValue(KEY_1, 1, rowIndex);
+            getModel().setValue(KEY_2, FILTER_VALUE_A, rowIndex);
+        }
     }
 
     /**
      * 触发时机: 用户删除分录行后。
      * 参数要点:
      * - AfterDeleteRowEventArgs e: 删除行后事件参数。
-     * - e.getRowIndex(): 获取删除行的行号。
+     * - e.getRowIndexs(): 获取被删分录行的索引集合（int[]）。
      * 典型用途: 删除行后的清理逻辑（如重新计算合计）。
      *
      */

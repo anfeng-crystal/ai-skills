@@ -34,13 +34,16 @@
 
 ## 3. 开发与插件基线
 
-- 禁止在 `beforeBindData`、`afterBindData` 中修改数据对象
+- `beforeBindData` 用于设置参与绑定的精度等视图属性；修改字段值会置数据修改标志，退出可能提示未保存。新建默认值和初始计算优先放 `afterCreateNewData`，其他数据变更按目的核对接口与修改标志影响
+- `afterBindData` 根据已有字段值设置可见、可用等界面状态，不在此修改字段值或数据对象
 - 禁止在 `initialize()` 中注册控件事件、设置控件可见性或编写界面逻辑
 - 事件注册放 `registerListener`；界面控制放 `afterBindData`
 - 禁止继承标准产品插件；禁止禁用原厂插件
 - 创建引用对象或给引用属性赋值时，必须保证对象类型与属性复杂类型一致
 - 从缓存拿到的实体元数据是单例，修改前必须先 `clone`
 - 判断"记录是否存在"优先使用 `QueryServiceHelper.exists(...)`
+
+绑定事件的具体放置策略与官方依据见[生命周期放置策略](../references/event-lifecycle.md#放置策略)。
 
 ## 4. 性能与数据访问基线
 
@@ -51,7 +54,7 @@
 
 ## 5. 异常、日志与多语言基线
 
-- 统一使用 `KDException` 体系；业务异常必须使用 `KDBizException`，不要用 `RuntimeException` 代替
+- [定制化开发规范 3.11](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=218063485690097920&id=498888207505798912&productLineId=29)（2025-12-23 更新）**推荐**统一使用 `KDException` 体系，允许自定义子异常；业务拒绝可按语义选用 `KDBizException`，不是唯一类型的强制要求。通用工具的参数/状态错误保留既有合同，不为统一类型机械替换。
 - 包装异常时必须保留原始 `cause`
 - 程序日志统一使用 `kd.bos.logging.Log`；业务操作日志统一使用 `BizLog.log`
 - 输出日志前先判断日志级别；禁止在大循环中打日志；记录异常时用 `logger.error("描述", e)`

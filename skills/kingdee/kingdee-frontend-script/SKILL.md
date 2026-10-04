@@ -45,7 +45,7 @@ metadata:
    - 自定义 CSS 选择器与限制:`references/custom-style.md`
    - 生命周期/样式确定性校验:`references/validation-contract.md`
 3. 控件标识、字段 key 不能猜:用设计器或 `kingdee-metadata-analyzer` 确认。
-4. 表格/树操作前必须等待 `onInit()` Promise;嵌套回调用箭头函数保 `this`;`didMount` 注册的监听在 `willUnmount` 配对清理。
+4. 表格/树读取初始化后数据或 DOM 前等待 `onInit()` Promise；其他懒加载控件的 DOM 用 `wait()` 获取。渲染器配置等注册动作按目标合同，不一律延后。嵌套回调用箭头函数保 `this`；`didMount` 注册的监听在 `willUnmount` 配对清理。
 5. 生成或修改 JS/CSS 后，对本次文件运行 `python3 scripts/validate_frontend.py <file-or-directory>`；仅解释 API 或审阅已有结果不为校验新建文件。控件标识、事件时机和 PC/移动端入口仍需目标版本证据，页面验证按当前模式执行。
 
 ## References
@@ -56,10 +56,10 @@ metadata:
 - 生命周期与样式校验:`references/validation-contract.md`
 
 ## Guardrails
-- 本 skill 的页面脚本 API 与设计器自定义 CSS 限制尚未取得注明适用版本的官方正文复核，属于待目标版本核验的参考；下列“不支持”不能推广到服务端插件、KDApi 控件资源 CSS 或所有苍穹版本。沿现有规则处理常规任务，遇到目标官方声明或可复现证据冲突时记录差异并以目标合同为准，不凭这些未核验条目直接宣称平台无法实现。
+- 页面脚本的版本、属性限制及自定义控件就绪时机见 `references/events-and-api.md`；设计器自定义 CSS 的入口与官方依据见 `references/custom-style.md`。下列规则不能推广到服务端插件、全局扩展 CSS、KDApi 资源 CSS 或所有版本；目标合同有差异时按目标证据处理。
 - 锁定性、可见性、必录、标识、类型不支持脚本修改;`set` 可能被服务端优先级覆盖,不要假设一定生效。
 - 基础资料字段 `setValue` 无效(需服务端赋值);`getValue()` 基础资料返回不可变对象,取值用 `.toJS()`。
-- 表格/树操作前等待 `onInit()`,否则竞速取空。
+- `didMount` 不保证每个控件 DOM 已就绪，PC 和移动端都需考虑懒加载；按需使用 `wait()` / `onInit()`，并防止异步就绪回调在页面卸载后重新挂载资源。详见 `references/events-and-api.md`。
 - `didMount` 注册的 DOM 事件 / 定时器 / 全局监听,必须在 `willUnmount` 解绑清理,引用用 `export var` 保存以便配对移除。
 - iframe/postMessage 必须做 `event.origin` 白名单校验。
 - 自定义样式:`$` 代表当前控件 className(不可自定义),`$` 后接后代选择器必须留空格;主题色 `'themeColor'` 必须单引号;**不支持 `@keyframes`/`@media`/`@import` 等 at-rules**;只作用子孙元素(body 下弹窗/下拉不受影响);表格字段定位必须用 `[data-code="..."]`,禁用编译产物 hash 类名。

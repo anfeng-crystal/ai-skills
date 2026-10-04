@@ -148,6 +148,59 @@ public class Demo extends AbstractFormPlugin implements ClickListener {
         self.assertTrue(report["summary"]["passed"])
         self.assertEqual(0, report["summary"]["errors"])
 
+    def check_form_event(self, event: str, body: str):
+        source = (
+            "public class Demo extends AbstractFormPlugin {\n"
+            "    @Override\n"
+            f"    public void {event}(EventObject e) {{\n"
+            f"        super.{event}(e);\n"
+            f"        {body}\n"
+            "    }\n"
+            "}\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="cosmic bind event ") as temp_name:
+            target = Path(temp_name) / "Demo.java"
+            target.write_text(source, encoding="utf-8")
+            process = self.run_post_check(target, "--json")
+            return process, json.loads(process.stdout)
+
+    def test_before_bind_value_change_warns_without_blocking(self):
+        process, report = self.check_form_event(
+            "beforeBindData", 'getModel().setValue("amount", 1);'
+        )
+
+        issues = [i for i in report["issues"] if i["rule_id"] == "SCENE-008"]
+        self.assertEqual(0, process.returncode, process.stderr)
+        self.assertTrue(report["summary"]["passed"])
+        self.assertEqual(["WARNING"], [i["severity"] for i in issues])
+
+    def test_after_bind_value_change_still_blocks(self):
+        process, report = self.check_form_event(
+            "afterBindData", 'getModel().setValue("amount", 1);'
+        )
+
+        issues = [i for i in report["issues"] if i["rule_id"] == "SCENE-008"]
+        self.assertEqual(1, process.returncode, process.stderr)
+        self.assertFalse(report["summary"]["passed"])
+        self.assertEqual(["ERROR"], [i["severity"] for i in issues])
+
+    def test_before_bind_view_property_does_not_report_data_mutation(self):
+        process, report = self.check_form_event(
+            "beforeBindData", 'getView().getControl("amount").setPrecision(2);'
+        )
+
+        self.assertEqual(0, process.returncode, process.stderr)
+        self.assertNotIn("SCENE-008", {i["rule_id"] for i in report["issues"]})
+
+    def test_after_create_explicit_calculation_does_not_report_bind_mutation(self):
+        process, report = self.check_form_event(
+            "afterCreateNewData",
+            'int initialAmount = 2 * 3;\n        getModel().setValue("amount", initialAmount);',
+        )
+
+        self.assertEqual(0, process.returncode, process.stderr)
+        self.assertNotIn("SCENE-008", {i["rule_id"] for i in report["issues"]})
+
     def test_algo_context_owns_dataset_lifecycle_but_unscoped_dataset_fails(self):
         safe_source = """\
 public class Demo {

@@ -64,8 +64,8 @@
 ### 反写插件 {#writeback-plugin}
 - **关键词**: 明确指定反写插件 / BOTP 回写阶段
 - **入口类**: `AbstractWriteBackPlugIn` · `ConvertServiceHelper`
-- **先读**: [botp-convert.md](../references/adv/botp-convert.md)
-- **兜底**: [plugin-writeback.md](../references/base/plugin/plugin-writeback.md)
+- **先读**: [plugin-writeback.md](../references/base/plugin/plugin-writeback.md)
+- **相关业务调用**: 若还需下推/选单及 `BotpUtils`，读 [botp-convert.md](../references/adv/botp-convert.md)
 - **模板**: [WriteBackPlugInTemplate.java](../assets/WriteBackPlugInTemplate.java)
 - **片段**: [BatchQuerySample](../assets/snippets/query/BatchQuerySample.java)
 
@@ -170,8 +170,8 @@
 - **片段**: [MessageNotifySample](../assets/snippets/message/MessageNotifySample.java)
 
 ### 附件与文件 {#attachment}
-- **关键词**: 附件上传 / 下载 / 复制 / 面板绑定
-- **入口类**: `AttachmentUtils` · `AttachmentServiceHelper`
+- **关键词**: 附件上传 / 下载 / 面板复制 / 面板与字段绑定 / 保存后附件丢失
+- **入口类**: 项目已具备时用 `AttachmentUtils`；原生 `AttachmentServiceHelper`
 - **先读**: [attachment-api.md](../references/adv/attachment-api.md)
 - **兜底**: [sdk-file.md](../references/base/sdk/sdk-file.md)
 - **片段**: [AttachmentUploadBindSample](../assets/snippets/attachment/AttachmentUploadBindSample.java)
@@ -188,6 +188,11 @@
 - **先读**: [request-context.md](../references/adv/request-context.md)
 - **兜底**: [sdk-threadpool.md](../references/base/sdk/sdk-threadpool.md) · [sdk-request-context.md](../references/base/sdk/sdk-request-context.md)
 - **片段**: [SampleThreadPoolBatch](../assets/snippets/concurrent/SampleThreadPoolBatch.java)
+
+### 跨服务事务与资源预占 {#distributed-transaction}
+- **关键词**: 审核预占余额 / 序列资源预占 / 跨库跨服务事务 / KDTX / TCC / 最终一致性
+- **先读**: [sdk-tx.md](../references/base/sdk/sdk-tx.md)，先区分本地 TX、最终一致性和 TCC；保留调用方事务边界。
+- **入口**: 审核等操作内接入仍配合操作插件；TCC 的静态 `Try` 要在已确认的本地事务内调用。
 
 ### 消息队列 {#mq-consumer}
 - **关键词**: MQ / 消息队列 / 异步消费 / MessageConsumer

@@ -1,6 +1,6 @@
 ---
 name: kingdee-openapi-client
-description: "从外部客户端调用金蝶云苍穹/星瀚 OpenAPI，处理鉴权、接口发现和调用代码；服务端接口开发使用 kingdee-cosmic。"
+description: "从外部客户端调用金蝶云苍穹/星瀚 OpenAPI，处理鉴权、接口与 MCP 工具发现、调用代码；服务端接口开发使用 kingdee-cosmic。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -15,6 +15,7 @@ metadata:
 
 ## 触发边界
 - **适用**:调用苍穹/星瀚 OpenAPI;`getToken` 鉴权与缓存刷新;`queryOpenApi` 查可用接口清单;参数探测;生成 Java/Python 调用代码。
+- 苍穹 MCP 工具列表为空、调用认证、`inputSchema` 与 API 参数不一致或返回 `MCP_CONFIRMATION_REQUIRED` 时，按需读 [MCP 发现、参数与确认恢复](references/mcp-discovery.md)。普通 `getToken` 和 kapi 请求继续走下方流程，不加载 MCP 参考；MCP 不默认套用 kapi 的发现接口或取 Token 流程。
 - **不适用(转交)**:
   - 服务端 OpenAPI/自定义 API 开发(写接口、`AbstractApiPlugin`)→ `kingdee-cosmic`。
   - 接口安全审计、越权/SSRF 验证 → `kingdee-security-review`。

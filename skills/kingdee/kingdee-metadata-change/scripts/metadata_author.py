@@ -592,6 +592,57 @@ def nearest_ancestor(node: ET.Element, parents: dict[int, ET.Element], tag: str)
     return None
 
 
+def page_nodes(page: ET.Element) -> Iterable[ET.Element]:
+    """Visit one design page without entering its nested list/mobile pages."""
+    yield page
+    for child in list(page):
+        if local_tag(child.tag) != "FormMetadata":
+            yield from page_nodes(child)
+
+
+def page_ancestor_context(
+    page: ET.Element,
+    current_root: ET.Element,
+    standard_roots: Iterable[ET.Element],
+) -> tuple[ET.Element | None, dict[str, ET.Element]]:
+    def location(node: ET.Element, parents: dict[int, ET.Element]) -> tuple[str, ...]:
+        tags = [local_tag(node.tag)]
+        while id(node) in parents:
+            node = parents[id(node)]
+            tags.append(local_tag(node.tag))
+        return tuple(reversed(tags))
+
+    path = location(page, parent_map(current_root))
+    props = direct_properties(page)
+    identities = {props.get(name) for name in ("Id", "PkId", "Key")} | {element_oid(page)}
+    identities -= {None, ""}
+    latest = None
+    index: dict[str, ET.Element] = {}
+    for root in standard_roots:
+        parents = parent_map(root)
+        candidates = [
+            node for node in root.iter()
+            if local_tag(node.tag) == "FormMetadata"
+            and location(node, parents) == path
+            and (not props.get("ModelType") or not direct_properties(node).get("ModelType")
+                 or direct_properties(node)["ModelType"] == props["ModelType"])
+        ]
+        if len(candidates) > 1:
+            candidates = [node for node in candidates if identities & (
+                {direct_properties(node).get(name) for name in ("Id", "PkId", "Key")}
+                | {element_oid(node)}
+            )]
+        if len(candidates) != 1:
+            continue
+        latest = candidates[0]
+        for node in page_nodes(latest):
+            values = direct_properties(node)
+            for value in (values.get("Id"), values.get("PkId"), values.get("Key"), element_oid(node)):
+                if value:
+                    index[value] = node
+    return latest, index
+
+
 def semantic_parent_type(
     node: ET.Element,
     page: ET.Element | None,
@@ -617,7 +668,7 @@ def semantic_parent_type_for_id(
     if page is not None and parent_id in {page_props.get("Id"), page_props.get("PkId")}:
         return "FormMetadata"
     if page is not None:
-        for candidate in page.iter():
+        for candidate in page_nodes(page):
             candidate_props = direct_properties(candidate)
             if parent_id in {candidate_props.get("Id"), candidate_props.get("PkId")}:
                 return local_tag(candidate.tag)
@@ -636,11 +687,11 @@ def semantic_parent_index(
     for source in (standard_page, page):
         if source is None:
             continue
-        for candidate in source.iter():
+        for candidate in page_nodes(source):
             props = direct_properties(candidate)
-            for name in ("Id", "PkId", "Key"):
-                if props.get(name):
-                    result[props[name]] = candidate
+            for value in (props.get("Id"), props.get("PkId"), props.get("Key"), element_oid(candidate)):
+                if value:
+                    result[value] = candidate
     return result
 
 
@@ -664,7 +715,7 @@ def would_create_parent_cycle(
     if new_parent_id in node_ids:
         return True
     index = semantic_parent_index(page, standard_page, standard_index)
-    if current_root is not None:
+    if current_root is not None and page is None:
         index.update(standard_identity_index(current_root))
     seen = set()
     current = new_parent_id
@@ -754,6 +805,10 @@ def property_shape_issue(contract: dict[str, Any] | None, property_name: str, va
         return None
     observed = set((contract.get("value_shapes") or {}).keys())
     actual = value_shape(normalized_scalar(value))
+    # A state-list property remains a state list even when empty is observed.
+    # Samples do not define its full enum; membership still needs target evidence.
+    if property_name == "Lock" and "text" in observed and observed <= {"empty", "text"} and actual not in {"empty", "text"}:
+        return f"{property_name} 值形态为 {actual}，实际标准为状态列表；不能用布尔或数值代替"
     strict = {"boolean", "color", "dimension"}
     numeric = {"integer", "decimal"}
     if observed and observed <= strict and actual not in observed:
@@ -947,12 +1002,9 @@ def resolve_change(
         if generic_profile is None:
             issues.append("节点类型/模型/XML 父节点组合没有生产标准完整实例")
         identity = knowledge.identity_contracts["contracts"].get(f"{base_kind}:{node_type}")
-        generation = ((identity or {}).get("generation") or {}).get("status")
-        if generation != "authoring-verified":
-            issues.append("新增身份合同尚未完成同版本 DEV 创建、回导和再导出验证")
         return {
-            "status": "blocked" if issues else "ready",
-            "reason": "; ".join(issues) if issues else None,
+            "status": "blocked" if issues else "candidate-required",
+            "reason": "; ".join(issues) if issues else "请在本地构造完整新增候选，再用 verify-candidate 校验；无需先在平台创建",
             "issues": issues,
             "action": action,
             "target": target,
@@ -974,11 +1026,14 @@ def resolve_change(
     parents = parent_map(root)
     parent = parents.get(id(node))
     parent_type = local_tag(parent.tag) if parent is not None else "none"
-    props = effective_properties(node, standard_node)
     page = (
         node if local_tag(node.tag) == "FormMetadata" else nearest_ancestor(node, parents, "FormMetadata")
     ) if unit["kind"] == "form" else None
-    standard_page = standard_index.get(element_oid(page)) if page is not None else None
+    standard_page = None
+    if page is not None:
+        standard_page, standard_index = page_ancestor_context(page, root, standard_roots)
+        standard_node = standard_index.get(element_oid(node))
+    props = effective_properties(node, standard_node)
     page_model = effective_properties(page, standard_page).get("ModelType", model_type) if page is not None else model_type
     semantic_parent = (
         semantic_parent_type(node, page, standard_node, standard_page, standard_index)
@@ -1015,6 +1070,8 @@ def resolve_change(
                 destination_type = semantic_parent_type_for_id(
                     new_parent, page, standard_page, standard_index
                 )
+                if destination_type == "unresolved":
+                    issues.append("移动目标 ParentId 无法在当前页面或对应标准祖先页面中解析")
                 destination_profile = knowledge.control_profile(
                     local_tag(node.tag), model_type, page_model, destination_type
                 )
@@ -1041,7 +1098,7 @@ def resolve_change(
     if action == "modify" and not requested:
         issues.append("modify 没有属性变化")
     if action == "modify" and requested & (IDENTITY_PROPERTIES | {"ParentId"}):
-        issues.append("身份属性不能按普通修改处理；ParentId 必须使用 move，其他身份需平台生成合同")
+        issues.append("身份属性不能按普通修改处理；ParentId 必须使用 move，其他身份变更需完整迁移与引用检查")
     if action in {"delete", "restore"} and requested:
         issues.append(f"{action} 不能同时携带属性修改")
     for name in normalized_change.get("unset") or []:
@@ -1093,8 +1150,11 @@ def resolve_change(
             issues.append(f"目标仍被 {len(references)} 个 ParentId/字段/操作引用")
     else:
         references = []
-    if action == "restore" and not element_action(node):
-        issues.append("restore 只适用于业务层继承覆盖节点")
+    if action == "restore":
+        if element_action(node) not in {"edit", "reset", "delete"}:
+            issues.append("restore 只适用于 action=edit/reset/delete 的业务层继承覆盖节点")
+        if not element_oid(node) or standard_node is None:
+            issues.append("restore 的 oid 必须解析到目标实际祖先链中的节点；缺少祖先证据时不能生成恢复补丁")
     return {
         "status": "invalid" if issues else "ready",
         "issues": issues,
@@ -1219,16 +1279,27 @@ def set_scalar_patch(
     if matches:
         child = matches[0]
         return child.start_tag_end + 1, child.end_start, encoded
-    child_indent = indentation(raw, target.children[0].start) if target.children else indentation(raw, target.end_start) + b"  "
-    newline = b"\r\n" if b"\r\n" in raw else b"\n"
-    insert_at = line_start(raw, target.end_start)
+    anchor = target.end_start
     if property_name in observed_order:
         target_order = observed_order.index(property_name)
         for child in target.children:
             if child.tag in observed_order and observed_order.index(child.tag) > target_order:
-                insert_at = line_start(raw, child.start)
+                anchor = child.start
                 break
-    fragment = child_indent + b"<" + property_name.encode("utf-8") + b">" + encoded + b"</" + property_name.encode("utf-8") + b">" + newline
+    # Keep the insertion inside its target even when the entire XML is one line.
+    opening_name = raw[target.start + 1 : target.start_tag_end].split(None, 1)[0].rstrip(b"/")
+    prefix = opening_name.rsplit(b":", 1)[0] + b":" if b":" in opening_name else b""
+    property_tag = prefix + property_name.encode("utf-8")
+    fragment = b"<" + property_tag + b">" + encoded + b"</" + property_tag + b">"
+    if raw[target.start : target.start_tag_end + 1].rstrip().endswith(b"/>"):
+        return target.end_start, target.end, b">" + fragment + b"</" + opening_name + b">"
+    insert_at = anchor
+    start = line_start(raw, anchor)
+    if not raw[start:anchor].strip():
+        insert_at = start
+        child_indent = indentation(raw, target.children[0].start) if target.children else indentation(raw, anchor) + b"  "
+        newline = b"\r\n" if b"\r\n" in raw else b"\n"
+        fragment = child_indent + fragment + newline
     return insert_at, insert_at, fragment
 
 
@@ -1255,10 +1326,10 @@ def apply_resolved(artifact: Artifact, resolved: list[dict[str, Any]]) -> tuple[
     documents = dict(artifact.documents)
     changes_by_document: dict[str, list[dict[str, Any]]] = {}
     for item in resolved:
+        if item["action"] == "add":
+            raise ContractError("apply 不构造新增节点；请在本地生成候选并使用 verify-candidate")
         if item["status"] != "ready":
             raise ContractError("内部变更描述包含未就绪变更")
-        if item["action"] == "add":
-            raise ContractError("新增合同尚未 authoring-verified")
         changes_by_document.setdefault(item["unit"]["source"], []).append(item)
     applied = []
     for source, items in changes_by_document.items():
@@ -1321,7 +1392,7 @@ def non_metadata_members(artifact: Artifact) -> dict[str, bytes]:
     return result
 
 
-def validate_platform_added_node(
+def validate_added_node(
     knowledge: Knowledge,
     units: list[dict[str, Any]],
     change: dict[str, Any],
@@ -1337,7 +1408,7 @@ def validate_platform_added_node(
     standard_roots = [root for root, _ in chain]
     node, standard_node = select_target_node(unit, target, standard_roots)
     if standard_node is not None or element_action(node):
-        raise ContractError("平台新增候选必须是业务层完整节点，不能是继承覆盖节点")
+        raise ContractError("新增候选必须是业务层完整节点，不能是继承覆盖节点")
     root = editable_root(unit)
     parents = parent_map(root)
     parent = parents.get(id(node))
@@ -1361,11 +1432,18 @@ def validate_platform_added_node(
         if generic_profile is None or int(generic_profile.get("full_definition_nodes", 0)) == 0:
             issues.append("新增节点类型/模型/XML 父节点组合没有生产标准完整实例")
     if unit["kind"] == "form" and knowledge.is_control_type(node_type):
-        standard_index = standard_identity_index_many(standard_roots)
         page = node if node_type == "FormMetadata" else nearest_ancestor(node, parents, "FormMetadata")
-        standard_page = standard_index.get(element_oid(page)) if page is not None else None
+        standard_page, standard_index = (
+            page_ancestor_context(page, root, standard_roots) if page is not None else (None, {})
+        )
         page_model = effective_properties(page, standard_page).get("ModelType", model_type) if page is not None else model_type
         semantic_parent = semantic_parent_type(node, page, None, standard_page, standard_index)
+        if semantic_parent == "unresolved":
+            issues.append("新增控件 ParentId 无法解析到实际父容器")
+        if props.get("ParentId") and would_create_parent_cycle(
+            node, None, props["ParentId"], page, standard_page, standard_index, root
+        ):
+            issues.append("新增控件 ParentId 形成父容器循环")
         control_profile = knowledge.control_profile(node_type, model_type, page_model, semantic_parent)
         if control_profile is None:
             issues.append("新增控件类型/宿主模型/页面模型/父容器组合没有生产标准完整实例")
@@ -1394,12 +1472,17 @@ def validate_platform_added_node(
         )
         if unknown_attributes:
             issues.append("新增节点包含精确实际合同未观察到的 XML 属性: " + ", ".join(unknown_attributes))
-        required_common = set(generic_profile.get("observed_common_properties", [])) if generic_profile else set()
+        # observed_common_properties is descriptive, not a required-property
+        # schema. Do not force optional behavior such as MustInput or Lock onto
+        # a new node just because every sampled instance happened to set it.
+        # Preserve existing identity/reference completeness checks separately.
+        common = set(generic_profile.get("observed_common_properties", [])) if generic_profile else set()
         if control_profile:
-            required_common |= set(control_profile.get("observed_common_properties", []))
-        missing_common = sorted(name for name in required_common if name not in props)
-        if missing_common:
-            issues.append("平台新增节点缺少精确完整实例共有属性: " + ", ".join(missing_common))
+            common |= set(control_profile.get("observed_common_properties", []))
+        structural = IDENTITY_PROPERTIES | BINDING_PROPERTIES | {"ParentId", "OperationKey"}
+        missing = sorted((common & structural) - set(props))
+        if missing:
+            issues.append("新增节点缺少结构身份或绑定属性: " + ", ".join(missing))
         identity = knowledge.identity_contracts.get("contracts", {}).get(
             f"{BASE_KIND[unit['kind']]}:{node_type}"
         )
@@ -1414,7 +1497,7 @@ def validate_platform_added_node(
             required = set(exact_identity_profiles[0].get("observed_common_identity_properties", []))
             missing = sorted(name for name in required if not props.get(name))
             if missing:
-                issues.append("平台新增节点缺少实际完整实例共有身份属性: " + ", ".join(missing))
+                issues.append("新增节点缺少实际完整实例共有身份属性: " + ", ".join(missing))
     if unit["kind"] == "form":
         fields = field_type_index(knowledge, units, unit)
         for binding_name in sorted(BINDING_PROPERTIES & set(props)):
@@ -1439,6 +1522,13 @@ def validate_platform_added_node(
                     props["OperationKey"],
                 )
             )
+    if unit["kind"] == "entity" and props.get("ParentId"):
+        identity_index = standard_identity_index_many([*standard_roots, root])
+        parent_id = props["ParentId"]
+        if parent_id not in identity_index:
+            issues.append("新增字段 ParentId 无法解析到实际父容器")
+        elif would_create_parent_cycle(node, None, parent_id, None, None, identity_index, root):
+            issues.append("新增字段 ParentId 形成父容器循环")
     return {
         "status": "invalid" if issues else "ready",
         "issues": issues,
@@ -1459,35 +1549,50 @@ def validate_platform_added_node(
     }
 
 
-def verify_platform_candidate(
+def verify_candidate(
     knowledge: Knowledge,
     baseline: Artifact,
     candidate: Artifact,
     contract: dict[str, Any],
+    *,
+    platform_only: bool = False,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     validate_contract(contract, baseline, knowledge)
     if contract.get("candidate_sha256") != sha256_bytes(candidate.raw):
-        raise ContractError("candidate_sha256 与平台候选不一致")
+        raise ContractError("candidate_sha256 与候选不一致")
     candidate_provenance = contract.get("candidate_provenance") or {}
-    if candidate_provenance.get("classification") != "platform-exported":
-        raise ContractError("新增候选必须是同版本平台设计器保存后直接导出的文件")
+    allowed_sources = {"platform-exported"} if platform_only else {"platform-exported", "local-authored"}
+    if candidate_provenance.get("classification") not in allowed_sources:
+        raise ContractError("候选来源必须是 " + " 或 ".join(sorted(allowed_sources)))
     if not str(candidate_provenance.get("evidence") or "").strip():
         raise ContractError("candidate_provenance.evidence 不能为空")
     if any(change.get("action") != "add" for change in contract["changes"]):
-        raise ContractError("verify-platform-candidate 只验证平台创建的新节点")
+        raise ContractError("候选验证入口只验证完整节点新增；混合修改需单独对账")
     if baseline.is_zip != candidate.is_zip:
-        raise ContractError("平台新增候选改变了包格式")
+        raise ContractError("新增候选改变了包格式")
     if baseline.is_zip and set(baseline.documents) != set(candidate.documents):
-        raise ContractError("平台新增候选改变了元数据 XML 成员集合")
+        raise ContractError("新增候选改变了元数据 XML 成员集合")
     if non_metadata_members(baseline) != non_metadata_members(candidate):
-        raise ContractError("平台新增候选改变了非元数据成员")
+        raise ContractError("新增候选改变了非元数据成员")
 
     baseline_units = all_document_units(baseline)
     candidate_units = all_document_units(candidate)
-    resolved = [validate_platform_added_node(knowledge, candidate_units, change) for change in contract["changes"]]
+    resolved = [validate_added_node(knowledge, candidate_units, change) for change in contract["changes"]]
     issues = [issue for item in resolved for issue in item["issues"]]
-    removals: dict[str, list[ET.Element]] = {}
+    declared_nodes = {id(item["node"]) for item in resolved}
     for item in resolved:
+        for child in item["node"].iter():
+            if child is not item["node"] and id(child) not in declared_nodes and (
+                IDENTITY_PROPERTIES & set(direct_properties(child)) or element_oid(child)
+            ):
+                issues.append("新增复杂区段包含未单独声明和校验的子节点: " + local_tag(child.tag))
+    removals: dict[str, list[ET.Element]] = {}
+    seen_nodes: set[int] = set()
+    for item in resolved:
+        if id(item["node"]) in seen_nodes:
+            issues.append(f"重复声明新增目标: {item['target']}")
+            continue
+        seen_nodes.add(id(item["node"]))
         target = item["target"]
         baseline_matches = [
             unit
@@ -1502,6 +1607,41 @@ def verify_platform_candidate(
             existing.extend(matching_target_nodes(unit, target, [root for root, _ in chain]))
         if existing:
             issues.append(f"新增目标在基线中已存在: {target}")
+        # Id/PkId are checked within a metadata unit, Key within its page/entity.
+        # MasterId/oid are relationships, not universally unique node identities.
+        unit = item["unit"]
+        unit_root = editable_root(unit)
+        parents = parent_map(unit_root)
+        chain = knowledge.resolve_standard_chain(unit)
+        scopes = [unit_root] + [root for root, _ in chain]
+        for name in ("Id", "PkId", "Key"):
+            value = direct_properties(item["node"]).get(name)
+            if not value:
+                continue
+            for scope in scopes:
+                nodes = scope.iter()
+                if name == "Key" and unit["kind"] == "form":
+                    page = nearest_ancestor(item["node"], parents, "FormMetadata")
+                    if page is not None:
+                        if scope is unit_root:
+                            nodes = page.iter()
+                        else:
+                            page_props = direct_properties(page)
+                            page_ids = {page_props.get("Id"), page_props.get("PkId"), page_props.get("Key"), element_oid(page)} - {None, ""}
+                            nodes = (
+                                child for ancestor_page in scope.iter()
+                                if local_tag(ancestor_page.tag) == "FormMetadata"
+                                and page_ids & (set(direct_properties(ancestor_page).get(k) for k in ("Id", "PkId", "Key")) | {element_oid(ancestor_page)})
+                                for child in ancestor_page.iter()
+                            )
+                if any(
+                    other is not item["node"]
+                    and not element_action(other)
+                    and direct_properties(other).get(name) == value
+                    for other in nodes
+                ):
+                    issues.append(f"新增节点 {name}={value} 与现有/祖先或其他新增节点冲突")
+                    break
         removals.setdefault(item["unit"]["source"], []).append(item["node"])
 
     for source, nodes in removals.items():
@@ -1527,6 +1667,15 @@ def verify_platform_candidate(
         if structural_signature(baseline_root) != structural_signature(candidate_root):
             issues.append(f"移除批准新增节点后仍有其他结构差异: {candidate_source}")
     return resolved, issues
+
+
+def verify_platform_candidate(
+    knowledge: Knowledge,
+    baseline: Artifact,
+    candidate: Artifact,
+    contract: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    return verify_candidate(knowledge, baseline, candidate, contract, platform_only=True)
 
 
 def write_file(path: Path, data: bytes, overwrite: bool) -> None:
@@ -1584,6 +1733,8 @@ def plan_command(args: argparse.Namespace) -> int:
     contract = read_change_spec(Path(args.contract))
     _, public = resolve_contract(knowledge, artifact, contract)
     status = "ready" if all(item["status"] == "ready" for item in public) else "blocked"
+    if status == "blocked" and all(item["status"] in {"ready", "candidate-required"} for item in public):
+        status = "candidate-required"
     print(
         json.dumps(
             {
@@ -1591,13 +1742,13 @@ def plan_command(args: argparse.Namespace) -> int:
                 "environment": knowledge.environment,
                 "baseline_sha256": sha256_bytes(artifact.raw),
                 "changes": public,
-                "meaning": "ready 表示可生成静态候选；不代表平台回导或运行验证通过",
+                "meaning": "ready 可用 apply 生成补丁；candidate-required 需在本地构造新增候选后校验；均不代表平台验证通过",
             },
             ensure_ascii=False,
             indent=2,
         )
     )
-    return 0 if status == "ready" else 1
+    return 0 if status in {"ready", "candidate-required"} else 1
 
 
 def apply_command(args: argparse.Namespace) -> int:
@@ -1657,13 +1808,15 @@ def validate_command(args: argparse.Namespace) -> int:
     return 0 if not issues else 1
 
 
-def verify_platform_candidate_command(args: argparse.Namespace) -> int:
+def verify_candidate_command(args: argparse.Namespace) -> int:
     baseline = Artifact.load(Path(args.baseline))
     candidate = Artifact.load(Path(args.candidate))
     knowledge = Knowledge(Path(args.knowledge))
     contract = read_change_spec(Path(args.contract))
-    resolved, issues = verify_platform_candidate(knowledge, baseline, candidate, contract)
-    status = "platform-candidate-structurally-ready" if not issues else "invalid"
+    platform_only = args.command == "verify-platform-candidate"
+    resolved, issues = verify_candidate(knowledge, baseline, candidate, contract, platform_only=platform_only)
+    ready_status = "platform-candidate-structurally-ready" if platform_only else "candidate-structurally-ready"
+    status = ready_status if not issues else "invalid"
     print(
         json.dumps(
             {
@@ -1672,7 +1825,7 @@ def verify_platform_candidate_command(args: argparse.Namespace) -> int:
                 "candidate_sha256": sha256_bytes(candidate.raw),
                 "changes": [public_resolution(item) for item in resolved],
                 "issues": issues,
-                "meaning": "只证明平台导出候选恰好新增批准节点且符合生产实际合同；仍需回导、再导出和运行验证",
+                "meaning": "只证明新增候选通过当前知识覆盖的静态检查；不证明身份由平台分配或导入、运行验证通过",
             },
             ensure_ascii=False,
             indent=2,
@@ -1727,12 +1880,13 @@ def parser() -> argparse.ArgumentParser:
         command.add_argument("--contract", required=True)
         command.set_defaults(func=func)
 
-    platform_candidate_parser = sub.add_parser("verify-platform-candidate")
-    platform_candidate_parser.add_argument("knowledge")
-    platform_candidate_parser.add_argument("baseline")
-    platform_candidate_parser.add_argument("candidate")
-    platform_candidate_parser.add_argument("--contract", required=True)
-    platform_candidate_parser.set_defaults(func=verify_platform_candidate_command)
+    for name in ("verify-candidate", "verify-platform-candidate"):
+        candidate_parser = sub.add_parser(name)
+        candidate_parser.add_argument("knowledge")
+        candidate_parser.add_argument("baseline")
+        candidate_parser.add_argument("candidate")
+        candidate_parser.add_argument("--contract", required=True)
+        candidate_parser.set_defaults(func=verify_candidate_command)
 
     apply_parser = sub.add_parser("apply")
     apply_parser.add_argument("knowledge")

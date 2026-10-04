@@ -134,6 +134,38 @@ class QueryPlanTest(unittest.TestCase):
         self.assertTrue(result["valid"])
         self.assertEqual(64, len(result["contractDigest"]))
 
+    def test_rejects_credential_field_aliases_recursively(self):
+        for key in (
+            "storageState", "storage_state", "storage-state", "STORAGESTATE",
+            "passwd", "pass_wd", "pass-wd", "password", "connectionString",
+            "connection_string", "requestHeaders", "accessToken", "session",
+        ):
+            with self.subTest(key=key):
+                plan = {
+                    "mode": "dev-query", "scopeId": "scope-alias-check",
+                    "targetRef": "dev-logs", "queryType": "trace",
+                    "filters": {"traceId": "trace-synthetic"}, "maxRecords": 10,
+                    "redaction": True,
+                    "context": {"items": [{key: "synthetic-credential-marker"}]},
+                }
+                with self.assertRaisesRegex(ValueError, "credential/session") as caught:
+                    QUERY.validate_plan(plan)
+                self.assertNotIn("synthetic-credential-marker", str(caught.exception))
+
+    def test_rejects_storage_state_aliases_in_text(self):
+        for key in ("storageState", "storage_state", "storage-state", "passwd"):
+            with self.subTest(key=key):
+                plan = {
+                    "mode": "dev-query", "scopeId": "scope-text-check",
+                    "targetRef": "dev-logs", "queryType": "trace",
+                    "filters": {"traceId": "trace-synthetic",
+                                "keyword": key + "=synthetic-state-marker"},
+                    "maxRecords": 10, "redaction": True,
+                }
+                with self.assertRaisesRegex(ValueError, "credential/session") as caught:
+                    QUERY.validate_plan(plan)
+                self.assertNotIn("synthetic-state-marker", str(caught.exception))
+
     def test_rejects_credentials_and_unapproved_production(self):
         with self.assertRaisesRegex(ValueError, "credential/session"):
             QUERY.validate_plan(

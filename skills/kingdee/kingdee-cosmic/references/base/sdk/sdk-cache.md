@@ -7,7 +7,7 @@
 - 继续读全文：当你要确认作用域、有效期、示例和常见误用时。
 
 ## 概述
-金蝶云苍穹提供了分布式缓存服务，支持跨微服务节点的数据共享。根据数据的生命周期和隔离级别，主要分为**页面缓存**（随表单关闭而销毁）和**应用缓存**（按应用隔离，支持自定义有效期）。
+金蝶云苍穹提供页面缓存和应用缓存。页面缓存用于当前表单的临时状态；应用缓存用于应用范围共享数据。本地 7.0 `bos-entity-core` JAR 中，`AppCacheImpl` 使用 `DistributeSessionlessCache`，缓存 key 包含账套与 `appKey`，不是只在同一 JVM 共享。具体节点配置、失效行为和目标补丁仍以项目依赖与运行配置为准。
 
 ## 核心类
 - **`kd.bos.form.IPageCache`**: 页面级缓存接口，仅限表单插件使用。
@@ -21,7 +21,7 @@
 - `get(String key)`: 读取数据。
 
 ### 应用缓存 (AppCache.get("appId"))
-- `put(String key, Object value)`: 存入数据，默认 1 小时过期。
+- `put(String key, Object value)`: 存入数据；本地 7.0 实现委托底层无显式 TTL 的重载，不能据此断言固定 1 小时过期。
 - `put(String key, Object value, int seconds)`: 存入带自定义过期时间的数据。
 - `get(String key, Class<T> clazz)`: 类型安全地读取数据。
 - `remove(String key)`: 显式移除缓存。
@@ -59,5 +59,6 @@ public class CacheDemo {
 
 ## 常见坑位
 1. **缓存一致性**：由于是分布式缓存，注意在多节点并发更新同一 Key 时可能产生的数据覆盖问题。
-2. **序列化要求**：存入 `AppCache` 的对象必须支持序列化（实现 `Serializable` 接口）。
+2. **序列化要求**：本地 7.0 `AppCacheImpl` 通过 `SerializationUtils.toJsonString` 写入，读取时按目标类型反序列化。值须适配该 JSON 序列化契约；不能把实现 Java `Serializable` 当作充分条件或统一必需条件。
 3. **大小限制**：严禁将超大对象（如数万行的 List）放入缓存，这会显著增加网络传输和 Redis 内存压力。
+具体容量、集合 TTL 与查询投影隔离见 [Cache / MQ 运行契约](../../cache-mq-runtime.md)。

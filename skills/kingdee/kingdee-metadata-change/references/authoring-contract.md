@@ -40,7 +40,7 @@
 - `user-confirmed-original`：用户明确确认是未被 agent/脚本修改的原始包，并有具体证据；
 - `repository-canonical`：版本库中有平台回导或发布血缘的规范源。
 
-`ai-derived/unknown/derived-candidate` 一律阻塞。`evidence` 不能为空，不能写“看起来正常”“文件在 Downloads”之类循环断言。
+`ai-derived/unknown/derived-candidate` 不能充当原始基线；候选可继续修订，但验证始终使用可信原包和累计变更。`evidence` 不能为空，不能写“看起来正常”“文件在 Downloads”之类循环断言。
 
 ## action 语义
 
@@ -50,9 +50,9 @@
 | `move` | `new_parent_id` | 只改 ParentId；新父容器有精确实际 profile 且不成环 |
 | `delete` | 无属性变化 | 只移除业务层完整节点；无外部引用 |
 | `restore` | 无属性变化 | 只移除 `action=edit/reset/delete` 业务覆盖，使其继续继承 |
-| `add` | 平台候选中的唯一目标定位 | 不离线生成；交 `verify-platform-candidate` 验证平台创建结果 |
+| `add` | 本地或平台候选中的唯一目标定位 | 本地构造后用 `verify-candidate`；平台导出也可用 `verify-platform-candidate` |
 
-`modify` 不能携带 `Id/PkId/Key/MasterId/oid/ParentId`。需要改 Key 或重新生成身份时，走平台设计器创建/迁移流程，不能把它伪装成普通属性修改。
+`modify` 不能携带 `Id/PkId/Key/MasterId/oid/ParentId`。已有节点需要改 Key 或身份时，按完整迁移处理所有引用，不能伪装成普通属性修改；新节点的身份按 [本地新增](local-addition.md) 生成。
 
 插件相关节点（`Plugin`、`Plugins`、`JsPlugins`，或其直接子节点）必须附带：
 
@@ -65,19 +65,21 @@
 
 执行器只接受该来源且 `reference` 非空；agent 先完成业务对象取证，再生成内部描述。
 
-## 新增平台候选输入
+## 新增候选输入
 
 在基础字段之外再记录：
 
 ```json
 {
-  "candidate_sha256": "<平台候选哈希>",
+  "candidate_sha256": "<候选哈希>",
   "candidate_provenance": {
-    "classification": "platform-exported",
-    "evidence": "同版本 DEV/TEST 设计器创建、保存和直接导出证据"
+    "classification": "local-authored",
+    "evidence": "本次可信模板、身份格式和引用映射的实际记录"
   }
 }
 ```
+
+本地候选使用 `verify-candidate`，来源为 `local-authored`；确为平台导出的候选使用 `platform-exported`，可继续用 `verify-platform-candidate`，不得伪填血缘。`plan` 对具备结构依据的新增返回 `candidate-required`；`apply` 不构造新节点，改用任务内本地生成再校验。两个候选入口目前仅支持已有单元内新增，混合修改和新文件须单独对账。
 
 每个 `changes[]` 都是 `add`，目标 locator 指向候选中新节点。验证器要求基线不存在该节点、候选存在且唯一、节点为完整定义、精确模型/父容器/字段绑定/操作绑定已观察；移除所有批准新增节点后，其他结构和非元数据成员必须与基线相同。
 

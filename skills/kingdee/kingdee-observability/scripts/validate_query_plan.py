@@ -12,26 +12,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from redact import redact_value
+from output_guard import write_output
+from redact import normalized_key, redact_value
 
 
 MODES = {"dev-query", "prod-readonly"}
 QUERY_TYPES = {"trace", "time-window", "service", "exception", "slow-sql"}
 FORBIDDEN_KEY_PARTS = {
     "password",
+    "passwd",
     "secret",
     "token",
     "cookie",
     "authorization",
     "csrf",
     "session",
-    "storage_state",
+    "storagestate",
     "connectionstring",
     "jdbc",
     "header",
 }
 FORBIDDEN_VALUE = re.compile(
-    r"(?i)[\"']?(password|passwd|secret|token|cookie|authorization|csrf|session|storage_state)[\"']?\s*[:=]"
+    r"(?i)[\"']?(password|passwd|secret|token|cookie|authorization|csrf|session|storage[_-]?state)[\"']?\s*[:=]"
 )
 
 
@@ -47,7 +49,7 @@ def find_forbidden_keys(value: Any, path: str = "$") -> list[str]:
     hits: list[str] = []
     if isinstance(value, dict):
         for key, item in value.items():
-            normalized = str(key).lower().replace("-", "_")
+            normalized = normalized_key(key)
             if any(part in normalized for part in FORBIDDEN_KEY_PARTS):
                 hits.append(f"{path}.{key}")
             hits.extend(find_forbidden_keys(item, f"{path}.{key}"))
@@ -127,7 +129,8 @@ def main() -> int:
     parser.add_argument("--output")
     args = parser.parse_args()
     try:
-        plan = json.loads(Path(args.input).expanduser().resolve().read_text(encoding="utf-8-sig"))
+        path = Path(args.input).expanduser().resolve()
+        plan = json.loads(path.read_text(encoding="utf-8-sig"))
         if not isinstance(plan, dict):
             raise ValueError("plan root must be an object")
         result = validate_plan(plan)
@@ -135,12 +138,11 @@ def main() -> int:
         print(f"invalid query plan: {exc}", file=sys.stderr)
         return 2
     payload = json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True)
-    if args.output:
-        output = Path(args.output).expanduser().resolve()
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(payload, encoding="utf-8")
-    else:
-        print(payload)
+    try:
+        write_output(payload, path, args.output)
+    except (OSError, ValueError) as exc:
+        print(f"cannot write output: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 

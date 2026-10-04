@@ -41,7 +41,6 @@ public class ReportListDataPluginTemplate extends AbstractReportListDataPlugin {
      */
     @Override
     public DataSet query(ReportQueryParam queryParam, Object selectedObj) {
-        super.query(queryParam, selectedObj);
         FilterInfo filter = queryParam.getFilter();
         int top = 1000;
         QFilter[] filters = filter == null ? null : filter.getQFilters().toArray(new QFilter[0]);
@@ -51,18 +50,18 @@ public class ReportListDataPluginTemplate extends AbstractReportListDataPlugin {
 
     /**
      * 触发时机: 报表初始化列定义后。
-     * 参数要点: columns 为系统生成的列集合，可调整显示列属性。
+     * 参数要点: columns 为系统生成的列集合，可能包含列分组；仅对 ReportColumn 调整字段属性。
      * 典型用途: 动态隐藏列、修改列宽、冻结列或调整显示顺序。
      */
     @Override
     public List<AbstractReportColumn> getColumns(List<AbstractReportColumn> columns) {
-        super.getColumns(columns);
-        for (int i = 0; i < columns.size(); i++) {
-            ReportColumn rColumn = (ReportColumn) columns.get(i);
-            String key = rColumn.getFieldKey();
-            if (key.equals("textfield")) {
+        for (AbstractReportColumn column : columns) {
+            if (!(column instanceof ReportColumn)) {
+                continue;
+            }
+            ReportColumn rColumn = (ReportColumn) column;
+            if ("textfield".equals(rColumn.getFieldKey())) {
                 rColumn.setFreeze(true);
-                columns.set(i, rColumn);
             }
         }
         return columns;
