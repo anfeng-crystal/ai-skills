@@ -49,7 +49,7 @@ node <active-root>/skills/automation/playwright/scripts/playwright_cli.mjs scree
 
 - 需要具体 CLI 命令、跨平台 helper 或 session 配置：读 [CLI](references/cli.md)。Windows 不依赖 Bash 或 POSIX 命令。
 - 填表、trace、多 tab、等待元素、排障和 fixture/POM/auth 复用：读 [工作流](references/workflows.md)。
-- 用户要代码时，按任务需要定位现有 `playwright.config.*`、fixture、POM、登录态与 helper，优先复用；已有资产不足才补最小 helper。CLI 为默认交互方式；用户要求测试文件时使用项目已有测试方案或 `@playwright/test`。
+- 用户要代码时，按任务需要定位现有 `playwright.config.*`、fixture、POM、登录态与 helper，优先复用；已有资产不足才补最小 helper。已选择终端交互时使用本 Skill 的 CLI；用户要求测试文件时使用项目已有测试方案或 `@playwright/test`。
 - 注释和署名：读 [注释策略](references/comment-policy.md)；代码、注释与提交署名用 `anfeng`。
 
 ## 完成

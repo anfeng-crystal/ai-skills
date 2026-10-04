@@ -62,6 +62,7 @@ if (Test-Path "$env:USERPROFILE\AI\skills\active\.git") {
 Use the canonical files from this repository. Before copying, compare them with the destination rules and preserve newer intentional host changes. Update the canonical copy when approved rules change; do not overwrite a newer destination with a stale template. Keep host files self-contained and verify the installed content after copying:
 
 - Codex: `docs/global-rules/codex/AGENTS.md`
+- Pi: `docs/global-rules/pi/AGENTS.md` → `~/.pi/agent/AGENTS.md` (default agent directory; respect a configured `PI_CODING_AGENT_DIR`). Back up and compare the destination before copying, as for the other hosts.
 - Claude Code: `docs/global-rules/claude/CLAUDE.md`
 - Antigravity / Gemini: `docs/global-rules/antigravity/GEMINI.md`
 
@@ -108,6 +109,8 @@ Copy-Item .\docs\global-rules\antigravity\GEMINI.md "$env:USERPROFILE\.gemini\GE
 ```
 
 ## 3. Install Skills
+
+Pi also discovers the shared `~/.agents/skills` directory natively in the verified `@earendil-works/pi-coding-agent 1.0.0`. Use the existing `agents` install target for shared Skills instead of creating a second copy. Verify discovery against the installed Pi version; use `/reload` in an active Pi session after updating rules or Skills. Start a new Codex session to reload global rules.
 
 ### macOS and WSL Ubuntu
 

@@ -30,7 +30,7 @@ metadata:
 
 ## 本地工具
 
-从本 Skill 的真实目录执行命令，或传脚本绝对路径。使用本地脚本时同任务先检查一次 `node scripts/check-deps.mjs --json`，仅修当前路径需要的缺口。
+从本 Skill 的真实目录执行命令，或传脚本绝对路径。选择本地 CDP 且当前任务尚无可用性证据时，运行 `node scripts/check-deps.mjs --json`；搜索、fetch 等路径只检查自身所需依赖，不触发浏览器/CDP 预检。复用已确认环境，只修当前路径的缺口。
 
 ```bash
 curl -sL --max-time 15 "https://example.com"

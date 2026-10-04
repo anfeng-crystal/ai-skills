@@ -48,7 +48,7 @@ pwcli screenshot  # confirm local path/privacy before saving
 
 ## Data extraction
 
-For a known interactive page, use this CLI workflow. Pure content retrieval,
+After selecting the terminal/CLI route for a known interactive page, use this workflow. Pure content retrieval,
 latest facts, or URL verification still routes to `web-access`.
 
 ```bash

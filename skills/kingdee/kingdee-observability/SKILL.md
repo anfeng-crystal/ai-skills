@@ -60,4 +60,4 @@ All scripts use UTF-8, `pathlib`, and explicit input/output paths; paths may con
 
 ## 输出
 
-Use Chinese. Lead with the supported diagnosis, then list mode and query contract, evidence by category, trace topology, redactions applied, confidence, missing evidence, and next read-only check.
+使用简体中文，先给证据支持的诊断，再按任务相关项报告模式与查询契约、分类证据、Trace 拓扑、脱敏情况、置信度、缺失证据及下一步只读检查；不要求每次诊断覆盖所有类别。明确已完成的分析或查询、未验证项与推断边界。

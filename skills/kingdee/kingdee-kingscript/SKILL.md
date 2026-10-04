@@ -21,7 +21,7 @@ metadata:
 
 ## 实现与证据
 
-- 按用户请求完成生成、修改、SDK 解释、运行错误排查或风险审查；先复用项目已有脚本、公共函数、wrapper 和同类实现。已有实现与目标签名足够时，不为局部修改另读模板或完整索引链。
+- 按用户请求完成生成、修改、SDK 解释、运行错误排查或风险审查；先复用当前项目或工作区已有脚本、公共/工具函数、SDK wrapper、模板、示例与同类实现，能覆盖需求时不复制同逻辑脚本。已有实现与目标签名足够时，不为局部修改另读模板或完整索引链。
 - 沿用已确认的产品与目标版本。`7.0` 不等于某个补丁，也不能被 `8.0` 示例/声明提升；用户指定其他版本时按该目标处理。
 - 生成或修改平台相关脚本前，用目标项目依赖、匹配目标实际版本的 `.d.ts`/SDK/JAR/Javadoc 确认本次 API、导入、归属和事件签名。references 只定位候选；同大版本另一补丁也不自动兼容。补丁未知但目标声明足以确认本次 API 时可继续；目标与实际依赖冲突时报告，不以另一版本检查通过冒充目标兼容。
 - 交付前核对受影响的事件/参数类型、字段标识、异常与空值边界及复用选择；完成已授权本地修改和适用验证，真实动作按下方契约执行。
@@ -37,25 +37,15 @@ metadata:
 | 插件或场景示例 | `references/examples/index.md` 或 `references/examples/plugins/index.md`，按类型/事件/场景进入具体文件 |
 | SDK 来源和版本判定 | `references/sdk/strategy.md`；需要总体组织说明时读 `references/sdk/index.md` |
 | 已知类名或方法名 | `references/sdk/indexes/class-index.md`、`method-index.md` 或 `methods-by-name.md` 中匹配的一项 |
-| 生命周期或插件类型 | `references/sdk/indexes/methods-lifecycle.md`、`plugin-index.md` |
+| 生命周期或插件类型 | `references/sdk/indexes/methods-lifecycle.md`、`plugin-index.md`；基类、事件与导入速查见 `references/plugin-event-cheatsheet.md` |
 | 场景、关键词或错误 | `references/sdk/indexes/scenario-index.md`、`keyword-index.md` 或 `error-index.md`；参数不匹配、`any`、确认框/关闭回调优先用错误索引 |
 | 语法、关键字、模块或异常处理 | `references/language/kingscript/index.md`，再读对应主题（如类、方法、变量、接口、异常处理或语法示例） |
 
 SDK 索引定位后读取对应 `classes/`、`packages/`、`plugins/` 或 `microservices/` 卡片。未命中时在本 skill 的 `references/` 检索；仍不足时用 `references/sdk/manifests/index.md` 与相关 JSON 清单，或目标声明/官方资料补证。无需按顺序穷尽已无帮助的资料，未知签名仍不得猜。
 
-## References
-- 总入口：`references/index.md`
-- 插件基类×事件 / SDK 导入速查：`references/plugin-event-cheatsheet.md`（入口速查；卡片用于定位，签名须由匹配目标版本的声明/SDK 确认）
-- SDK 查询：`references/sdk/index.md`、`references/sdk/strategy.md`
-- SDK 索引：`references/sdk/indexes/class-index.md`、`references/sdk/indexes/method-index.md`、`references/sdk/indexes/methods-by-name.md`、`references/sdk/indexes/methods-lifecycle.md`、`references/sdk/indexes/plugin-index.md`、`references/sdk/indexes/scenario-index.md`、`references/sdk/indexes/keyword-index.md`
-- SDK 清单：`references/sdk/manifests/index.md`
-- 模板：`references/templates/index.md`
-- 示例：`references/examples/index.md`、`references/examples/plugins/index.md`
-- 语法：`references/language/kingscript/index.md`
-- 注释规范：`references/comment-policy.md`
-- 官方报表支持与版本边界：`references/official-report-support.md`
-
 ## 代码注释策略
+按下列规则编写，细节按需读 `references/comment-policy.md`。
+
 - 生成或修改 KingScript 时，脚本模块、类、工具函数、公共函数、复杂函数和关键业务分支必须写功能性注释。
 - 文件或模块注释说明用途、入口事件、SDK/声明前提、外部副作用和平台约束。
 - 函数注释说明参数来源、返回语义、空值/权限/异常边界，以及调用方需要保证的前置条件。
@@ -73,13 +63,11 @@ SDK 索引定位后读取对应 `classes/`、`packages/`、`plugins/` 或 `micro
 - 生成或修改事件方法时，必须核对事件参数类型是否与当前插件基类、生命周期和示例上下文一致；同名事件在不同插件体系下不能混用参数签名。
 - 生成脚本前先确认 import、对象归属和声明入口；拿不准时先回 `references/sdk/indexes/` 和具体类卡，不凭印象补全 API。
 - `references/` 的发现顺序不代表版本权威；新版或版本不明的卡片始终是目标 API 候选，复用已有有效目标证据，不固定追加人工确认、下载、登录或编译步骤。只暂停依赖未确认签名的实现，继续独立本地检查；实际运行与写入仍遵守原授权。
-- 新增脚本模块、类、工具函数和复杂函数必须写功能性注释。
 - 涉及代码、注释、文档或提交时，署名必须遵守全局规则：不用 AI，统一用 `anfeng`。
-- 当前项目或工作区已有脚本模块、共享工具函数、SDK wrapper、模板或示例能覆盖需求时，不再复制一份同逻辑脚本。
 - 不把实施过程、排查过程、修改经过或交付口径写入代码注释、skills、操作说明或示例说明。
 
 ## Output
-使用简体中文，默认保持现有结构：依据 → 脚本/说明 → 风险检查 → 验证建议。
-- 信息不完整时，在“依据”后补一段“假设/待确认”，明确哪些内容已确认、哪些只是保守推断。
-- 做代码生成或修改时，“脚本/说明”部分先给复用来源与选择理由，再给最小必要代码或改动点。
-- 做 SDK 解释、错误诊断或风险审查时，“风险检查”里至少覆盖 API 归属、事件参数类型、生命周期时机和空值/权限边界。
+使用简体中文，先给结论，再按任务相关项报告依据、脚本或说明、风险与验证；不固定输出无关章节。
+- 信息不完整时，明确已确认事实、假设与待确认项。
+- 做代码生成或修改时，说明复用来源与选择理由、最小必要代码或改动点、已完成的适用验证及未验证项；待授权的真实动作单独说明。
+- 做 SDK 解释、错误诊断或风险审查时，按涉及内容核对并报告 API 归属、事件参数类型、生命周期时机及空值/权限边界。
