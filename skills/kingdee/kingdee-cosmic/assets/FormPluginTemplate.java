@@ -49,47 +49,14 @@ import java.util.Set;
  * <p>
  * 低频事件（分录移动/置顶/拖拽/合计、导入、定时器、自定义事件等）已省略，
  * 需要时请查阅 references/base/plugin/plugin-form.md 获取方法签名。
- *
  * <pre>
- * ═══ 方法索引（按需跳转，无需通读） ═══
- *
- * ─ 生命周期事件
- *   initialize()             — 初始化变量/缓存
- *   registerListener()        — 注册控件/菜单/F7 监听
- *   preOpenForm()             — 表单打开前参数准备
- *   beforeClosed()            — 关闭前校验/回传数据
- *
- * ─ 数据创建/绑定事件
- *   createNewData()           — 新增数据包创建前
- *   afterCreateNewData()      — 新增后设置默认值
- *   beforeBindData()          — 数据绑定前（调整参与绑定的视图属性）
- *   afterBindData()           — 数据绑定后，设置界面状态
- *   afterCopyData()           — 复制后清理字段
- *
- * ─ 菜单/按钮事件
- *   beforeItemClick()         — 菜单点击前校验
- *   itemClick()               — 菜单点击后处理（弹窗/确认框）
- *
- * ─ 操作事件
- *   beforeDoOperation()       — 保存/提交/审核前校验
- *   afterDoOperation()        — 操作完成后处理
- *
- * ─ 字段变化事件
- *   propertyChanged()         — 字段联动/级联更新
- *
- * ─ 回调/弹框事件
- *   confirmCallBack()         — 确认框 Yes/No 回调
- *   closedCallBack()          — 子页面关闭回调
- *
- * ─ F7 过滤事件
- *   beforeF7Select()          — F7 下拉添加过滤条件
- *
- * ─ 分录增删改事件
- *   afterAddRow()             — 新增分录行后初始化
- *   afterDeleteRow()          — 删除分录行后清理
- *   afterDeleteEntry()        — 清空分录后处理
+ * 方法索引（按需保留，各方法下方有参数/用途说明）
+ * 生命周期：initialize / registerListener / preOpenForm / beforeClosed
+ * 数据：createNewData / afterCreateNewData / beforeBindData / afterBindData / afterCopyData
+ * 菜单：beforeItemClick / itemClick；操作：beforeDoOperation / afterDoOperation
+ * 字段：propertyChanged；回调：confirmCallBack / closedCallBack
+ * F7：beforeF7Select；分录：afterAddRow / afterDeleteRow / afterDeleteEntry
  * </pre>
- *
  * @template FormPluginTemplate
  * @extends AbstractFormPluginExt (kd.cd.common.plugin)
  * @highFreqEvents afterBindData, propertyChanged, beforeDoOperation, afterDoOperation, itemClick, closedCallBack
@@ -97,7 +64,6 @@ import java.util.Set;
  * @relatedDocs references/adv/plugin-base.md, references/base/plugin/plugin-form.md
  */
 public class FormPluginTemplate extends AbstractFormPluginExt {
-
 
     // 占位常量：复制模板后请统一替换为业务真实 key。
     private static final String KEY_1 = "key1";
@@ -125,26 +91,21 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     // ===== 生命周期事件 =====
 
     /**
-     * 触发时机: 插件对象初始化时，在 registerListener 之前。
-     * 参数要点: 无参数。
-     * 典型用途: 初始化轻量化变量、缓存，避免在各事件中重复查询。
-     *
+     * 视图注入后的轻量初始化，可能随请求重建再次执行。
+     * 缓存仅在键缺失时设默认值，保留页面此前恢复的业务状态。
      */
-
     @Override
     public void initialize() {
         super.initialize();
-        this.getPageCache().put(PAGE_CACHE_SUBMIT_FLAG, "false");
+        if (this.getPageCache().get(PAGE_CACHE_SUBMIT_FLAG) == null) {
+            this.getPageCache().put(PAGE_CACHE_SUBMIT_FLAG, "false");
+        }
     }
 
     /**
-     * 触发时机: 表单初始化完毕，所有事件监听注册前。
-     * 参数要点:
-     * - EventObject e: 通用事件参数。
-     * 典型用途: 注册表单控件、菜单、F7（基础资料/引用数据选择控件）等的事件监听。
-     *
+     * 在当前控件实例上注册菜单、点击、F7、超链接及分录行监听。
+     * EventObject 为通用参数；同一路径避免重复 add，不假定每页仅调用一次。
      */
-
     @Override
     public void registerListener(EventObject e) {
         super.registerListener(e);
@@ -158,14 +119,11 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 表单打开前，参数准备阶段。
-     * 参数要点:
      * - PreOpenFormEventArgs e: 包含表单打开参数。
      * - e.getFormShowParameter(): 获取和修改表单打开参数。
      * - e.getFormShowParameter().getParentPageId(): 获取父页面 ID。
      * 典型用途: 调整表单打开参数、访问父页面数据进行参数传递。
-     *
      */
-
     @Override
     public void preOpenForm(PreOpenFormEventArgs e) {
         super.preOpenForm(e);
@@ -181,13 +139,10 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 表单关闭前，用户点击关闭按钮或程序调用关闭前。
-     * 参数要点:
      * - BeforeClosedEvent e: 关闭前事件参数。
      * - e.setCancel(true): 取消关闭操作。
      * 典型用途: 关闭前校验、返回数据到父页面、触发父页面操作。
-     *
      */
-
     @Override
     public void beforeClosed(BeforeClosedEvent e) {
         super.beforeClosed(e);
@@ -200,13 +155,9 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     // ===== 数据创建/绑定事件 =====
 
     /**
-     * 触发时机: 新增表单时，数据包创建前（可自定义数据包构建逻辑）。
-     * 参数要点:
-     * - BizDataEventArgs e: 业务数据事件参数。
-     * 典型用途: 自定义创建新增数据包的逻辑，如加载模板数据。
-     *
+     * 新建数据包阶段，可自定义构建逻辑；BizDataEventArgs 为数据事件参数。
+     * 本例把打开参数转入页面缓存，供初始赋值使用。
      */
-
     @Override
     public void createNewData(BizDataEventArgs e) {
         super.createNewData(e);
@@ -217,17 +168,9 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     }
 
     /**
-     * 触发时机: 新增表单数据初始化完毕后（与 afterLoadData 互斥）。
-     * 参数要点:
-     * - EventObject e: 通用事件参数。
-     * 差异说明:
-     * - afterCreateNewData: 新增模式，用于设置默认值。
-     * - afterLoadData: 修改/查看模式，数据来自 DB。
-     * - 两个事件互斥，仅触发其一。
-     * 典型用途: 设置字段默认值、初始化分录数据。
-     *
+     * 新数据包完成后设置字段默认值、处理分录初始数据。
+     * 此时字段赋值不触发 propertyChanged；所需初始计算必须显式完成。
      */
-
     @Override
     public void afterCreateNewData(EventObject e) {
         super.afterCreateNewData(e);
@@ -241,15 +184,10 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     }
 
     /**
-     * 触发时机: 数据绑定到表单前。
-     * 参数要点:
-     * - EventObject e: 通用事件参数。
-     * 典型用途: 调整参与绑定的精度等视图属性。
-     * 注意: 直接 setEnable/setVisible 的状态会被后续绑定清空，请放到 afterBindData；
-     *       在此改字段会置数据修改标志，新建默认值和初始计算放到 afterCreateNewData。
-     *
+     * 生成前端刷新指令前，调整参与绑定的精度等视图属性。
+     * 直接 setEnable/setVisible 放 afterBindData；此时改字段会置数据修改标志。
+     * 新建默认值和初始计算放 afterCreateNewData，本例只记录绑定前值。
      */
-
     @Override
     public void beforeBindData(EventObject e) {
         super.beforeBindData(e);
@@ -258,13 +196,9 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
     }
 
     /**
-     * 触发时机: 数据绑定到表单后，表单界面渲染完成。
-     * 参数要点:
-     * - EventObject e: 通用事件参数。
-     * 典型用途: 设置字段可见/隐藏、可编辑/锁定状态，初始化动态界面。
-     *
+     * 服务端数据绑定后，根据已有数据设置可见、可编辑等界面状态。
+     * 此回调不证明浏览器已经完成渲染，不在此补初始化字段赋值。
      */
-
     @Override
     public void afterBindData(EventObject e) {
         super.afterBindData(e);
@@ -274,15 +208,11 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
         getView().setEnable(false, KEY_1, KEY_2, KEY_3);
     }
 
-
     /**
      * 触发时机: 单据复制后，新数据包初始化完毕。
-     * 参数要点:
      * - EventObject e: 通用事件参数。
      * 典型用途: 复制后清理字段（如单号、日期等不应被复制的字段）。
-     *
      */
-
     @Override
     public void afterCopyData(EventObject e) {
         super.afterCopyData(e);
@@ -294,14 +224,11 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户点击菜单项前（系统的菜单点击前置校验）。
-     * 参数要点:
      * - BeforeItemClickEvent evt: 包含菜单项信息。
      * - evt.getItemKey(): 获取菜单项标识。
      * - evt.setCancel(true): 取消菜单点击。
      * 典型用途: 菜单点击前校验，必要时取消菜单动作。
-     *
      */
-
     @Override
     public void beforeItemClick(BeforeItemClickEvent evt) {
         super.beforeItemClick(evt);
@@ -322,13 +249,10 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户点击菜单项后（菜单点击已执行，触发自定义逻辑）。
-     * 参数要点:
      * - ItemClickEvent evt: 包含菜单项信息。
      * - evt.getItemKey(): 获取菜单项标识。
      * 典型用途: 处理菜单项的点击动作，如打开表单、列表、确认框等。
-     *
      */
-
     @Override
     public void itemClick(ItemClickEvent evt) {
         super.itemClick(evt);
@@ -357,13 +281,10 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
         }
     }
 
-
-
     // ===== 操作事件 =====
 
     /**
      * 触发时机: 用户点击 save、submit、audit 等操作前（系统校验前）。
-     * 参数要点:
      * - BeforeDoOperationEventArgs args: 操作前置事件参数。
      * - getOpKey(args): 获取操作类型（"save"、"submit"、"audit"、"reject" 等）。
      * - getOperate(args): 获取操作对象。
@@ -371,9 +292,7 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
      * - args.setCancel(true): 取消操作。
      * 典型用途: 业务前置校验、设置操作参数。
      * 建议: 简单校验用此事件；复杂逻辑优先使用校验器插件。
-     *
      */
-
     @Override
     public void beforeDoOperation(BeforeDoOperationEventArgs args) {
         super.beforeDoOperation(args);
@@ -396,15 +315,12 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 表单操作（save、submit、audit 等）完成后。
-     * 参数要点:
      * - AfterDoOperationEventArgs args: 操作后置事件参数。
      * - getOpKey(args): 获取操作类型。
      * - args.getOperationResult(): 获取操作结果对象。
      * - result.isSuccess(): 判断操作是否成功。
      * 典型用途: 处理操作完成后的逻辑，如刷新列表、关闭表单、调用外部系统。
-     *
      */
-
     @Override
     public void afterDoOperation(AfterDoOperationEventArgs args) {
         super.afterDoOperation(args);
@@ -427,7 +343,6 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户修改表单字段值后（字段值已更新到模型）。
-     * 参数要点:
      * - e.getChangeSet() 返回发生改变的数据。通常本属性只返回一条数据，当批量触发字段值改变事件时，本属性会返回多条数据。
      * - PropertyChangedArgs e: 属性变更事件参数。
      * - ChangeData[] changeSet = e.getChangeSet(): 获取变更集合（通常一条，批量触发时可能多条）。
@@ -436,9 +351,7 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
      * - 只有已确认集合恰含一条时才可使用 changeSet[0]；批量联动需覆盖完整集合。
      * 典型用途: 字段联动、级联更新、计算字段。
      * 建议: 简单联动优先用公式；复杂逻辑才在此处理；保持轻量以避免重查询。
-     *
      */
-
     @Override
     public void propertyChanged(PropertyChangedArgs e) {
         super.propertyChanged(e);
@@ -470,14 +383,11 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户在确认框（showConfirm）中选择 Yes 或 No 时。
-     * 参数要点:
      * - MessageBoxClosedEvent evt: 消息框关闭事件参数。
      * - evt.getCallBackId(): 获取回调 ID。
      * - evt.getResult(): 获取用户选择结果（Yes/No）。
      * 典型用途: 处理确认框的用户选择结果。
-     *
      */
-
     @Override
     public void confirmCallBack(MessageBoxClosedEvent evt) {
         super.confirmCallBack(evt);
@@ -491,14 +401,11 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 子表单/列表页面关闭时（被 showForm 打开的页面关闭）。
-     * 参数要点:
      * - ClosedCallBackEvent e: 关闭回调事件参数。
      * - e.getActionId(): 获取回调 ID。
      * - e.getReturnData(): 获取子页面返回的数据。
      * 典型用途: 处理子页面关闭后的逻辑，获取子页面返回的数据。
-     *
      */
-
     @Override
     public void closedCallBack(ClosedCallBackEvent e) {
         super.closedCallBack(e);
@@ -520,14 +427,11 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户点击基础资料 F7（基础资料/引用数据选择控件）下拉选择前。
-     * 参数要点:
      * - BeforeF7SelectEvent e: F7（基础资料/引用数据选择控件）选择前事件参数。
      * - e.getProperty().getName(): 获取字段标识。
      * - e.getCustomQFilters(): 获取自定义过滤条件列表，可添加新的过滤。
      * 典型用途: 为 F7（基础资料/引用数据选择控件）下拉添加过滤条件（如按部门、组织过滤）。
-     *
      */
-
     @Override
     public void beforeF7Select(BeforeF7SelectEvent e) {
         super.beforeF7Select(e);
@@ -546,15 +450,12 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户新增分录行后。
-     * 参数要点:
      * - AfterAddRowEventArgs e: 新增行后事件参数。
      * - e.getEntryProp(): 获取分录属性对象。
      * - e.getRowDataEntities(): 获取本次实际新增行集合，逐行用 getRowIndex() 初始化。
      * - e.getInsertRow(): 插入位置上下文，普通追加/批量事件可为 -1，不作为新增行号。
      * 典型用途: 新增行后的初始化逻辑（如设置默认值）。
-     *
      */
-
     @Override
     public void afterAddRow(AfterAddRowEventArgs e) {
         super.afterAddRow(e);
@@ -567,13 +468,10 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户删除分录行后。
-     * 参数要点:
      * - AfterDeleteRowEventArgs e: 删除行后事件参数。
      * - e.getRowIndexs(): 获取被删分录行的索引集合（int[]）。
      * 典型用途: 删除行后的清理逻辑（如重新计算合计）。
-     *
      */
-
     @Override
     public void afterDeleteRow(AfterDeleteRowEventArgs e) {
         super.afterDeleteRow(e);
@@ -586,13 +484,10 @@ public class FormPluginTemplate extends AbstractFormPluginExt {
 
     /**
      * 触发时机: 用户清空分录所有行后。
-     * 参数要点:
      * - AfterDeleteEntryEventArgs e: 清空分录后事件参数。
      * - e.getEntryKey(): 获取分录标识。
      * 典型用途: 清空分录后的处理逻辑。
-     *
      */
-
     @Override
     public void afterDeleteEntry(AfterDeleteEntryEventArgs e) {
         super.afterDeleteEntry(e);

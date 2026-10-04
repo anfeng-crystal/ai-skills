@@ -17,6 +17,9 @@ SENSITIVE_QUERY_KEYS = re.compile(r"(?:password|passwd|pwd|token|secret|cookie|c
 SENSITIVE_TEXT = re.compile(
     r'(?i)("?(?:password|passwd|pwd|token|secret|cookie|credential|access[_-]?key)"?\s*[:=]\s*)("[^"\r\n]*"|[^&,\s}\r\n]+)'
 )
+SENSITIVE_HEADER_PARTS = re.compile(
+    r"authorization|cookie|token|csrf|secret|password|passwd|credential|apikey|accesskey|tenant|accountid|session"
+)
 
 
 @dataclass
@@ -43,6 +46,17 @@ def redact_url(target_url: str) -> str:
 
 def redact_text(value: str) -> str:
     return SENSITIVE_TEXT.sub(r"\1<redacted>", value)
+
+
+def redact_headers(headers: dict) -> dict:
+    """Cover Cosmic/MCP tokens and tenant context as well as standard HTTP secrets."""
+    result = {}
+    for key, value in headers.items():
+        normalized = re.sub(r"[-_]", "", str(key)).lower()
+        # Redirect URLs can carry credentials in arbitrary query/fragment fields.
+        sensitive = SENSITIVE_HEADER_PARTS.search(normalized) or normalized in {"location", "contentlocation"}
+        result[key] = "<redacted>" if sensitive else value
+    return result
 
 
 def target_contract_error(target_url: str) -> str | None:

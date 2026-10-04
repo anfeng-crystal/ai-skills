@@ -8,10 +8,16 @@ import re
 import subprocess
 import sys
 import tempfile
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from functools import lru_cache
 from pathlib import Path
 
+
+# CLI and file-backed import callers both resolve sibling bundled helpers.
+SCRIPTS_ROOT = Path(__file__).resolve().parent
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
+from script_static_analysis import Finding, ScriptAnalysis, call_findings
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REAL_SCRIPT_RUNTIME = REPO_ROOT / "scripts" / "script_runtime_real.py"
@@ -24,10 +30,6 @@ CURATED_CASES_PATH = CURATED_CASES_ROOT / "manifest.json"
 SIGNATURE_RE = re.compile(
     r"(?P<name>[A-Za-z_$][A-Za-z0-9_$.%]*)\((?P<args>[^)\n]*)\)\s*->\s*(?P<ret>[A-Za-z0-9_<>\[\]|? .]+)"
 )
-GLOBAL_CALL_RE = re.compile(r"(?<![.\w$])([A-Za-z_$%][A-Za-z0-9_$%]*)\s*\(")
-NAMESPACED_CALL_RE = re.compile(r"(?<![\w$])([A-Za-z_$][A-Za-z0-9_$]*)\.([A-Za-z_$%][A-Za-z0-9_$%]*)\s*\(")
-FUNCTION_DEF_RE = re.compile(r"\bfunction\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(")
-VAR_DECL_RE = re.compile(r"\bvar\s+([A-Za-z_$][A-Za-z0-9_$]*)\b")
 BIZQUERY_STRING_CONNECTION_RE = re.compile(
     r"\bbizQuery\s*\(\s*(?P<quote>['\"])(?P<connection>(?:\\.|(?!\1).)*)\1",
     re.S,
@@ -159,14 +161,6 @@ MAPPING_INDEX_SELECTOR_RE = re.compile(r"^\[(?P<index>-?\d+)\]$")
 MAPPING_FIELD_SELECTOR_RE = re.compile(r"^\[(?P<field>[^=\[\]]+)=(?P<value>[^\[\]]+)\]$")
 
 
-@dataclass
-class Finding:
-    severity: str
-    code: str
-    message: str
-    location: str
-
-
 def add_unique(items: list[str], value: str, seen: set[str]) -> None:
     if value in seen:
         return
@@ -187,12 +181,13 @@ def summarize_missing_items(items: list[str]) -> str:
     return "；".join(items)
 
 
-def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict[str, object]:
+def collect_platform_dependencies(script: str) -> dict[str, object]:
     references: list[str] = []
     missing_items: list[str] = []
     seen_references: set[str] = set()
     seen_missing_items: set[str] = set()
-    local_vars = set(VAR_DECL_RE.findall(script))
+    analysis = ScriptAnalysis(script)
+    code = analysis.code
     platform_manifest = load_platform_manifest()
     platform_globals = set(platform_manifest["globals"])
     platform_globals.update(platform_manifest["deprecated"])
@@ -203,7 +198,10 @@ def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict
     )
     platform_namespaces = set(platform_manifest["namespaces"])
 
-    for namespace, method in NAMESPACED_CALL_RE.findall(script):
+    for call in analysis.calls:
+        if not call.member or call.receiver is None or analysis.is_local(call.receiver, call.start):
+            continue
+        namespace, method = call.receiver, call.name
         if namespace not in ENGINE_EXTERNAL_NAMESPACES and namespace not in platform_namespaces:
             continue
         add_unique(references, f"`{namespace}.{method}()`", seen_references)
@@ -213,8 +211,11 @@ def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict
             seen_missing_items,
         )
 
-    for global_name in GLOBAL_CALL_RE.findall(script):
-        if global_name in IGNORE_GLOBAL_CALLS or global_name in user_functions:
+    for call in analysis.calls:
+        if call.member:
+            continue
+        global_name = call.name
+        if global_name in IGNORE_GLOBAL_CALLS or analysis.is_local(global_name, call.start):
             continue
         if global_name not in ENGINE_EXTERNAL_GLOBALS and global_name not in platform_globals:
             continue
@@ -227,7 +228,7 @@ def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict
 
     resources = platform_manifest["resources"]
     for resource_name in [*resources["available"], *resources["declared_unavailable"]]:
-        if not re.search(rf"(?<![\w$]){re.escape(resource_name)}\b", script):
+        if not re.search(rf"(?<![\w$]){re.escape(resource_name)}\b", code):
             continue
         add_unique(references, f"`{resource_name}`", seen_references)
         add_unique(
@@ -237,9 +238,8 @@ def collect_platform_dependencies(script: str, user_functions: set[str]) -> dict
         )
 
     for pattern, local_name, label, requirement in PLATFORM_CONTEXT_MARKERS:
-        if local_name is not None and local_name in local_vars:
-            continue
-        if not pattern.search(script):
+        hits = list(pattern.finditer(code))
+        if not any(local_name is None or not analysis.is_local(local_name, hit.start()) for hit in hits):
             continue
         add_unique(references, label, seen_references)
         add_unique(missing_items, requirement, seen_missing_items)
@@ -270,7 +270,10 @@ def build_platform_dependency_message(mode: str, dependencies: dict[str, object]
 
 def bizquery_connection_findings(script: str) -> list[Finding]:
     findings: list[Finding] = []
-    for match in BIZQUERY_STRING_CONNECTION_RE.finditer(script):
+    analysis = ScriptAnalysis(script)
+    for match in BIZQUERY_STRING_CONNECTION_RE.finditer(analysis.views.literals):
+        if not analysis.code_match(match):
+            continue
         connection = match.group("connection")
         findings.append(
             Finding(
@@ -799,7 +802,7 @@ def audit_curated_cases() -> dict[str, object]:
             if context == "engine":
                 fail("reference_only cases must use a non-engine context.")
                 continue
-            platform_dependencies = collect_platform_dependencies(script, set(FUNCTION_DEF_RE.findall(script)))
+            platform_dependencies = collect_platform_dependencies(script)
             if not platform_dependencies["has_dependency"]:
                 fail(
                     "reference_only script must contain an explicit platform dependency marker such as src/tar/$process/#request/cn, or a known platform namespace/global."
@@ -1011,7 +1014,9 @@ def check_mapping_expression(value: str) -> dict[str, object]:
 
 def platform_sql_findings(script: str) -> list[Finding]:
     findings: list[Finding] = []
-    if re.search(r"\b(?:var\s+)?[A-Za-z_$][A-Za-z0-9_$]*[Ss][Qq][Ll]\s*=\s*['\"][^;]*['\"]\s*\+", script, re.S):
+    analysis = ScriptAnalysis(script)
+    matches = re.finditer(r"\b(?:var\s+)?[A-Za-z_$][A-Za-z0-9_$]*[Ss][Qq][Ll]\s*=\s*['\"][^;]*['\"]\s*\+", analysis.views.literals, re.S)
+    if any(analysis.code_match(match) for match in matches):
         findings.append(
             Finding(
                 "warn",
@@ -1024,6 +1029,7 @@ def platform_sql_findings(script: str) -> list[Finding]:
 
 
 def platform_catalog_findings(script: str) -> list[Finding]:
+    script = ScriptAnalysis(script).code
     payload = load_platform_manifest()
     findings: list[Finding] = []
     for name in payload["deprecated"]:
@@ -1049,45 +1055,6 @@ def platform_catalog_findings(script: str) -> list[Finding]:
     return findings
 
 
-def balance_check(script: str) -> list[Finding]:
-    findings: list[Finding] = []
-    pairs = {"(": ")", "[": "]", "{": "}"}
-    reverse = {value: key for key, value in pairs.items()}
-    stack: list[str] = []
-    in_single = False
-    in_double = False
-    escaped = False
-    for char in script:
-        if escaped:
-            escaped = False
-            continue
-        if char == "\\":
-            escaped = True
-            continue
-        if char == "'" and not in_double:
-            in_single = not in_single
-            continue
-        if char == '"' and not in_single:
-            in_double = not in_double
-            continue
-        if in_single or in_double:
-            continue
-        if char in pairs:
-            stack.append(char)
-        elif char in reverse:
-            if not stack or stack[-1] != reverse[char]:
-                findings.append(
-                    Finding("error", "unbalanced-delimiter", f"Found unmatched `{char}`.", "script")
-                )
-                return findings
-            stack.pop()
-    if in_single or in_double:
-        findings.append(Finding("error", "unterminated-string", "String literal is not closed.", "script"))
-    if stack:
-        findings.append(Finding("error", "unbalanced-delimiter", f"Unclosed delimiter `{stack[-1]}`.", "script"))
-    return findings
-
-
 def check_script(script: str, mode: str) -> dict[str, object]:
     if mode == "mapping":
         return check_mapping_expression(script)
@@ -1096,20 +1063,6 @@ def check_script(script: str, mode: str) -> dict[str, object]:
 
     manifest_index = load_manifest()
     platform_manifest = load_platform_manifest()
-    namespaces: dict[str, set[str]] = {
-        key: set(value) for key, value in manifest_index["namespaces"].items()
-    }
-    platform_namespaces: dict[str, set[str]] = {
-        key: set(value) for key, value in platform_manifest["namespaces"].items()
-    }
-    globals_set: set[str] = set(manifest_index["globals"])
-    platform_globals: set[str] = set(platform_manifest["globals"])
-    platform_globals.update(platform_manifest["deprecated"])
-    platform_globals.update(
-        token
-        for token in platform_manifest["operators"]
-        if re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", token)
-    )
     findings: list[Finding] = bundle_findings()
 
     if looks_like_mapping_expression(script):
@@ -1122,101 +1075,16 @@ def check_script(script: str, mode: str) -> dict[str, object]:
             )
         )
 
-    findings.extend(balance_check(script))
+    analysis = ScriptAnalysis(script)
+    findings.extend(analysis.balance_findings())
     findings.extend(bizquery_connection_findings(script))
     if mode == "platform":
         findings.extend(platform_sql_findings(script))
         findings.extend(platform_catalog_findings(script))
 
-    user_functions = set(FUNCTION_DEF_RE.findall(script))
-    local_vars = set(VAR_DECL_RE.findall(script))
-    platform_dependencies = collect_platform_dependencies(script, user_functions)
-
-    for namespace, method in NAMESPACED_CALL_RE.findall(script):
-        official_methods = platform_namespaces.get(namespace)
-        if official_methods is not None:
-            if method not in official_methods:
-                findings.append(
-                    Finding(
-                        "warn",
-                        "unverified-platform-method",
-                        f"`{namespace}.{method}()` 不在当前官方平台速查目录；需用目标版本官方文档或运行证据确认。",
-                        "script",
-                    )
-                )
-            continue
-        if namespace in ENGINE_EXTERNAL_NAMESPACES:
-            continue
-        methods = namespaces.get(namespace)
-        if methods is None:
-            findings.append(
-                Finding(
-                    "error" if mode == "engine" else "warn",
-                    "unknown-namespace" if mode == "engine" else "unverified-platform-namespace",
-                    (
-                        f"Unknown namespace `{namespace}`."
-                        if mode == "engine"
-                        else f"`{namespace}` 不在 bundled engine 或当前官方平台目录；需用目标版本证据确认。"
-                    ),
-                    "script",
-                )
-            )
-            continue
-        if method not in methods:
-            lower_to_actual = {value.lower(): value for value in methods}
-            if method.lower() in lower_to_actual:
-                findings.append(
-                    Finding(
-                        "error",
-                        "case-mismatch",
-                        f"`{namespace}.{method}()` uses the wrong case; bundled manifest uses `{namespace}.{lower_to_actual[method.lower()]}()`.",
-                        "script",
-                    )
-                )
-            else:
-                findings.append(
-                    Finding(
-                        "error",
-                        "unknown-method",
-                        f"`{namespace}.{method}()` was not found in the bundled engine manifest.",
-                        "script",
-                    )
-                )
-    for global_name in GLOBAL_CALL_RE.findall(script):
-        if (
-            global_name in IGNORE_GLOBAL_CALLS
-            or global_name in user_functions
-            or global_name in local_vars
-        ):
-            continue
-        if global_name in ENGINE_EXTERNAL_GLOBALS:
-            continue
-        if global_name in globals_set or (mode == "platform" and global_name in platform_globals):
-            continue
-        candidates = globals_set | (platform_globals if mode == "platform" else set())
-        lower_to_actual = {value.lower(): value for value in candidates}
-        if global_name.lower() in lower_to_actual:
-            findings.append(
-                Finding(
-                    "error",
-                    "case-mismatch",
-                    f"`{global_name}()` uses the wrong case; current profile uses `{lower_to_actual[global_name.lower()]}()`.",
-                    "script",
-                )
-            )
-        else:
-            findings.append(
-                Finding(
-                    "error" if mode == "engine" else "warn",
-                    "unknown-global" if mode == "engine" else "unverified-platform-global",
-                    (
-                        f"Unknown global function `{global_name}()`."
-                        if mode == "engine"
-                        else f"`{global_name}()` 不在 bundled engine 或当前官方平台目录；需用目标版本证据确认。"
-                    ),
-                    "script",
-                )
-            )
+    platform_dependencies = collect_platform_dependencies(script)
+    findings.extend(call_findings(analysis, mode, manifest_index, platform_manifest,
+        IGNORE_GLOBAL_CALLS, ENGINE_EXTERNAL_GLOBALS, ENGINE_EXTERNAL_NAMESPACES))
 
     if platform_dependencies["has_dependency"]:
         if mode == "engine":
@@ -1238,7 +1106,10 @@ def check_script(script: str, mode: str) -> dict[str, object]:
                 )
             )
 
-    for bare_name in re.findall(r"(?<![.\w$])(parseInt|parseLong|parseDouble|parseDecimal)\s*\(", script):
+    for call in analysis.calls:
+        if call.member or call.name not in {"parseInt", "parseLong", "parseDouble", "parseDecimal"}:
+            continue
+        bare_name = call.name
         findings.append(
             Finding(
                 "warn",
@@ -1248,7 +1119,8 @@ def check_script(script: str, mode: str) -> dict[str, object]:
             )
         )
 
-    if re.search(r'Hash\.Hmac[A-Za-z0-9_]*\(\s*["\'].*?["\']\s*,\s*["\'].*?["\']\s*\)', script, re.S):
+    hmac_matches = re.finditer(r'Hash\.Hmac[A-Za-z0-9_]*\(\s*["\'].*?["\']\s*,\s*["\'].*?["\']\s*\)', analysis.views.literals, re.S)
+    if any(analysis.code_match(match) for match in hmac_matches):
         findings.append(
             Finding(
                 "error",

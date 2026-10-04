@@ -6,6 +6,7 @@
     this._action = null;
     this._actionHandler = null;
     this._disposed = false;
+    this._locked = false;
     this._renderGeneration = 0;
     this._latestData = undefined;
   }
@@ -14,12 +15,17 @@
     init: function (props) {
       this._renderGeneration += 1;
       this._disposed = false;
+      this._locked = !!(props && props.lock === true);
       this._latestData = props && props.data;
       this._unmount();
       this._render(this._renderGeneration);
     },
 
     update: function (props) {
+      if (props && typeof props.lock === 'boolean') {
+        this._locked = props.lock;
+        this._applyLock();
+      }
       this._setData(props && props.data);
     },
 
@@ -28,7 +34,7 @@
         this._setData(arg && Object.prototype.hasOwnProperty.call(arg, 'data') ? arg.data : arg);
         return true;
       }
-      if (methodName === 'focus') {
+      if (methodName === 'focus' && !this._locked && !this._disposed) {
         var action = this.model.dom.querySelector('[data-role="action"]');
         if (action && typeof action.focus === 'function') {
           action.focus();
@@ -84,6 +90,9 @@
         return;
       }
       this._actionHandler = function () {
+        if (self._disposed || self._locked) {
+          return;
+        }
         var payload = { controlId: '__CONTROL_ID__', action: 'primary' };
         if (typeof self.model.invoke === 'function') {
           self.model.invoke('primaryAction', payload);
@@ -93,6 +102,13 @@
         }
       };
       this._action.addEventListener('click', this._actionHandler);
+      this._applyLock();
+    },
+
+    _applyLock: function () {
+      if (this._action && !this._disposed) {
+        this._action.disabled = this._locked;
+      }
     },
 
     _setData: function (data) {

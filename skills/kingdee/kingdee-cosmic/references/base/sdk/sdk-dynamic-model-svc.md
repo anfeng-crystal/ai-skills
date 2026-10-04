@@ -1,5 +1,7 @@
 # 动态领域模型 - 公共服务索引
 
+详细知识与证据边界见 [云端公共服务知识](https://chatgpt.com/space/page_9f9a1ce057808191bb05df4d49cf0c5d)。
+
 ## 按业务选择入口
 
 本卡索引数据存取、业务操作、编号、基础资料、参数、时间和微服务分发。Helper 是调用入口，不等于统一具备权限校验、事务、插件或跨节点时间保证；按具体方法合同核验，不能凭类名猜重载。
@@ -84,7 +86,7 @@ public final class CodeAndParameterExample {
 
 ## 基础资料、删除与时间
 
-- 分配的真实入口之一是 `BaseDataResponse assign(String entityId, Long assignOrgId, String appId, Set<Long> dataIds, Set<Long> orgIds)`；调用前确认分配主体组织、应用、数据与目标组织，检查响应及逐项失败。无三参 `(String,long[],long[])` 重载；另有基于 List 的 `batchAssign` 等方法，按所需返回合同选用。
+- 分配的真实入口之一是 `BaseDataResponse assign(String entityId, Long assignOrgId, String appId, Set<Long> dataIds, Set<Long> orgIds)`；调用前确认分配主体组织、应用、数据与目标组织，检查响应及逐项失败。无三参 `(String,long[],long[])` 重载；V7.0.1 文档将两个基于 List 的 `batchAssign` 重载标为 `@Deprecated`，说明不带校验和返回信息并建议调用 `assign`。存量调用仍须核对目标版本和返回合同；其文档中的返回 Map 表示检查失败的资料及目标组织，不能当作成功分配列表。
 - 缓存查询是 `Map<Object,DynamicObject> queryBaseDataFromCache(String entityId, Long orgId, QFilter filter, String selectFields)`。组织非空且非 0 并处于受控策略时按合同追加组织使用范围；这不证明满足当前用户全部数据/字段权限。补值、过滤、分配是不同能力，不互相替代。
 - 低层 `DeleteServiceHelper.delete(String entityName, QFilter[] filters)` 返回 `int`；另有 `(IDataEntityType,Object[])` 返回 `void`，没有 `(String,Object[])` 重载。低层删除与业务删除操作不同，不能靠替换参数就声称执行了操作插件/校验。
 - `new DeleteServiceHelper().deleteOperate(String entityName, Object[] pkids, OperateOption option)` 返回 `OperationResult`，是**实例方法**；另有不带 option 及带 operationKey 的重载。是否成功以操作结果、失败明细和实际业务状态判断，不能以未抛异常替代。

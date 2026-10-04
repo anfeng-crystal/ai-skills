@@ -53,10 +53,21 @@ return Algo.create(algoKey + "_assembled").createDataSet(new CollectionInput(met
 
 ## 模式 C:AlgoX Pipeline(新版成本模块)
 **何时用**:成本卷算(CAD 模块)等明确要求 `AlgoX`/`DataSetX`/`JobSession` 的场景;**默认不用**。
+以下只展示输入构造，`jobName`、`jobTitle`、`algoKey` 和实体/投影/过滤条件由已确认的任务合同提供：
 ```java
-AlgoX algoX = AlgoX.createSession(name, name);
-DataSetX dsX = algoX.queryDataSetX(entityName, selectFields, filters);
+import kd.bos.algox.AlgoX;
+import kd.bos.algox.JobSession;
+import kd.bos.algox.DataSetX;
+import kd.bos.algo.input.OrmInput;
+
+JobSession session = AlgoX.createSession(jobName, jobTitle);
+DataSetX dsX = session.fromInput(
+    new OrmInput(algoKey, entityName, selectFields, filters));
 ```
+
+`createSession()` 返回 `JobSession`；输入经 `fromInput()` 形成 `DataSetX`。不要在 `AlgoX` 或 `JobSession` 上调用不存在的 `queryDataSetX()`。该片段还未配置输出、提交任务或取得最终 `DataSet`，不能直接作为 `query()` 返回结果。完整实现须再按目标版本核对输出、提交超时和结果读取合同。
+
+版本依据：官方 V7.0.1 [AlgoX](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/algox/AlgoX.html) / [JobSession](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/algox/JobSession.html)；本地 7.0/JDK 8 编译通过，未执行集群任务。[云端知识：案例来源、阶段边界与验证](https://chatgpt.com/space/page_437b17ab03748191b0b1187d41a1ac68)。
 
 ## 选型速记
 ORM 直取 + JOIN/聚合可表达 → A;逐行换算/条件分支/动态列 → B;成本卷算且指定 AlgoX → C。

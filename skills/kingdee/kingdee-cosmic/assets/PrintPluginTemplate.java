@@ -84,7 +84,7 @@ public class PrintPluginTemplate extends AbstractPrintPlugin {
 
     /**
      * 触发时机: 打印控件输出前。
-     * 参数要点: evt 可读取控件标识、当前输出值并在输出前改写。
+     * 参数要点: evt 可读取控件标识，并在输出前设置输出值。
      * 典型用途: 格式化文本、替换图片地址、控制单元格输出内容。
      */
     @Override

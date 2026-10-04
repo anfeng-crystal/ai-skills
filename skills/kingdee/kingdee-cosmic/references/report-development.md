@@ -182,9 +182,17 @@ return Algo.create(algoKey + "_assembled").createDataSet(inputs);
 
 ```java
 // 仅当 Template B 明确指定使用 AlgoX 时使用
-AlgoX algoX = AlgoX.createSession(simpleName, simpleName);
-DataSetX dsX = algoX.queryDataSetX(entityName, selectFields, filters);
+import kd.bos.algox.AlgoX;
+import kd.bos.algox.JobSession;
+import kd.bos.algox.DataSetX;
+import kd.bos.algo.input.OrmInput;
+
+JobSession session = AlgoX.createSession(jobName, jobTitle);
+DataSetX dsX = session.fromInput(
+    new OrmInput(algoKey, entityName, selectFields, filters));
 ```
+
+任务名称、标题、AlgoKey 与查询参数按已确认合同提供。此片段只构造输入，尚未配置输出、提交任务或读取最终 `DataSet`，不能直接作为 `query()` 返回结果；签名依据及后续阶段见[报表架构模式 C](../../kingdee-report/references/architecture-patterns.md)。
 
 **默认使用模式A**，仅在 Template B 中有特殊要求时切换。
 

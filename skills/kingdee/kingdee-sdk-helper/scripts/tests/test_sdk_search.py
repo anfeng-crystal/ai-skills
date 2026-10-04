@@ -42,6 +42,28 @@ def sdk_fixture():
     }
 
 
+def collector_fixture():
+    """Two real indexed Collector identities, plus one unambiguous class."""
+    sdk = sdk_fixture()
+    sdk['classes'] = sdk['classes'][:1] + [
+        {
+            'name': 'Collector',
+            'full_name': full_name,
+            'type': 'interface',
+            'comment': comment,
+            'methods': [{
+                'name': 'collect', 'returnType': 'void', 'modifiers': 'public',
+                'paramNames': [param_name], 'paramTypes': [param_type],
+            }],
+        }
+        for full_name, param_name, param_type, comment in (
+            ('kd.bos.algo.Collector', 'values', 'java.lang.Object[]', 'Algo collector.'),
+            ('kd.bos.algox.Collector', 'row', 'kd.bos.algox.RowX', 'AlgoX collector.'),
+        )
+    ]
+    return sdk
+
+
 class SdkSearchTests(unittest.TestCase):
     def assert_evidence(self, output, target="7.0", comparison="different-version"):
         self.assertEqual(output.count("## SDK evidence"), 1)
@@ -80,6 +102,47 @@ class SdkSearchTests(unittest.TestCase):
         self.assert_evidence(output, "not provided", "target-not-specified")
         self.assertIn("Top 1:", output)
         self.assertNotIn("- kd.fixture.BetaWidget", output)
+
+    def test_duplicate_simple_name_lists_candidates_in_either_index_order(self):
+        for reverse in (False, True):
+            with self.subTest(reverse=reverse):
+                sdk = collector_fixture()
+                if reverse:
+                    sdk['classes'].reverse()
+                output = sdk_search.search(sdk, 'Collector', target_version='7.0')
+                self.assert_evidence(output)
+                self.assertIn('Found 2 classes:', output)
+                self.assertIn('- kd.bos.algo.Collector:', output)
+                self.assertIn('- kd.bos.algox.Collector:', output)
+                self.assertNotIn('# Class:', output)
+                self.assertNotIn('**Signature:**', output)
+
+    def test_duplicate_simple_name_honors_existing_limit(self):
+        output = sdk_search.search(collector_fixture(), 'Collector', 1, target_version='7.0')
+        self.assert_evidence(output)
+        self.assertIn('Found 2 matching classes. Please be more specific. Top 1:', output)
+        self.assertIn('- kd.bos.algo.Collector', output)
+        self.assertNotIn('kd.bos.algox.Collector', output)
+        self.assertNotIn('# Class:', output)
+
+    def test_full_names_and_unique_simple_name_keep_exact_details(self):
+        cases = (
+            ('kd.bos.algo.Collector', 'kd.bos.algo.Collector',
+             'public void collect(java.lang.Object[] values)'),
+            ('kd.bos.algox.Collector', 'kd.bos.algox.Collector',
+             'public void collect(kd.bos.algox.RowX row)'),
+            ('AlphaWidget', 'kd.fixture.AlphaWidget', 'public String read(String key)'),
+        )
+        for reverse in (False, True):
+            sdk = collector_fixture()
+            if reverse:
+                sdk['classes'].reverse()
+            for query, full_name, signature in cases:
+                with self.subTest(reverse=reverse, query=query):
+                    output = sdk_search.search(sdk, query, target_version='7.0')
+                    self.assert_evidence(output)
+                    self.assertIn(f'# Class: {full_name}', output)
+                    self.assertIn(f'**Signature:** `{signature}`', output)
 
     def test_version_comparison_never_fills_missing_components(self):
         cases = (

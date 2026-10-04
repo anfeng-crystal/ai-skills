@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.util.EventObject;
 
 /**
- * 单据界面插件骨架模板（原生 AbstractBillPlugIn）。
+ * 单据界面插件骨架模板（项目封装 AbstractBillPlugInExt）。
  * 该类仅用于示例写法，生成后请按实际业务删除无用事件并替换占位常量。
  *
  * @template BillPlugInTemplate
@@ -146,7 +146,7 @@ public class BillPlugInTemplate extends AbstractBillPlugInExt {
     public void propertyChanged(PropertyChangedArgs e) {
         super.propertyChanged(e);
         if (FIELD_QTY.equals(e.getProperty().getName())) {
-            Integer changedNewValue = getChangedNewValue(e);
+            BigDecimal changedNewValue = getChangedNewValue(e);
             this.getView().showTipNotification(String.format(
                     ResManager.loadKDString("数量已更新为：%s", "BillPlugInTemplate_5", RES_APP_ID),
                     changedNewValue

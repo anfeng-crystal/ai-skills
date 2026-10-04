@@ -61,7 +61,7 @@ flowchart TD
 | `beforeClosed` | 在界面资源仍可用时读取关闭校验所需信息，必要时取消关闭 | 把取消关闭视为已完成关闭 |
 | `destory` / `pageRelease` | 释放插件创建的资源 | 读取表单信息、补做关闭校验 |
 
-表单依据：[初始化事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222735399012056064&productLineId=29)、[绑定前事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222740062122405120&productLineId=29)、[绑定后事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222741078570036480&productLineId=29)。具体控件属性仍核对目标 SDK；不把默认放置策略当作所有版本的 API 禁令。
+表单依据：[初始化事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222730410794020096&productLineId=29)、[绑定前事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222740062122405120&productLineId=29)、[绑定后事件](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222741078570036480&productLineId=29)。具体控件属性仍核对目标 SDK；不把默认放置策略当作所有版本的 API 禁令。
 
 关闭事件依据：[beforeClosed](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222768769984991488&productLineId=29)（2026-07-31 更新）、[destory](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222769424095135488&productLineId=29)（2024-04-17 更新）、[pageRelease](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222769921389358336&productLineId=29)（2026-07-31 更新）。正文未给完整版本范围；生成实现前仍核对目标 SDK。
 

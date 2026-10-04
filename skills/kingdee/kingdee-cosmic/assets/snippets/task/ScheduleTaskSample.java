@@ -49,7 +49,9 @@ public class ScheduleTaskSample extends AbstractTask {
         boolean dryRun = resolveDryRun(params);
         this.feedbackProgress(0, ResManager.loadKDString("开始扫描接口统计数据", "ScheduleTaskSample_0", RES_APP_ID), null);
 
+        this.checkIsStop();
         DynamicObjectCollection stats = queryStats();
+        this.checkIsStop();
         if (CollectionUtils.isEmpty(stats)) {
             this.feedbackProgress(100, ResManager.loadKDString("本次无需处理数据", "ScheduleTaskSample_1", RES_APP_ID), null);
             return;
@@ -84,10 +86,7 @@ public class ScheduleTaskSample extends AbstractTask {
         }
     }
 
-    @Override
-    public void stop() throws KDException {
-        this.feedbackProgress(95, ResManager.loadKDString("收到停止指令，准备安全退出", "ScheduleTaskSample_3", RES_APP_ID), null);
-    }
+    // 不覆盖 stop()：父类通过终止异常中断 checkIsStop() 所在执行路径。
 
     private DynamicObjectCollection queryStats() {
         LocalDateTime nextHour = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0);

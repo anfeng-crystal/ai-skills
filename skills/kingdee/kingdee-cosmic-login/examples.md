@@ -20,7 +20,7 @@ python cosmic_login.py http://127.0.0.1:8080/ierp admin <password>
 # 指定数据中心
 python cosmic_login.py http://127.0.0.1:8080/ierp admin <password> 1565321489509515264
 
-# 检查 Cookie 是否有效
+# 探测 Cookie 会话（结果含义见 reference.md）
 python cosmic_login.py --check http://127.0.0.1:8080/ierp "KERPSESSIONID=xxx; other=yyy"
 ```
 
@@ -37,7 +37,7 @@ if result["success"]:
     csrf = result["csrf_token"]
     # 仅传给已授权且明确接受页面会话的目标接口
 
-# 检查已有 Cookie 是否还能用
+# 探测已有 Cookie 会话；True 的认证含义仍需目标部署证据
 session_ok = check_session("http://127.0.0.1:8080/ierp", old_cookie)
 # False 不能单独证明过期；先结合端点合同、网络状态和脱敏错误核对原因。
 ```

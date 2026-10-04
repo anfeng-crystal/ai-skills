@@ -99,15 +99,20 @@ def _search_results(sdk, query, limit=10):
     query = query.lower()
     matches = []
     
-    # Priority 1: Exact class name match
+    # A full name identifies the package; a simple name may be ambiguous.
     for cls in sdk.get('classes', []):
-        if cls['name'].lower() == query or cls['full_name'].lower() == query:
+        if cls['full_name'].lower() == query:
             return format_class(cls)
-            
-    # Priority 2: Substring in class name
+
+    # Prefer all exact simple-name candidates before substring matches.
     for cls in sdk.get('classes', []):
-        if query in cls['name'].lower() or query in cls['full_name'].lower():
+        if cls['name'].lower() == query:
             matches.append(cls)
+
+    if not matches:
+        for cls in sdk.get('classes', []):
+            if query in cls['name'].lower() or query in cls['full_name'].lower():
+                matches.append(cls)
     
     if len(matches) == 1:
         return format_class(matches[0])

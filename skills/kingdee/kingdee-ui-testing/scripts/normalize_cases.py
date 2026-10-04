@@ -12,6 +12,8 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
+from page_evidence import expected_page
+
 
 MODES = {"generate", "safe-smoke", "approved-crud", "prod-safe-smoke", "approved-prod-e2e"}
 READ_ONLY_ACTIONS = {
@@ -129,7 +131,7 @@ def normalize_step(raw: dict[str, Any], index: int, mode: str) -> dict[str, Any]
     target = str(raw.get("target") or "").strip()
     if "://" in target:
         raise ValueError(f"step {index}: target must be a logical page/control reference, not a URL")
-    return {
+    step = {
         "stepId": str(raw.get("stepId") or raw.get("step_id") or f"step-{index}").strip(),
         "order": int(raw.get("order") or raw.get("step_order") or index),
         "action": action,
@@ -139,6 +141,9 @@ def normalize_step(raw: dict[str, Any], index: int, mode: str) -> dict[str, Any]
         "mutates": mutates,
         "effect": effect,
     }
+    if "page" in raw:
+        step["page"] = expected_page(raw["page"])
+    return step
 
 
 def normalize_case(raw: dict[str, Any], index: int, mode: str) -> dict[str, Any]:
@@ -214,6 +219,13 @@ def cases_from_csv(path: Path) -> list[dict[str, Any]]:
                     "effect": row.get("effect"),
                 }
             )
+            page = {
+                "formId": row.get("page_form_id") or "",
+                "pageType": row.get("page_type") or "",
+                "pageElement": row.get("page_element") or "",
+            }
+            if any(value.strip() for value in page.values()):
+                case["steps"][-1]["page"] = page
     return list(grouped.values())
 
 

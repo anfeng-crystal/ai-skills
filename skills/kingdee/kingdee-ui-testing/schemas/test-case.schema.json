@@ -35,7 +35,17 @@
                 "data": {},
                 "expected": {"type": "string"},
                 "mutates": {"type": "boolean"},
-                "effect": {"type": "string"}
+                "effect": {"type": "string"},
+                "page": {
+                  "type": "object",
+                  "required": ["formId", "pageType", "pageElement"],
+                  "properties": {
+                    "formId": {"type": "string", "pattern": "\\S"},
+                    "pageType": {"enum": ["list", "detail", "edit", "dialog"]},
+                    "pageElement": {"type": "string", "pattern": "\\S"}
+                  },
+                  "additionalProperties": false
+                }
               },
               "additionalProperties": false
             }

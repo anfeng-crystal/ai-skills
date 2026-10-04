@@ -18,7 +18,7 @@
 
 - `🔐` **RSA 加密自动登录**：实现 getAllDatacenters → getPublicKey → yzjlogin 的页面会话流程；其跨版本适用性未获官方通用合同确认，不等同于所有浏览器/SSO 登录方式
 - `🌐` **多数据中心识别**：单数据中心自动选择，多数据中心列出 ID 强制要求显式指定
-- `🔁` **会话有效性探活**：`--check` 模式发轻量请求验证现有 Cookie 是否仍可用，避免重复登录
+- `🔁` **会话探测**：`--check` 保留现有身份分支作为兼容候选；成功含义需目标部署证据，`False` 表示未确认有效
 - `📦` **零项目依赖**：整个目录可独立拷贝到任何项目使用，仅需 `pip install requests pycryptodome`
 - `🧰` **双重 RSA 后端兜底**：优先 `pycryptodome`，失败回退 `rsa` 库，再失败尝试解 DER 重构密钥，最大化兼容性
 - `📤` **标准化状态输出**：CLI 输出 `LOGIN_SUCCESS` 与 Cookie/CSRF 可用性，不回显会话原值
@@ -28,7 +28,7 @@
 
 | 老办法的痛点 | kingdee-cosmic-login 给出的答案 |
 |--------------|------------------------|
-| F12 复制 Cookie，过期就重抓 | `auto_login()` 一行拿到 Cookie，配 `check_session()` 失效自动重登 |
+| F12 复制 Cookie，过期就重抓 | `auto_login()` 取得 Cookie；`check_session()` 探测后先诊断原因，确认失效才重登 |
 | 各项目重复实现 RSA 加密 + 数据中心选择 | 单一脚本，复制即用，所有项目共享同一份维护代码 |
 | 每次写新工具都得绑定项目侧 `config.py` | 脚本不依赖任何项目结构；下游可在同一 Python 进程直接复用返回值 |
 | 多数据中心环境用错 ID 静默登错租户 | 单 DC 自动选 / 多 DC 强制要求显式指定，避免误登 |
@@ -43,7 +43,7 @@
 |----------|------------|--------|
 | 首次安装 | 步骤 1 | 3 分钟 |
 | 已装好，要登一个新环境 | 步骤 4 | 10 秒 |
-| 已有 Cookie，想确认是否过期 | 步骤 5 | 5 秒 |
+| 已有 Cookie，需要探测会话状态 | 步骤 5 | 5 秒 |
 | 想在自己的 Python 工程里 import 用 | 步骤 6 | 1 分钟 |
 
 下面是完整安装与使用流程。
@@ -194,7 +194,7 @@ python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin <password>
 # 3. 指定数据中心登录（多数据中心环境必须显式指定）
 python /path/to/cosmic_login.py http://127.0.0.1:8080/ierp admin <password> 1565321489509515264
 
-# 4. 检查已有 Cookie 是否还有效
+# 4. 探测已有 Cookie 会话（结果含义见 reference.md）
 python /path/to/cosmic_login.py --check http://127.0.0.1:8080/ierp "KERPSESSIONID=xxx; other=yyy"
 ```
 

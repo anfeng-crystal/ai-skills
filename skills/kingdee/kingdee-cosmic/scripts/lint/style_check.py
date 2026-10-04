@@ -4,6 +4,8 @@
 import re
 from typing import List, Optional
 
+from .style_contract_check import check_contracts
+
 from .base import (
     LintIssue,
     Severity,
@@ -118,33 +120,6 @@ STYLE_RULES = [
         "fix_hint": "使用 BusinessDataServiceHelper.load(entityName, selectFields, filters) 指定查询字段",
     },
 ]
-
-# 主键/id 判空检测（STYLE-026）
-# 检测模式：xxxId/xxxPk 变量与 null/0/0L 比较，或 .get("id"/"xxx_id") 与 null 比较
-PK_NULL_CHECK_PATTERNS = [
-    # xxxId == null / xxxId != null / xxxPk == null / xxxPk != null
-    re.compile(r'\b\w*(?:[Ii]d|[Pp]k)\s*(?:==|!=)\s*null\b'),
-    # xxxId == 0L / xxxId == 0 / xxxId <= 0L / xxxId <= 0 / xxxId < 1
-    re.compile(r'\b\w*(?:[Ii]d|[Pp]k)\s*(?:==|<=|<)\s*(?:0L?|1)\b'),
-    # .get("id") == null / .get("id") != null
-    re.compile(r'\.\s*get\s*\(\s*"\w*[Ii]d"\s*\)\s*(?:==|!=)\s*null'),
-]
-
-# BigDecimal 原生运算检测（STYLE-027）
-# 检测加减乘除 + compareTo 比较
-BIGDECIMAL_RAW_PATTERNS = [
-    # 链式 .add/.subtract/.multiply/.divide + BigDecimal/new 上下文
-    re.compile(r'\.\s*(?:add|subtract|multiply|divide)\s*\(\s*(?:new\s+BigDecimal|BigDecimal\.)'),
-    # .divide(..., RoundingMode) —— 有 RoundingMode 参数必定是 BigDecimal 除法
-    re.compile(r'\.\s*divide\s*\([^)]*RoundingMode'),
-    # .compareTo(BigDecimal → BigDecimalUtils.equals/largeThan
-    re.compile(r'\.\s*compareTo\s*\(\s*BigDecimal'),
-]
-
-# QFilter 字符串运算符检测（P0：编译通过但运行时崩溃）
-QFILTER_STRING_OP_PATTERN = re.compile(
-    r'new\s+QFilter\s*\([^,]+,\s*"[^"]*"\s*,'
-)
 
 SQL_CONCAT_PATTERN = re.compile(
     r'("[^"]*\b(select|insert|update|delete|from|where)\b[^"]*"\s*\+)'
@@ -377,46 +352,7 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
                 source_line=line.strip(),
             ))
 
-        # STYLE-024: QFilter 使用字符串运算符代替 QCP 枚举（编译通过但运行时崩溃）
-        if QFILTER_STRING_OP_PATTERN.search(raw_code_line):
-            issues.append(LintIssue(
-                file=filepath, line=lineno,
-                severity=Severity.ERROR,
-                rule_id="STYLE-024",
-                message="QFilter 第二个参数必须使用 QCP 枚举，不能用字符串（编译通过但运行时崩溃）",
-                fix_hint='\u5c06 new QFilter(field, "=", value) \u6539\u4e3a new QFilter(field, QCP.equals, value)\uff1b\u5e38\u7528\u679a\u4e3e: QCP.equals / not_equals / large_equals / less_equals / like / in',
-                source_line=line.strip(),
-            ))
-
-        # STYLE-027: BigDecimal 原生运算，应优先使用 BigDecimalUtils
-        if 'BigDecimalUtils' not in code_line:
-            for bd_pat in BIGDECIMAL_RAW_PATTERNS:
-                if bd_pat.search(code_line):
-                    issues.append(LintIssue(
-                        file=filepath, line=lineno,
-                        severity=Severity.WARNING,
-                        rule_id="STYLE-027",
-                        message="BigDecimal 原生运算应优先使用 BigDecimalUtils 工具方法",
-                        fix_hint="使用 BigDecimalUtils.valueOf() / add() / subtract() / multiply() / divide() / largeThanZero() / nullToZero() 等",
-                        source_line=line.strip(),
-                    ))
-                    break
-
-        # STYLE-026: 主键/id 用 == null / != null / == 0L 等方式判空
-        if not any(kw in code_line for kw in ('isEmptyPk', 'isNotEmptyPk')):
-            # 前两个 pattern 检测变量名，用 code_line；第三个 pattern 检测 .get("id")，用 raw_code_line（保留字符串字面量）
-            pk_sources = [code_line, code_line, raw_code_line]
-            for pk_pat, src in zip(PK_NULL_CHECK_PATTERNS, pk_sources):
-                if pk_pat.search(src):
-                    issues.append(LintIssue(
-                        file=filepath, line=lineno,
-                        severity=Severity.WARNING,
-                        rule_id="STYLE-026",
-                        message="主键/id 判空不应直接用 == null / != null / == 0L，苍穹主键默认值为 0L",
-                        fix_hint="使用 EntityUtils.isEmptyPk(pk) 或 EntityUtils.isNotEmptyPk(pk)，兼容 null 和 0L",
-                        source_line=line.strip(),
-                    ))
-                    break
+        issues.extend(check_contracts(filepath, lineno, line, raw_code_line))
 
         if "ResManager.loadKDString" not in line and "String.format" not in line and CHINESE_CONCAT_PATTERN.search(line):
             issues.append(LintIssue(

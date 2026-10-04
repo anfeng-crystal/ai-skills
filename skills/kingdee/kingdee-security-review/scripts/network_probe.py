@@ -6,19 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import socket
-import ssl
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
 import scope_check
-
-
-SENSITIVE_HEADERS = {"authorization", "proxy-authorization", "cookie", "set-cookie", "x-api-key"}
-
-
-def redact_headers(headers: dict) -> dict:
-    return {key: ("<redacted>" if key.lower() in SENSITIVE_HEADERS else value) for key, value in headers.items()}
+from http_transport import open_once
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,9 +44,15 @@ def probe(target_url: str, timeout: float) -> dict:
 
     req = urllib.request.Request(target_url, method="HEAD", headers={"User-Agent": "kingdee-security-review-probe/1.0"})
     try:
-        ctx = ssl.create_default_context()
-        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-            result.update({"ok": True, "status": resp.status, "headers": redact_headers(dict(resp.headers.items()))})
+        with open_once(req, timeout) as resp:
+            result.update({"ok": True, "status": resp.status, "headers": scope_check.redact_headers(dict(resp.headers.items()))})
+    except urllib.error.HTTPError as exc:
+        redirect_blocked = exc.code in {301, 302, 303, 307, 308}
+        result.update({"ok": False, "status": exc.code,
+                       "redirect_blocked": redirect_blocked,
+                       "headers": scope_check.redact_headers(dict(exc.headers.items())),
+                       "error": "Redirect blocked; review destination before another request" if redirect_blocked else scope_check.redact_text(str(exc))})
+        exc.close()
     except Exception as exc:
         result.update({"ok": False, "error": scope_check.redact_text(str(exc))})
     return result

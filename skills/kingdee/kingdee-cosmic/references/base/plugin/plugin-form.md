@@ -1,5 +1,8 @@
 # 动态表单插件
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_8c9a77acc8fc8191b2fa5dec93e3ca30)。
+
+
 ## TL;DR
 - 适用：动态表单插件原生兜底，封装层没覆盖的 UI 生命周期和监听器时读本页。
 - 先抓：`AbstractFormPlugin`、`registerListener`、核心事件顺序和上下文方法。
@@ -87,7 +90,7 @@ EntryGrid entryGrid = this.getView().getControl("entryentity");
 // 获取字段值
 Object value = this.getModel().getValue("fieldKey");
 
-// 设置字段值（自动触发propertyChanged）
+// 设置字段值；初始建数据阶段不触发 propertyChanged，联动按事件合同处理
 this.getModel().setValue("fieldKey", newValue);
 
 // 控件启用/禁用
@@ -117,6 +120,14 @@ DynamicObject dataEntity = model.getDataEntity();
 - 页面显示、附件预览、下载、打印按需求分别验证。正文示例出现 `setAddDownloadWatermark`、`setAddImageDownloadWatermark`，但不能据此推定所有打印或文件类型都会生效；先确认目标 SDK 与实际输出入口。
 
 依据：[社区帮助《根据单据内容自定义水印》](https://vip.kingdee.com/knowledge/890900627831297280)（2026-09-24 更新）与[水印插件及配置范围](https://vip.kingdee.com/knowledge/specialDetail/294832938980257024?category=294833149400665344&id=289788705932651264&type=Knowledge&productLineId=29&lang=zh-CN)（2026-07-30 更新）。正文未给完整版本范围；接口在本地 Cosmic V8.0.1 索引可查，不代表目标项目已经兼容。注册、发布按当前任务授权执行。
+
+## 初始化与页面状态
+
+普通表单的服务端视图、模型和插件可能在后续请求中重建，`initialize` 用于轻量变量初始化，不能当作整页只执行一次的构造过程。页面缓存中的跨请求业务标记只在缺失时设默认值；再次初始化时保留已恢复状态，业务重置放到明确的操作/回调分支。模板的 `submitflag` 因而不会在下次初始化时被无条件改回 false。
+
+创建数据后的默认值与初始计算放 `afterCreateNewData`；绑定前后围绕生成前端刷新指令，不把 `afterBindData` 当作浏览器完成渲染的确认。`propertyChanged` 处理后续字段联动，人工录入先执行相关实体服务规则；批量变更遍历 `ChangeData[]`，按字段所属实体及数据对象区分头/分录，不能只凭行号 0 判断字段层次。
+
+依据：[initialize](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=222730410794020096&type=Knowledge&productLineId=29&lang=zh-CN)、[事件总览](https://vip.kingdee.com/knowledge/221684288814181632)、[propertyChanged](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238600539112877056&id=228917111786574080&type=Knowledge&productLineId=29&lang=zh-CN)。官方正文未给精确 SDK 版本；按目标依赖核签名，不把一页总览外推成所有插件完整调用链。
 
 ## 实践建议
 

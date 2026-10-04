@@ -1,15 +1,11 @@
 <root>
-    <!--所属云：fi=财务云、tmc=资金云、sys=系统、scm=供应链云 等-->
+    <!--示例值：部署前核对 region、appid、queue 和并发度；消费者业务钩子未实现前不要启用。-->
     <region name="fi">
-        <!--name：队列名称（全局唯一） appid：所属应用（如 gl=总账、bei=银企互联）-->
+        <!--同一 region 下队列名称不得与标准产品或其他业务冲突。-->
         <queue name="kdcd_sample_queue" appid="gl">
-            <!--class：消费者实现类全路径 concurrency：消费者线程数（一般 3~10）-->
-            <consumer class="kd.cd.xxx.biz.mq.SampleMQConsumer" concurrency="5"/>
+            <!--类路径与配套 Java 一致；若继承模板实现业务，改为实际实现类。并发度须按目标容量确定。-->
+            <consumer class="kd.cd.common.snippets.SampleMQConsumer" concurrency="5"/>
         </queue>
-
-        <!--同一 region 下可配置多个队列-->
-        <queue name="kdcd_another_queue" appid="gl">
-            <consumer class="kd.cd.xxx.biz.mq.AnotherMQConsumer" concurrency="3"/>
-        </queue>
+        <!--可在此 region 增加其他已实现消费者的 queue；不要配置尚不存在的占位类。-->
     </region>
 </root>

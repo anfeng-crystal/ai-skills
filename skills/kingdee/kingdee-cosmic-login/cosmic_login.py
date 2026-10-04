@@ -9,7 +9,7 @@ cosmic_login.py — 苍穹平台自动登录（完全自包含，零项目依赖
   python cosmic_login.py <base_url>                              # 列出数据中心
   python cosmic_login.py <base_url> <user> <password>            # 自动登录（单数据中心）
   python cosmic_login.py <base_url> <user> <password> <dc_id>    # 指定数据中心登录
-  python cosmic_login.py --check <base_url> <cookie>             # 检查 Cookie 有效性
+  python cosmic_login.py --check <base_url> <cookie>             # 探测已有 Cookie 会话
 
 CLI 输出格式（供上层脚本解析，不包含会话秘密）:
   LOGIN_SUCCESS
@@ -384,7 +384,9 @@ def auto_login(base_url: str, username: str, password: str,
 
 def check_session(base_url: str, cookie: str, csrf_token: str = "",
                   timeout: int = 8) -> bool:
-    """检查已有 Cookie 是否仍然有效"""
+    """探测兼容身份分支；True 的认证含义仍需目标部署证据。
+    False 仅表示未确认有效，不区分过期、网络故障或响应不兼容。
+    """
     base_url = base_url.rstrip("/")
     headers = {"Cookie": cookie, "ajax": "true"}
     if csrf_token:
@@ -400,8 +402,6 @@ def check_session(base_url: str, cookie: str, csrf_token: str = "",
                 data = resp.json()
                 if isinstance(data, dict) and data.get("userId"):
                     return True
-            if resp.text.strip() and "login" not in resp.text.lower():
-                return True
         return False
     except Exception:
         return False

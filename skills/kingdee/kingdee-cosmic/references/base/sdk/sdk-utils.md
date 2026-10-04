@@ -1,5 +1,7 @@
 # 字符串、日期、集合与 JSON 工具
 
+详细知识与证据边界见 [云端通用工具知识](https://chatgpt.com/space/page_db09e88edfc08191a9924a1fb9882e2a)。
+
 ## 入口与版本
 
 按具体数据类型选择已核实的 SDK 或 JDK API，不把同名工具类视为可互换。以下平台方法以实际 `bos-dataentity-7.0`、`bos-util-7.0` 和官方 V7.0.1 Javadoc 互核；日期与分批示例使用 JDK 8。

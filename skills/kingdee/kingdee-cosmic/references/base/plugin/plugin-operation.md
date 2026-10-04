@@ -64,6 +64,7 @@ result.setMessage("处理结果提示");
 2. **onPreparePropertys中不要漏字段**
    - 若操作依赖某字段，必须在此添加
    - 否则系统加载的数据包会缺失此字段
+   - 读和写都算依赖；操作参数 `OperateOption` 的 key 与单据字段标识分属不同合同，不要用同一个常量混指两者。
 
 3. **规则校验优先放onAddValidators，事务前事件只做最后整理**
    - 明确的业务规则优先注册校验器，失败会在事务开启前阻断
@@ -76,6 +77,12 @@ result.setMessage("处理结果提示");
 5. **提交后的处理放afterExecuteOperationTransaction**
    - 此时主事务已提交，只放允许独立失败的后续动作，并处理重试与幂等
    - 需要与主操作原子完成的级联更新不能统一后移到此事件
+
+## 字段准备取决于操作输入
+
+按主键加载时在 `onPreparePropertys` 声明后续读写字段；直接传数据包的入口可能不触发此事件，检查调用方字段和类型。默认值、校验和权限逻辑必须放在覆盖实际入口的相应事件中。维护界面成功不能代替列表批量路径验证，缺字段不能用补 `null` 掩盖。
+
+依据：[官方事件说明](https://vip.kingdee.com/knowledge/specialDetail/218022218066869248?category=238612178977499648&id=225567617954456832&type=Knowledge&productLineId=29&lang=zh-CN)；特殊操作按目标实现核验。[云端知识：入口差异、OperateOption 与真实 SDK 验证](https://chatgpt.com/space/page_0593e0f4842881918712cf78287b31fb)。
 
 ## 基础资料异步删除：区分操作返回与物理删除
 

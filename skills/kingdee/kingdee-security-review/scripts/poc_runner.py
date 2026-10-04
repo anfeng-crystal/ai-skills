@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import posixpath
 import sys
 import urllib.error
 import urllib.parse
@@ -12,6 +13,7 @@ import urllib.request
 from pathlib import Path
 
 import scope_check
+from http_transport import open_once
 
 
 SAFE_PAYLOADS = {
@@ -22,13 +24,6 @@ SAFE_PAYLOADS = {
     "xxe": ["<!-- xxe marker only; no external entity -->"],
     "rce": ["echo-test"],
 }
-SENSITIVE_HEADERS = {"authorization", "proxy-authorization", "cookie", "set-cookie", "x-api-key"}
-
-
-def redact_headers(headers: dict) -> dict:
-    return {key: ("<redacted>" if key.lower() in SENSITIVE_HEADERS else value) for key, value in headers.items()}
-
-
 def redact_text(value: str) -> str:
     return scope_check.redact_text(value)
 
@@ -42,12 +37,21 @@ def load_poc(path: str) -> dict:
 
 
 def build_request(target_url: str, poc: dict) -> urllib.request.Request:
+    target = urllib.parse.urlparse(target_url)
+    if scope_check.target_contract_error(target_url) or target.query or target.fragment:
+        raise ValueError("POC target must be an HTTP(S) base URL without credentials, query or fragment")
     base = target_url.rstrip("/") + "/"
-    path = str(poc.get("path", "")).lstrip("/")
+    path = str(poc.get("path", ""))
     parsed_path = urllib.parse.urlparse(path)
     if parsed_path.scheme or parsed_path.netloc:
         raise ValueError("POC path must be relative to the approved target")
-    url = urllib.parse.urljoin(base, path)
+    url = urllib.parse.urljoin(base, path.lstrip("/"))
+    resolved = urllib.parse.urlparse(url)
+    base_path = normalized_route(target.path or "/").rstrip("/")
+    resolved_path = normalized_route(resolved.path)
+    if ((resolved.scheme, resolved.netloc) != (target.scheme, target.netloc)
+            or not (resolved_path == base_path or resolved_path.startswith(base_path + "/"))):
+        raise ValueError("POC route leaves the approved target path")
     params = poc.get("params") or {}
     if params:
         query = urllib.parse.urlencode(params, doseq=True)
@@ -69,24 +73,48 @@ def build_request(target_url: str, poc: dict) -> urllib.request.Request:
     return urllib.request.Request(url, data=data, headers=headers, method=method)
 
 
+def normalized_route(path: str) -> str:
+    # Decode route escapes only. Payloads in params/body retain their test semantics.
+    for _ in range(5):
+        decoded = urllib.parse.unquote(path)
+        if decoded == path:
+            if "\\" in path or any(ord(char) < 32 for char in path):
+                raise ValueError("POC route contains ambiguous separators or control characters")
+            return posixpath.normpath(path)
+        path = decoded
+    raise ValueError("POC route encoding is too deeply nested to validate")
+
+
 def run_request(req: urllib.request.Request, timeout: float) -> dict:
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with open_once(req, timeout) as resp:
             body = resp.read(4096)
             return {
                 "ok": True,
                 "status": resp.status,
-                "headers": redact_headers(dict(resp.headers.items())),
+                "headers": scope_check.redact_headers(dict(resp.headers.items())),
                 "body_preview": redact_text(body.decode("utf-8", errors="replace")),
             }
     except urllib.error.HTTPError as exc:
-        body = exc.read(4096)
+        redirect_blocked = exc.code in {301, 302, 303, 307, 308}
+        body = b""
+        body_read_failed = False
+        try:
+            # Redirect pages often echo Location; they are not target evidence.
+            if not redirect_blocked:
+                body = exc.read(4096)
+        except Exception:
+            body_read_failed = True
+        finally:
+            exc.close()
         return {
             "ok": False,
             "status": exc.code,
-            "headers": redact_headers(dict(exc.headers.items())),
+            "redirect_blocked": redirect_blocked,
+            "body_read_failed": body_read_failed,
+            "headers": scope_check.redact_headers(dict(exc.headers.items())),
             "body_preview": redact_text(body.decode("utf-8", errors="replace")),
-            "error": redact_text(str(exc)),
+            "error": "Redirect blocked; review destination before another request" if redirect_blocked else redact_text(str(exc)),
         }
     except Exception as exc:
         return {"ok": False, "error": redact_text(str(exc))}
@@ -129,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
         "request": {
             "method": req.get_method(),
             "url": scope_check.redact_url(req.full_url),
-            "headers": redact_headers(dict(req.header_items())),
+            "headers": scope_check.redact_headers(dict(req.header_items())),
             "body_bytes": len(req.data or b""),
             "poc_file": str(Path(args.poc_file).resolve()),
         },

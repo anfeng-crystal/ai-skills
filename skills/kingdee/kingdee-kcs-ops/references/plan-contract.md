@@ -1,5 +1,7 @@
 # KCS Plan Contract
 
+Response redaction and failure-audit evidence are recorded in the [cloud knowledge entry](https://chatgpt.com/space/page_b8467f7dcbf08191a655cb3ec1affbaf). The local contract below remains the execution reference when that entry is unavailable.
+
 ## Top Level
 
 Draft and finalized plan fields:

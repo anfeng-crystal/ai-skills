@@ -7,6 +7,8 @@
 
 ## Cache 选型与操作
 
+详细知识与证据边界见 [云端缓存知识](https://chatgpt.com/space/page_4887970ebdd48191b69aae5afc1d7f54)。
+
 | 场景 | 首选 | 已确认入口 |
 |---|---|---|
 | 单页面临时状态 | 页面缓存 | `this.getView().getPageCache()` -> `IPageCache` |
@@ -44,15 +46,19 @@ Cache 门禁：
 
 ## MQ 已确认 API
 
+详细知识与证据边界见 [云端 MQ 知识](https://chatgpt.com/space/page_67b293e5c7808191b181e944f5964480)。
+
 - `MQFactory.get().createSimplePublisher(String region, String queue)`
 - `MessagePublisher.publish(Object message)`
 - `MessagePublisher.publishDelay(Object message, int seconds)`；当前 SDK 注释范围为 5 到 7200 秒
-- `MessagePublisher.publishInDbTranscation(...)`；方法名以 SDK 中的 `Transcation` 拼写为准
-- `MessagePublisher.close()`；发送结束必须释放 IO 资源
+- `MessagePublisher.publishInDbTranscation(Object message)`、`publishInDbTranscation(String routeKey, Object message)`；方法名以 SDK 中的 `Transcation` 拼写为准
+- `MessagePublisher.close()`；发送结束必须在 `finally` 释放 IO 资源。本机 7.0 接口不继承 `AutoCloseable`，不能直接把 publisher 放入 try-with-resources
 - `MessageConsumer.onMessage(Object message, String messageId, boolean resend, MessageAcker acker)`
 - `MessageConsumer.getRouteKey()`；跨库事务消息按消费方实际数据库路由返回
 - `MessageAcker.ack(String messageId)`、`deny(String messageId)`、`discard(String messageId)`
 - `DLock.create(String key)`、`tryLock()`、`tryLock(long timeoutMillis)`、`unlock()`
+
+以上发布/消费签名另由本机 7.0 `bos-mq` JAR 核对，补丁号未确认；该 JAR 的 `MQFactory` 没有 `send`，按 `createSimplePublisher → publish → close` 使用。普通、延迟和事务发布能力均保留；行为说明结合官方 SDK V8.0.1，不能将其当作 7.0 平台运行验收。
 
 ## MQ 状态与失败规则
 
@@ -68,6 +74,10 @@ MQ 门禁：
 1. `messageId` 不是全局唯一，`resend` 也不能作为幂等判定；幂等键来自队列/业务类型/业务主键或发送方事件 ID。
 2. 先持久化或确认业务最终状态，再 `ack`；不得先确认后写业务状态。
 3. 重试必须有上限、退避和最终失败去向；平台未提供这些能力时，把缺口列为部署前门禁。
-4. 消息只携带最小业务标识，不放凭据、大对象或敏感明文；当前 SDK 建议消息小于 512KB。
-5. 普通发布、延迟发布、数据库事务发布不能按名称猜选；先确认原子性需求、数据库路由和消费方 `getRouteKey()`。
+4. 消息只携带最小业务标识，不放凭据、大对象或敏感明文；官方 SDK 文档建议消息小于 `512Kb`（原文记法），这是容量建议，不据此推定所有重载的硬阈值。
+5. 普通发布、延迟发布、数据库事务发布不能按名称猜选；先确认原子性需求、发送方业务事务及数据库路由，跨库时按消费方实际数据库重写 `public String getRouteKey()`。数据库事务发布不自动覆盖外部接口副作用。
 6. region、queue、appid、消费者类和并发度从目标环境配置取证；不复制示例常量。
+7. `OperationResult.isSuccess()==false` 不足以证明永久失败；仅按已核实的结构化业务错误分类 `discard`，分类未知则 `deny` 或让消费失败。官方示例里的某个异常类型不构成通用丢弃规则。
+8. 业务处理与最终应答分开：`ack` 抛错不能反写业务失败或在同一 acker 上再 `deny`。本机 7.0 Rabbit 实现先标记 acker 已访问，再调用 broker；后续应答可能直接返回，不能把补一次 `deny` 当作恢复保证。
+9. DLock 只防并发，不能证明业务恰好一次。远端成功而本地保存失败的窗口，需要远端识别同一稳定幂等键或查询最终结果；幂等键包含业务隔离维度，不能仅拼消息对象的 `toString()`。
+10. 示例 `assets/snippets/mq/SampleMQConsumer.java` 保留操作和消息池两场景，固定实体/载荷类型/正整数Long主键，先校验再调用业务；查不到单据、读取/保存失败或未实现钩子不确认成功。示例元数据、持久完成检查、外部调用和重试上限必须落到目标业务；配套 XML 只注册实际存在的类。

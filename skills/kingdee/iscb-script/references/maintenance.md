@@ -2,10 +2,12 @@
 
 只在修改本 skill 的 validator、runtime、规则、reference、cases、示例或分发结构时读取；普通 ISCB 业务任务不加载。
 
+静态误报与真实引擎验证的详细结论见[云端运行时知识](https://chatgpt.com/space/page_e22ab958bea4819195a0e5ffd3b154c2)；分发和回归入口继续以本地合同为准。
+
 ## Bundle 完整性
 
 - curated regression 位于 `assets/cases/manifest.json` 与 `assets/cases/**/*`。
-- 对外分发至少保留：`SKILL.md`、`references/`、`agents/openai.yaml`、engine/platform manifests、`iscb_skill_validator.py`、DTS 服务流程只读分析器、受控 review-copy 改包器、DTS 检查器、外发合同验证器、真实 runtime wrapper、DML 生成器、runtime JAR 和 `assets/cases/`。
+- 对外分发至少保留：`SKILL.md`、`references/`、`agents/openai.yaml`、engine/platform manifests、`iscb_skill_validator.py` 与其 `script_static_analysis.py` 词法/调用识别模块、DTS 服务流程只读分析器、受控 review-copy 改包器、DTS 检查器、外发合同验证器、真实 runtime wrapper、DML 生成器、runtime JAR 和 `assets/cases/`。
 - 分发前运行资产校验并检查实际成员；不能只信目录清单。
 
 ## 回归命令

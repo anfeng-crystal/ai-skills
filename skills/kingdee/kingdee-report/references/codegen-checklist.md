@@ -39,3 +39,4 @@
 - Java 编译无语法错误、适用的模块级 Gradle 测试通过；KingScript 按目标声明和脚本验证路径检查，不要求 TS 通过 Java 编译。
 - BigDecimal 精度正确;大数据量(10 万+ 行)性能可接受。
 - 无实例字段导致的并发串数据。
+- 使用 AlgoX 时，分别检查 `JobSession` 输入构造、输出与提交、结果读取；仅生成 `DataSetX` 不等于已有可返回的报表 `DataSet`，按 `architecture-patterns.md` 核对各阶段。

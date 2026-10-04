@@ -1,5 +1,7 @@
 # Runtime Evidence Model
 
+异常、SQL 签名及已知漏检的复核依据见[云端知识](https://chatgpt.com/space/page_ef4ccf12b8c881919ccc548f277fa6e4)；来源字段与未验证边界继续按本文保留。
+
 ## Normalized fields
 
 The analyzer recognizes common variants of timestamp, trace/span IDs, parent span ID, service, logger, thread, level, duration, message, exception, SQL, and bind parameters. Missing fields remain unknown; do not infer them from array position except for deterministic display order.
@@ -10,13 +12,15 @@ Duration values must be finite and non-negative after conversion to milliseconds
 
 | Category | Evidence rule | Interpretation limit |
 | --- | --- | --- |
-| Exception | Exception field, stack marker, or error/fatal level | Error level alone does not prove an exception type |
+| Exception | Exception field, text marker, Java stack, or ERROR/FATAL/SEVERE level | Collection membership alone does not prove an exception type |
 | Slow SQL | SQL evidence with duration at or above threshold, or explicit slow-SQL marker | Report normalized SQL only |
 | Possible N+1 | Same normalized SQL signature repeats in one trace at or above threshold | Repetition is a candidate, not proof of ORM behavior |
 | Thread | Blocking, deadlock, rejection, saturation, or thread-pool marker | Correlate with timestamps and pool metrics |
 | GC | Full GC, GC pause, allocation failure, or overhead marker | Correlate with latency; do not equate every pause with root cause |
 
 This local analyzer defaults to 1000 ms for slow SQL and 3 repeats for possible N+1; these are diagnostic heuristics, not Kingdee product logging thresholds. Override only when the task defines a different threshold and report the chosen value.
+
+Exception items retain the source level, redacted message and any explicit exception value. `classificationReasons` lists all matching collection rules: `error_level`, `exception_field`, `text_marker`, and `java_stack`; none invents an exception field or proves a root cause. `text_marker` retains the existing broad keyword heuristic. `java_stack` requires an Exception/Error/Throwable class header immediately followed by an indented Java `at` frame inside the same message (Java source line, Native Method or Unknown Source; optional JVM module/class-loader prefix). Preserve only its boolean match before redaction, since SQL redaction can flatten stack lines; emit only redacted text. A class-name mention, isolated frame or incomplete stack alone does not meet this new rule. Other stack formats remain unverified. Plain-text files still produce one event per nonempty line; adjacent records are never joined to infer a stack or Trace.
 
 ## OpenAPI log source boundaries
 

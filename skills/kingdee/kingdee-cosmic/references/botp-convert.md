@@ -1,13 +1,17 @@
 # 单据转换与下推 (BotpUtils & PushResult)
 
+工具包证据、分单场景和验证边界见 [云端知识：单据转换与多目标结果](https://chatgpt.com/space/page_3c45abfff804819194126ee8f805cfcf)；本页保留执行合同和示例。
+
 ## TL;DR
 - 适用：下推、选单、来源追踪和转换结果处理。
-- 先抓：默认优先 `BotpUtils` / `PushResult`，不要先手写原生转换服务调用。
+- 先抓：目标项目已引入并核验 `BotpUtils` / `PushResult` 时优先复用；缺少工具包时核对目标原生转换 API。
 - 跳转：只是保存/提交/审核改读 `operate-chain.md`；只是转换插件事件再读 `base/plugin/plugin-botp.md`。
 - 继续读全文：当你要确认上拉、链路追踪或后台自动下推模板时。
 
 ## 概述
 单据下推（Push）与转换（Convert）是苍穹实现业务流转（如订单下推入库）的核心机制。`BotpUtils` (位于 `kd.cd.common.util`) 对原生的转换服务进行了深度简化，支持一键下推并保存、下推并显示界面、上拉数据以及多层级的正/反向链路追踪。
+
+`BotpUtils` / `PushResult` 来自项目引入的 `kd.cd.common` 工具包（可位于 `cus`），不是所有苍穹环境默认提供的标准 SDK。使用前确认目标依赖中实际存在的工具包、版本和签名；不能仅凭包名推定平台自带。
 
 > **适用边界**
 > ✅ 适用：下推/选单/来源追踪/转换结果处理。
@@ -21,9 +25,11 @@
 ## 常用 API 方法
 
 ### 1. 下推操作 (BotpUtils)
-- `pushAndSave(String sourceEntityId, String targetEntityId, Object srcPkValue, String ruleId)`: 一对一后台下推并自动保存的简版重载。
-- `pushAndSave(String sourceEntityId, String targetEntityId, Object srcPkValue, Map<String, List<Long>> entryMapping, String ruleId, Consumer<PushArgs> consumer)`: **最常用**。一对一后台下推并自动保存。
-- `pushNoSave(String sourceEntityId, String targetEntityId, Object srcPkValue, String ruleId)`: 一对一后台下推但不保存的简版重载。
+单个 `srcPkValue` 限定源单选择，不保证只生成一张目标单；目标数量仍取决于转换规则的分单策略和实际结果。
+
+- `pushAndSave(String sourceEntityId, String targetEntityId, Object srcPkValue, String ruleId)`: 单源后台下推并自动保存的简版重载。
+- `pushAndSave(String sourceEntityId, String targetEntityId, Object srcPkValue, Map<String, List<Long>> entryMapping, String ruleId, Consumer<PushArgs> consumer)`: **最常用**。单源后台下推并自动保存。
+- `pushNoSave(String sourceEntityId, String targetEntityId, Object srcPkValue, String ruleId)`: 单源后台下推但不保存的简版重载。
 - `pushNoSave(String sourceEntityId, String targetEntityId, Object srcPkValue, Map<String, List<Long>> entryMapping, String ruleId, Consumer<PushArgs> consumer)`: 下推生成内存对象，不持久化。
 - `push(boolean autoSave, String sourceEntityId, String targetEntityId, List<ListSelectedRow> selectedRows, String ruleId, Consumer<PushArgs> consumer)`: 基于 `selectedRows` 的通用下推入口。
 - `push(boolean autoSave, PushArgs pushArgs)`: 通用下推方法。
@@ -48,7 +54,7 @@
 - `buildSelectedRows(Map<Object, Map<String, List<Long>>> billData)`: 构建下推选择行信息。
 - `PushResult.failThenThrow()`: 下推失败时直接抛出 `PushConvertFailureException`。
 - `PushResult.getDatapacks()`: 获取目标单数据包；自动保存场景下会懒加载。
-- `PushResult.getSingleDataPack()`: 获取单张目标单数据包。
+- `PushResult.getSingleDataPack()`: 返回数据包首项，无数据包时返回 `null`，不检查结果是否唯一。`failThenThrow()` 也不验证目标数量。
 
 ## 示例代码
 
@@ -60,19 +66,28 @@ import kd.cd.common.util.BotpUtils;
 import kd.cd.common.util.PushResult;
 
 public class PushDemo {
-    public void autoPush(String sourceFormId, String targetFormId, Object sourcePk) {
+    public Object[] autoPush(String sourceFormId, String targetFormId, Object sourcePk) {
         // 1. 下推并保存
         PushResult result = BotpUtils.pushAndSave(sourceFormId, targetFormId, sourcePk, null);
         result.failThenThrow();
 
-        // 2. 获取生成的单据主键
-        Object[] targetPks = result.getPks();
-
-        // 3. 需要时可继续读取完整数据包
-        result.getSingleDataPack();
+        // 2. 返回全部已保存目标主键，由调用方处理完整结果
+        return result.getPks();
     }
 }
 ```
+
+需要完整数据包时调用 `result.getDatapacks()` 并处理全部元素。只有业务明确要求唯一目标时，才先验证数量，再读取单张：
+
+```java
+DynamicObject[] targets = result.getDatapacks();
+if (targets == null || targets.length != 1) {
+    throw new IllegalStateException("预期唯一目标单，请核对已生成的完整结果");
+}
+DynamicObject target = targets[0];
+```
+
+`DynamicObject` 的完整类名为 `kd.bos.dataentity.entity.DynamicObject`。`pushAndSave` 已执行保存；后续数量校验失败不表示未保存，不能据此盲目重新下推。
 
 ### 链路追踪示例
 ```java

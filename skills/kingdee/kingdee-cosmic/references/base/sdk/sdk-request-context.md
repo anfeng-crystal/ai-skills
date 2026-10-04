@@ -1,5 +1,7 @@
 # 请求上下文（RequestContext）
 
+详细知识与证据边界见 [云端请求上下文知识](https://chatgpt.com/space/page_b6cba0054c80819194c6ebd60e892564)。
+
 ## 读取入口与版本
 
 `kd.bos.context.RequestContext` 保存当前线程绑定的用户、租户、账套、组织等信息。以下签名按实际 `bos-framework-7.0`、`bos-util-7.0` 与官方 V7.0.1 Javadoc 核对；其他版本按项目依赖确认。

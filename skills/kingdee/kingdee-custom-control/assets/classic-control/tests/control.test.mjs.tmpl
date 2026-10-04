@@ -8,6 +8,7 @@ class FakeElement {
     this.listeners = new Map();
     this.textContent = '';
     this.focused = false;
+    this.disabled = false;
   }
 
   addEventListener(type, listener) {
@@ -142,6 +143,62 @@ test('cleans listeners idempotently across lifecycle spellings', async () => {
   control.destroyed();
   assert.equal(harness.action.listeners.has('click'), false);
   assert.equal(harness.dom.innerHTML, '');
+});
+
+test('honors initial lock while allowing display data to refresh', async () => {
+  const harness = await createHarness();
+  const control = new harness.Control(harness.model);
+  control.init({ lock: true, data: 'initial' });
+  await flushPromises();
+  assert.equal(harness.action.disabled, true);
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes.length, 0);
+  assert.equal(harness.calls.messages.length, 0);
+  assert.equal(control.handleDirective({}, 'focus', {}), false);
+  assert.equal(control.handleDirective({}, 'setData', { data: 'read-only update' }), true);
+  assert.equal(harness.status.textContent, 'read-only update');
+});
+
+test('applies lock and unlock updates to the existing action handler', async () => {
+  const harness = await createHarness();
+  const control = new harness.Control(harness.model);
+  control.init({ lock: true });
+  await flushPromises();
+  control.update({ lock: false, data: 'editable' });
+  assert.equal(harness.action.disabled, false);
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes.length, 1);
+  assert.equal(harness.calls.messages.length, 1);
+  control.update({ lock: true, data: 'locked' });
+  assert.equal(harness.action.disabled, true);
+  // Even a direct callback/dispatch must respect the latest lock state.
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes.length, 1);
+  assert.equal(harness.calls.messages.length, 1);
+  assert.equal(harness.action.listenerCount('click'), 1);
+});
+
+test('uses the latest lock after async rendering and resets it on re-init', async () => {
+  const harness = await createHarness({ deferTemplates: true });
+  const control = new harness.Control(harness.model);
+  control.init({ lock: false });
+  control.update({ lock: true });
+  control.update({ data: 'latest data' });
+  harness.pendingTemplates[0].resolve('<section data-role="root"></section>');
+  await flushPromises();
+  assert.equal(harness.action.disabled, true);
+  assert.equal(harness.status.textContent, 'latest data');
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes.length, 0);
+  assert.equal(harness.calls.messages.length, 0);
+  control.destoryed();
+  control.init({ lock: false });
+  harness.pendingTemplates[1].resolve('<section data-role="root"></section>');
+  await flushPromises();
+  assert.equal(harness.action.disabled, false);
+  harness.action.emit('click');
+  assert.equal(harness.calls.invokes.length, 1);
+  assert.equal(harness.calls.messages.length, 1);
 });
 
 test('applies the latest update received before async rendering completes', async () => {

@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
 
+from javascript_view import EventCall, javascript_code_view
+
 
 SUPPORTED_SUFFIXES = {".js": "javascript", ".jsx": "javascript", ".css": "css"}
 
@@ -22,6 +24,13 @@ class Issue:
     message: str
     path: str
     line: int
+
+
+@dataclass(frozen=True)
+class AnalysisWarning:
+    path: str
+    line: int
+    reason: str
 
 
 def resolve_user_path(raw_path: str, cwd: Path | None = None) -> Path:
@@ -45,12 +54,15 @@ def line_number(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
-def validate_javascript(text: str, path: str) -> list[Issue]:
+def raw_event_calls(text: str) -> list[EventCall]:
+    pattern = re.compile(r"\b(addEventListener|removeEventListener)\s*\(\s*(['\"])([^'\"]+)\2")
+    return [EventCall(match.group(1), match.group(3), match.start()) for match in pattern.finditer(text)]
+
+
+def javascript_issues(text: str, path: str, events: list[EventCall]) -> list[Issue]:
     issues: list[Issue] = []
-    add_pattern = re.compile(r"\baddEventListener\s*\(\s*(['\"])([^'\"]+)\1")
-    remove_pattern = re.compile(r"\bremoveEventListener\s*\(\s*(['\"])([^'\"]+)\1")
-    added_events = [(match.group(2), match.start()) for match in add_pattern.finditer(text)]
-    removed_events = {match.group(2) for match in remove_pattern.finditer(text)}
+    added_events = [(event.name, event.offset) for event in events if event.operation == 'addEventListener']
+    removed_events = {event.name for event in events if event.operation == 'removeEventListener'}
     reported_events: set[str] = set()
     for event_name, offset in added_events:
         if event_name not in removed_events and event_name not in reported_events:
@@ -65,9 +77,22 @@ def validate_javascript(text: str, path: str) -> list[Issue]:
     if append and not re.search(r"\b(?:removeChild|remove)\s*\(", text):
         issues.append(Issue("JS003", "动态插入的 DOM 缺少卸载删除动作", path, line_number(text, append.start())))
 
-    message_listener = re.search(r"\baddEventListener\s*\(\s*(['\"])message\1", text)
-    if message_listener and not re.search(r"\b(?:event|evt|e)\.origin\b|\borigin\s*=", text):
-        issues.append(Issue("JS004", "message 监听缺少 origin 白名单证据", path, line_number(text, message_listener.start())))
+    message_listener = next((offset for name, offset in added_events if name == 'message'), None)
+    if message_listener is not None and not re.search(r"\b(?:event|evt|e)\.origin\b|\borigin\s*=", text):
+        issues.append(Issue("JS004", "message 监听缺少 origin 白名单证据", path, line_number(text, message_listener)))
+    return issues
+
+
+def validate_javascript(text: str, path: str, *, warnings: list[AnalysisWarning] | None = None) -> list[Issue]:
+    view = javascript_code_view(text)
+    issues = javascript_issues(view.text, path, view.events)
+    if view.limitations:
+        # Preserve both scanned-code hints and the previous raw-text hints. Neither
+        # is conclusive across an unclassified span; the CLI must expose partial.
+        issues = list(dict.fromkeys(issues + javascript_issues(text, path, raw_event_calls(text))))
+        if warnings is not None:
+            warnings.extend(AnalysisWarning(path, line_number(text, item.offset), item.reason)
+                            for item in view.limitations)
     return issues
 
 
@@ -174,13 +199,13 @@ def iter_inputs(path: Path, forced_kind: str | None) -> Iterable[tuple[Path, str
             yield child, forced_kind or SUPPORTED_SUFFIXES[child.suffix.lower()]
 
 
-def validate_path(path: Path, forced_kind: str | None = None) -> list[Issue]:
+def validate_path(path: Path, forced_kind: str | None = None, *, warnings: list[AnalysisWarning] | None = None) -> list[Issue]:
     issues: list[Issue] = []
     for input_path, kind in iter_inputs(path, forced_kind):
         text = input_path.read_text(encoding="utf-8")
         display_path = str(input_path)
         if kind == "javascript":
-            issues.extend(validate_javascript(text, display_path))
+            issues.extend(validate_javascript(text, display_path, warnings=warnings))
         elif kind == "css":
             issues.extend(validate_css(text, display_path))
         else:
@@ -200,7 +225,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         target = resolve_user_path(args.path)
-        issues = validate_path(target, args.kind)
+        warnings: list[AnalysisWarning] = []
+        issues = validate_path(target, args.kind, warnings=warnings)
     except (OSError, UnicodeError, ValueError) as error:
         payload = {"status": "error", "error": str(error)}
         if args.output_format == "json":
@@ -210,7 +236,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.output_format == "json":
-        print(json.dumps({"status": "pass" if not issues else "fail", "issues": [asdict(issue) for issue in issues]}, ensure_ascii=False, indent=2))
+        payload = {"status": "fail" if issues else "partial" if warnings else "pass", "issues": [asdict(issue) for issue in issues]}
+        if warnings:
+            payload.update(analysis="partial", warnings=[asdict(item) for item in warnings])
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    elif warnings:
+        for issue in issues:
+            print(f"{issue.path}:{issue.line}: {issue.code} {issue.message}")
+        for item in warnings:
+            print(f"{item.path}:{item.line}: PARTIAL: {item.reason}")
     elif not issues:
         print("PASS: no deterministic frontend findings")
     else:

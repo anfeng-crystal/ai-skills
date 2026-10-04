@@ -92,6 +92,11 @@ def normalize_fields(raw_fields: Iterable[Any], evidence: str) -> List[Dict[str,
         if not key:
             continue
         field_type = raw.get("fieldType") or raw.get("type") or raw.get("tag")
+        raw_evidence = raw.get("evidence") or [evidence]
+        if not isinstance(raw_evidence, list):
+            raw_evidence = [raw_evidence]
+        if all(isinstance(value, str) for value in raw_evidence):
+            raw_evidence = sorted(set(raw_evidence))
         fields.append(
             {
                 "fieldKey": key,
@@ -99,10 +104,30 @@ def normalize_fields(raw_fields: Iterable[Any], evidence: str) -> List[Dict[str,
                 "fieldType": field_type or "",
                 "entryKey": raw.get("entryKey"),
                 "physicalColumn": raw.get("physicalColumn"),
-                "evidence": sorted(set(raw.get("evidence") or [evidence])),
+                "evidence": raw_evidence,
             }
         )
+        for name in ("sourceEntity", "sourceDepth", "inherited_from", "action", "oid"):
+            if name in raw:
+                fields[-1][name] = raw[name]
     return fields
+
+
+def source_evidence(data: Dict[str, Any], label: str, warnings: List[Any]) -> Dict[str, Any]:
+    """Keep source status verbatim; absence is not proof of completeness."""
+    original = data.get("warnings")
+    if isinstance(original, list):
+        warnings.extend(original)
+    elif original is not None:
+        warnings.append(original)
+    if data.get("fields") and "fieldEvidence" not in data:
+        warnings.append(f"{label}:field_evidence_status_unknown")
+    field_status = data.get("fieldEvidence")
+    if (data.get("complete") is False or data.get("truncated") is True
+            or isinstance(field_status, dict) and field_status.get("chainComplete") is False):
+        warnings.append(f"{label}:source_incomplete")
+    return {name: data[name] for name in
+            ("warnings", "fieldEvidence", "complete", "completeness", "truncated") if name in data}
 
 
 def entity_number_from(inventory: Optional[Dict[str, Any]], quick_cache: Optional[Dict[str, Any]], explicit: Optional[str]) -> str:
@@ -124,7 +149,11 @@ def entity_number_from(inventory: Optional[Dict[str, Any]], quick_cache: Optiona
 def build_contract(args: argparse.Namespace) -> Dict[str, Any]:
     inventory = load_json(Path(args.inventory)) if args.inventory else None
     quick_cache = load_json(Path(args.quick_cache)) if args.quick_cache else None
-    warnings: List[str] = []
+    warnings: List[Any] = []
+    evidence_by_source = {}
+    for label, data in (("inventory", inventory), ("quickCache", quick_cache)):
+        if data is not None:
+            evidence_by_source[label] = source_evidence(data, label, warnings)
 
     fields: List[Dict[str, Any]] = []
     if quick_cache:
@@ -142,6 +171,7 @@ def build_contract(args: argparse.Namespace) -> Dict[str, Any]:
         "forms": build_forms(inventory),
         "fields": fields,
         "warnings": warnings,
+        "sourceEvidence": evidence_by_source,
     }
 
 

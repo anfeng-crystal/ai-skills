@@ -1,5 +1,7 @@
 # ORM、QFilter 与底层数据库查询
 
+详细知识与证据边界见 [云端 ORM 查询知识](https://chatgpt.com/space/page_f18eec3cfaa48191a6483231e000ea9c)。
+
 ## 选路与版本
 
 按实体元数据查询优先使用 ORM/QFilter；需要底层数据库访问时，再核定路由、KSQL 或数据库方言。以下重载来自实际 7.0 的 `bos-ormengine`、`bos-dataentity`、`bos-algo`、`bos-dbengine`；公开 V7.0.1 文档辅助核对。

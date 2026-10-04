@@ -76,8 +76,15 @@ IDENTIFIER_PAIR = re.compile(
 SQL_PARAMS = re.compile(
     r"(?i)([\"']?(?:params?|parameters?|queryparams?|bind(?:ings?)?|args?|arguments?)[\"']?)(\s*[:=]\s*)(\[[^\]\r\n]*\]|\{[^}\r\n]*\}|[^\s;}]+)"
 )
-SQL_STRING = re.compile(r"'(?:''|[^'])*'")
-SQL_NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])")
+SQL_LITERAL = re.compile(
+    r"(?P<string>'(?:''|[^'])*')|"
+    r"(?<![\w.$:?@])(?P<sign>[+-]?)(?P<number>(?:\d+(?:\.\d*)?|\.\d+)"
+    r"(?:[eE][+-]?\d+)?)(?![\w.$])"
+)
+SQL_EXPRESSION_PREFIX = re.compile(
+    r"(?i)(?<![\w.$:?@])(?:select|distinct|all|case|when|then|else|where|"
+    r"and|or|not|between|having|on|by|values)\s*$"
+)
 SQL_WHITESPACE = re.compile(r"\s+")
 SQL_START = re.compile(r"(?i)\b(select|insert|update|delete|merge)\b")
 
@@ -91,9 +98,19 @@ def key_is_sensitive(key: object) -> bool:
     return normalized == "ip" or any(part in normalized for part in SENSITIVE_KEY_PARTS)
 
 
+def redact_sql_literal(match: re.Match[str]) -> str:
+    sign = match.group("sign")
+    if sign:
+        prefix = match.string[:match.start()].rstrip()
+        # Absorb unary numeric signs but retain arithmetic after an operand.
+        # This is a bounded lexical rule, not a SQL dialect parser.
+        if prefix and prefix[-1] not in "(,[=<>!~+*/%|&^-" and not SQL_EXPRESSION_PREFIX.search(prefix):
+            return sign + "?"
+    return "?"
+
+
 def sanitize_sql(value: str) -> str:
-    sanitized = SQL_STRING.sub("?", value)
-    sanitized = SQL_NUMBER.sub("?", sanitized)
+    sanitized = SQL_LITERAL.sub(redact_sql_literal, value)
     sanitized = SQL_PARAMS.sub(
         lambda match: f"{match.group(1)}{match.group(2)}{REDACTED}", sanitized
     )

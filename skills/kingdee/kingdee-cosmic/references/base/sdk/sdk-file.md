@@ -1,5 +1,7 @@
 # 文件服务 (File Service)
 
+路径分层、同路径覆盖与证据范围见 [云端知识：文件路径与上传覆盖](https://chatgpt.com/space/page_18dfcc834cb881919df3fffa0e48479a)；本页保留执行合同与接口示例。
+
 ## 适用与边界
 
 物理文件上传、读取、删除与预览先区分附件服务、图片服务、临时缓存；还需挂到业务附件面板/字段时，继续读[附件绑定 API](../../adv/attachment-api.md)。物理上传成功不等于单据关联已保存。
@@ -34,9 +36,11 @@
 
 `kd.bos.fileservice.FileItem` 的构造器为 `FileItem(String fileName, String path, InputStream in)`：第一参含扩展名，第二参是存储相对路径，不是 MIME 类型。V7.0.1 上传文档要求路径保留租户、数据中心、日期和业务目录层级；实际附件标准路径按 FAQ 的面板/字段规则及平台路径生成入口取得，不硬编码当前租户或账套。
 
+上传前确认同路径冲突策略：V7.0.1 `FileItem` 文档在 fileserver 场景下说明 `createNewFileWhenExists` 默认 `false`，同路径会覆盖；设置 `true` 时另建文件。该选项不适用于 OSS、MinIO 等二开存储。本地 7.0 构件也将此标志初始化为 `false`，这只核实对象默认值，不证明实际后端行为。需要保留旧文件时，按目标存储合同准备路径和新建策略，并使用上传实际返回的标识；不能把这个开关当作所有后端的防覆盖保证。
+
 ## 物理上传示例
 
-调用方提供按目标存储规则生成的相对路径。此方法接管传入流的关闭；`FileItem` 有 `close()`，但本地 7.0 未实现 `AutoCloseable`，使用 `finally` 释放资源。
+调用方提供按目标存储规则生成的相对路径，并确认不会与需保留的文件冲突，或业务明确允许覆盖；下面没有开启同路径另建，不将重复上传当作幂等保证。此方法接管传入流的关闭；`FileItem` 有 `close()`，但本地 7.0 未实现 `AutoCloseable`，使用 `finally` 释放资源。
 
 ```java
 import kd.bos.fileservice.FileItem;
@@ -65,6 +69,6 @@ public final class FileDemo {
 
 ## 官方依据
 
-- [附件二开常见问题汇总](https://vip.kingdee.com/knowledge/449213564277170432)，更新于 2024-07-10 15:14，2026-10-02 已登录核验正文；本卡使用第1～6、9～11节及“常见误区”，未标统一 API 版本。
-- [FileItem · V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/fileservice/FileItem.html)：构造参数与关闭语义。
+- [附件二开常见问题汇总](https://vip.kingdee.com/knowledge/449213564277170432)，更新于 2024-07-10 15:14，2026-10-05 已登录核验正文；本卡使用第1～6、9～11节及“常见误区”，未标统一 API 版本。
+- [FileItem · V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/fileservice/FileItem.html)：构造参数、关闭语义及同路径处理的后端范围；2026-10-05 核验。
 - [FileService · V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/fileservice/FileService.html)：上传返回标识、路径规范、读取和下载重载。精确签名同时对照实际 7.0 JAR；文档或版本差异不靠方法名推断。

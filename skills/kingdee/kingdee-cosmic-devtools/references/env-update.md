@@ -1,5 +1,7 @@
 # Environment Update
 
+Related version and resource notes: [SDK and resource knowledge](https://chatgpt.com/space/page_4da965c745c88191a07bc024728e39f1).
+
 ## Directories
 
 `COSMIC_HOME` is the resource root. The script resolves it in this order:
@@ -14,7 +16,7 @@ Standard target directories:
 - static resources: `<COSMIC_HOME>/static-file-service`
 - cache: `<COSMIC_HOME>/.kddt-cache`
 - staging jobs: `<COSMIC_HOME>/.kddt-staging/<job_id>`
-- backups: `<COSMIC_HOME>/.kddt-backups/<timestamp>`
+- backups: `<COSMIC_HOME>/.kddt-backups/apply-<unique_id>`
 
 Paths are shown with `/` as documentation separators; the CLI uses the host platform path rules at runtime.
 
@@ -46,8 +48,8 @@ The updater first tries `update.json`. If it is not available, it falls back to 
 - `status`: read current manifest and log path.
 - `resume`: continue a failed or canceled job without discarding verified downloads.
 - `cancel`: mark the job as canceled; the worker stops at the next checkpoint.
-- `apply`: verify the completed job, back up current targets, then extract staged zips into `COSMIC_HOME`.
-- `rollback`: restore a previous backup manifest.
+- `apply`: verify all staged packages, prepare their contents, back up affected resource components, then write them into `COSMIC_HOME`.
+- `rollback`: validate all backup components before restoring them; retain the original backup and hold replaced resources under its `replaced-*` directory.
 
 Recommended operator loop:
 
@@ -85,7 +87,9 @@ Resource packages must be normalized before apply or manual absorption:
 
 ## Apply Safety
 
-Before writing into `COSMIC_HOME`, the script checks that the job completed, paths stay inside `COSMIC_HOME`, zips do not contain unsafe paths, and a backup can be created.
+Before the first resource write, every item must have a staged file inside its job, a matching recorded SHA256 (and remote MD5 when present), a valid ZIP, and safe, conflict-free destination paths. All ZIP contents are read into temporary staging before any target backup or replacement; a bad later package leaves all old resource targets unchanged. A temporary path mirror checks aliases using the filesystem's naming rules; staging and targets must share that filesystem. This verifies local integrity against the recorded manifest, not publisher authenticity.
+
+Legacy `cosmic/apppackage-cosmic` entries map to `mservice-cosmic/lib`; legacy static wrappers map to `static-file-service`. Backups cover affected resource components, never the whole `COSMIC_HOME` or updater staging/cache/backups. Rollback checks every source before moving a target and preserves its own backup. Old root-wide backup manifests are rejected; inspect and restore their resource components separately. Runtime I/O failures after writes begin are reported as failed with a backup for recovery; apply is not a filesystem transaction.
 
 An authorized update includes preparation in its cache, staging, and backup directories; a hidden directory alone does not require another confirmation. Stop the affected write if actual permissions are insufficient, privilege elevation is needed, or the target is outside the authorized paths. Applying the update still requires the review summary and authorization defined in `SKILL.md`.
 

@@ -36,6 +36,16 @@ ALIASES = {
 EXCEPTION_MARKER = re.compile(
     r"(?i)\b(exception|error|throwable|caused by|stacktrace|outofmemoryerror|deadlock)\b"
 )
+# Require a throwable-shaped header immediately followed by a Java frame in
+# this message. A class-name mention or a frame in another event is not a stack.
+JAVA_EXCEPTION_STACK = re.compile(
+    r"(?m)^[ \t]*(?:[A-Za-z_$][\w$]*\.)*"
+    r"(?:[A-Za-z_$][\w$]*)?(?:Exception|Error|Throwable)"
+    r"(?::[^\r\n]*)?[ \t]*\r?\n[ \t]+at[ \t]+"
+    r"(?:[^\s()/]*/){0,2}"  # Optional JVM module / class-loader prefixes.
+    r"(?:[A-Za-z_$][\w$]*\.)+(?:[A-Za-z_$][\w$]*|<init>|<clinit>)"
+    r"\((?:[\w$]+\.java:\d+|Native Method|Unknown Source)\)[ \t]*\r?$"
+)
 SQL_MARKER = re.compile(r"(?is)\b(select|insert|update|delete|merge)\b.+")
 DURATION_MARKER = re.compile(r"(?i)\b(?:duration|elapsed|cost|took)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(ms|s)\b")
 SLOW_SQL_MARKER = re.compile(r"(?i)\b(slow\s*sql|sql\s*slow|slowquery)\b")
@@ -143,6 +153,9 @@ def normalize_event(event: dict[str, Any], sequence: int) -> dict[str, Any]:
         "durationMs": duration_ms,
         "message": message,
         "exception": redact_value(exception_value),
+        # SQL redaction can collapse line breaks; retain only the source match,
+        # never the unredacted text, for the later collection decision.
+        "hasJavaStack": bool(JAVA_EXCEPTION_STACK.search(raw_message)),
         "sqlSignature": sanitize_sql(str(raw_sql)) if raw_sql else "",
         "hasSqlParams": pick(event, "params") is not None or "params" in raw_message.lower(),
     }
@@ -161,10 +174,25 @@ def evidence_item(event: dict[str, Any], include_sql: bool = False) -> dict[str,
         "durationMs": event["durationMs"],
         "message": event["message"],
     }
+    if event["exception"]:
+        item["exception"] = event["exception"]
     if include_sql:
         item["sqlSignature"] = event["sqlSignature"]
         item["parametersRedacted"] = event["hasSqlParams"]
     return item
+
+
+def exception_reasons(event: dict[str, Any], searchable: str) -> list[str]:
+    reasons = []
+    if event["level"] in {"ERROR", "FATAL", "SEVERE"}:
+        reasons.append("error_level")
+    if event["exception"]:
+        reasons.append("exception_field")
+    if EXCEPTION_MARKER.search(searchable):
+        reasons.append("text_marker")
+    if event["hasJavaStack"]:
+        reasons.append("java_stack")
+    return reasons
 
 
 def would_cycle(node_id: str, parent_id: str, parent_by_id: dict[str, str]) -> bool:
@@ -249,8 +277,9 @@ def analyze(
 
     for event in normalized:
         searchable = " ".join((event["message"], str(event["exception"] or "")))
-        if event["level"] in {"ERROR", "FATAL", "SEVERE"} or event["exception"] or EXCEPTION_MARKER.search(searchable):
-            exceptions.append(evidence_item(event))
+        reasons = exception_reasons(event, searchable)
+        if reasons:
+            exceptions.append({**evidence_item(event), "classificationReasons": reasons})
         if event["sqlSignature"]:
             if event["traceId"]:
                 sql_groups[(event["traceId"], event["sqlSignature"])].append(event)

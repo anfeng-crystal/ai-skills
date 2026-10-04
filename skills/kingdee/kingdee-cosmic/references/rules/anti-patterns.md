@@ -1,5 +1,8 @@
 # 禁忌清单 (Anti-Patterns)
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_07b0448f8f988191aed5ff986de1fc95)。
+
+
 > 本文件所有条目默认属于 **A 层硬约束**，除非单独标注 `[B层]`。
 > 对应的 lint 规则 ID 前缀：`HAL-*`（幻觉）、`SCENE-*`（场景错配）、`STYLE-*`（可扫描坏味道）、`RESOURCE-*`（资源管理）。
 
@@ -37,7 +40,7 @@
 | 在 `afterBindData` 中 `setValue` 或改数据包 | 此事件用于绑定后的界面状态，不用于修改字段值 | 根据已有字段值设置可见、可用等状态；新建初始化放 `afterCreateNewData`，交互联动放 `propertyChanged` |
 | 在 `afterCreateNewData` 中期望触发 `propertyChanged` | 此时赋值不触发 | 在 `afterCreateNewData` 显式完成初始计算；交互时由 `propertyChanged` 调用相同业务计算 |
 | 仅 `implements Listener` 不注册监听 | 监听不会生效 | 在 `registerListener` 中调用 `add*Listener` |
-| 对继承型插件 `@Override` 不调 `super.xxx()` | 基类初始化逻辑不执行 | 继承型必须先调 `super`；接口型无需 |
+| 继承型生命周期 `@Override` 未核对父实现就省略 `super.xxx()` `[B层，SCENE-011]` | 可能遗漏父实现的必要行为；不能一律认定父方法负责初始化 | 核对实际继承链和调用位置；有必要逻辑时保留，已确认空实现可有意省略；接口型无需补类 `super` 调用 |
 | 直接修改 `EntityMetadataCache` 返回的元数据对象 | 缓存对象是单例，污染全局 | `clone` 后再修改 |
 | 用其他实体 `createInstance()` 的对象给引用属性赋值 `→ SCENE-010` | 引用对象类型可能不一致 | 使用属性复杂类型或当前实体元数据创建对象 |
 

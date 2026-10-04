@@ -1,5 +1,7 @@
 # 字段证据分层
 
+继承差量与设计候选的详细依据见[云端知识](https://chatgpt.com/space/page_39a9515828b88191a49edd3efba88b2a)；本文保留离线执行所需的证据规则。
+
 ## 目标
 
 字段结论必须区分实体字段、页面控件、物理列、分录层级和代码读写位置，避免把一个层级的证据外推到另一个层级。
@@ -43,3 +45,4 @@
 - 字段存在但页面位置未知：`evidence=["entitydesign"]`，说明页面挂载未确认。
 - 页面有控件但物理列未知：`physicalColumn=null`。
 - quick query 有警告或截断：把字段列为摸底结果，并建议全景分析或直接读取设计 XML。
+- `--fields` 缓存的 `fieldEvidence.scope=design-layer-candidates` 表示各层原始候选；`chainComplete` 仅说明已遍历 XML 声明的父引用，不覆盖外部扩展或运行期合并。`effectiveFieldsResolved=false` 不得提升为有效全集。`unresolvedDeltas` 保留 `action/oid` 和来源层，含无 Key 节点；不据此猜测最终字段。当前最多读取 32 个祖先，循环、上限、缺失/无效 XML、只声明 InheritPath 而无可解析父引用均记录缺口。

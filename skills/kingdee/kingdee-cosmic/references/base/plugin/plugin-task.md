@@ -21,7 +21,7 @@
 ## 核心事件
 
 - `execute(RequestContext ctx, Map<String, Object> params)`：调度中心触发任务执行时进入，承载任务主逻辑。
-- `stop()`：调度中心主动停止任务时触发，用于安全退出与资源释放。
+- `stop()`：终止执行路径；不能假定它只是设置停止标志或发出通知，具体行为须核对目标 SDK。
 
 ## 插件内上下文方法
 
@@ -32,7 +32,7 @@
 - `checkIsStop()`：主动检查是否已收到停止指令。
 - `isStop()`：读取当前停止标记。
 - `getMessageHandler()`：获取调度消息处理器。
-- `setTaskId(String)` / `getTaskId()`：访问任务标识。
+- `setTaskId(String)`：框架注入任务标识；本地 7.0 的 `AbstractTask` 以受保护字段 `taskId` 保存，没有 `getTaskId()`。
 - `isSupportReSchedule()`：判断是否支持重新调度。
 
 ```java
@@ -46,6 +46,16 @@ this.feedbackCustomdata(java.util.Collections.singletonMap("phase", "load-data")
 示例代码统一维护在模板文件中，直接参考：
 
 - [TaskTemplate.java](../../../assets/TaskTemplate.java)
+- [ScheduleTaskSample.java](../../../assets/snippets/task/ScheduleTaskSample.java)：含参数解析、停止检查和进度反馈。
+
+## 7.0 任务入口与停止合同
+
+- 子类实现 `execute(...)`，不调用抽象的 `super.execute(...)`。
+- `checkIsStop()` 确认停止后调用实例 `stop()`；默认实现抛出 `TASK_STOPED_BY_USER`。优先继承它；覆盖时须保留终止语义，不能只反馈进度后正常返回，或吞掉终止异常再报告成功。
+- 清理放在执行路径的 `finally` 或 try-with-resources；不要依赖 `super.stop()` 后不可达的反馈，也不能将停止请求记为完成。
+- 在批次或耗时步骤边界检查停止；协作式检查不能中断阻塞调用，外部调用仍需超时。检查可能访问平台状态，应按实际性能选择频率。
+
+本地 7.0 SDK 已核实上述合同；其他版本另核。[云端知识：来源、停止回归与“运行中”诊断](https://chatgpt.com/space/page_0593e0f4842881918712cf78287b31fb)。无云端访问时参阅官方[调度管理](https://vip.kingdee.com/knowledge/specialDetail/389113676499986688?category=389113814392277504&id=63230337102722816&type=Knowledge&productLineId=29&lang=zh-CN)，并以目标 SDK 为准。
 
 ## 实践建议
 

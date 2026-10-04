@@ -21,7 +21,7 @@ public class TaskTemplate extends AbstractTask {
      * 典型用途: 作为模板提示，指导在各事件内选择正确的上下文 API。
      */
     private void getContextSample() {
-        // this.getTaskId();
+        // this.taskId; // 7.0 中为受保护字段，由调度框架注入。
         // this.checkIsStop();
         // this.isStop();
         // this.feedbackProgress(10);
@@ -43,7 +43,8 @@ public class TaskTemplate extends AbstractTask {
      */
     @Override
     public void execute(RequestContext context, Map<String, Object> params) throws KDException {
-        super.execute(context, params);
+        // AbstractTask 未实现 execute；任务入口不调用抽象的 super.execute。
+        this.checkIsStop();
         this.feedbackProgress(0, ResManager.loadKDString("任务开始", "TaskTemplate_0", RES_APP_ID), null);
 
         Object taskParam = params == null ? null : params.get("taskParam");
@@ -57,16 +58,7 @@ public class TaskTemplate extends AbstractTask {
         this.feedbackProgress(100, ResManager.loadKDString("任务完成", "TaskTemplate_1", RES_APP_ID), customData);
     }
 
-    /**
-     * 触发时机: 调度中心主动停止任务时。
-     * 参数要点: 可在停止前做资源释放、状态补偿、最后一次进度反馈。
-     * 典型用途: 安全退出长任务，避免中途停止导致资源未释放。
-     */
-    @Override
-    public void stop() throws KDException {
-        super.stop();
-        this.feedbackProgress(95, ResManager.loadKDString("收到停止指令，准备安全退出", "TaskTemplate_2", RES_APP_ID), null);
-    }
+    // 沿用父类 stop() 的终止异常；业务资源在 execute 的 finally 或 try-with-resources 中释放。
 
     private void doStep(Object taskParam) {
         if (taskParam == null) {

@@ -1,5 +1,7 @@
 # 分布式 ID (Distributed ID)
 
+详细知识与证据边界见 [云端分布式 ID 知识](https://chatgpt.com/space/page_fc244390a620819186a55d74dcc0be53)。
+
 ## TL;DR
 - 适用：生成平台分布式唯一 ID，或临时资源的唯一名称。
 - 先抓：`ID.genLongId()` / `ID.genStringId()`；实体主键遵循真实元数据类型及平台分配流程，不一律手工覆盖。

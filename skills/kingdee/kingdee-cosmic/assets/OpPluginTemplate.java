@@ -51,8 +51,7 @@ public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
     private static final String FIELD_BILL_NO = "billno";
     private static final String FIELD_BILL_STATUS = "billstatus";
     private static final String ENTRY_KEY_MAIN = "entryentity";
-    private static final String OPTION_KEY_DEMO = "key3";
-    private static final String OPTION_VALUE_DEMO = "value1";
+    private static final String FIELD_CUSTOM_TEXT = "key3";
     private static final String ERROR_CODE_DEMO = "OperateError_001";
     private static final String ERROR_MSG_REQUIRED_BILL_NO = "OperateError_002";
     private static final String RES_APP_ID = "kd-cd-common-template";
@@ -75,6 +74,8 @@ public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
         List<String> fieldKeys = e.getFieldKeys();
         fieldKeys.add(FIELD_BILL_NO);
         fieldKeys.add(FIELD_BILL_STATUS);
+        // 事务前事件会写入此业务字段；它不是 OperateOption 自定义参数。
+        fieldKeys.add(FIELD_CUSTOM_TEXT);
         // 需要整张分录的场景可直接准备分录字段。
         fieldKeys.addAll(entryFields(ENTRY_KEY_MAIN));
     }
@@ -115,7 +116,7 @@ public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
         DynamicObject[] dataEntities = e.getDataEntities();
         if (OP_KEY_SAVE.equals(opKey) || OP_KEY_SUBMIT.equals(opKey)) {
             for (DynamicObject bill : dataEntities) {
-                bill.set(OPTION_KEY_DEMO, "A");
+                bill.set(FIELD_CUSTOM_TEXT, "A");
             }
         }
         // 若需直接取消整个操作，可按需启用：
@@ -185,7 +186,6 @@ public class OpPluginTemplate extends AbstractOperationServicePlugInExt {
     private static class BillNoRequiredValidator extends AbstractValidatorExt {
         @Override
         public void validate() {
-            super.validate();
             for (ExtendedDataEntity ext : getDataEntities()) {
                 DynamicObject bill = ext.getDataEntity();
                 String billNo = bill.getString(FIELD_BILL_NO);

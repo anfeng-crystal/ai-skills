@@ -11,11 +11,11 @@ python3 scripts/validate_frontend.py <file-or-directory> --kind javascript --for
 
 退出码：
 
-- `0`：未命中确定性规则。
-- `1`：命中需修复规则。
+- `0`：未命中所列静态模式；若结果为 `partial`，仍需复核未覆盖部分。
+- `1`：命中静态模式，结合下述边界核对后修复。
 - `2`：输入、编码或参数错误。
 
-## 确定性规则
+## 静态规则与结果边界
 
 | 编号 | 规则 | 修复要求 |
 |---|---|---|
@@ -26,6 +26,14 @@ python3 scripts/validate_frontend.py <file-or-directory> --kind javascript --for
 | `CSS001` | 使用 `@media`、`@keyframes`、`@import` 等 at-rule | 改为平台支持的普通选择器规则 |
 | `CSS002` | `$` 后直接接 `.class`、`[attr]` 或 `>` | `$` 与后代/子选择器之间保留空格 |
 | `CSS003` | `themeColor` 未使用单引号 | 写成 `'themeColor'` |
+
+`JS001`–`JS004` 是启发式提示，不是 JavaScript/JSX 语法或控制流分析。有界代码视图屏蔽注释、普通字符串、模板静态文本及可判定的正则字面量；事件名作为数据保留，`${...}` 中的代码仍检查，并保留原始行号。普通除法和比较运算不一律拒绝。
+
+遇 JSX、正则/除法语境歧义、动态或未解码的转义事件名、未闭合输入或模板深度超过 32 时，JSON 增加 `analysis: "partial"` 和 `warnings`（`path`、`line`、`reason`）；无 findings 时 `status` 为 `partial`，有 findings 时仍为 `fail`。文本输出 `PARTIAL`，退出码仍按是否命中规则为 0/1。此时合并已扫描代码和原文本线索，可能包含保守误报；按警告位置检查源码，不能把部分分析当作通过。原 `issues` 字段、规则编号、正常 pass/fail 和输入错误退出码不变。
+
+命中时先确认实际执行代码，不能为消除告警添加无效清理；未命中时仍核对注册/移除是否针对同一对象、handler 和定时器，是否在 `willUnmount` 的实际路径中执行，以及消息来源是否真正经过白名单判断。仅出现 `event.origin` 不证明白名单成立。
+
+[官方生命周期](https://vip.kingdee.com/knowledge/588370901079337984?productLineId=29&isKnowledge=2&lang=zh-CN)要求真实释放资源；当前入口、编号及退出码保持不变。[云端知识：版本与误判复现](https://chatgpt.com/space/page_aa00bb99d0488191bb4adecba2b328fe)。
 
 校验器只证明上述静态模式未命中，不证明控件标识、生命周期签名、PC/移动端入口在目标版本可用或目标页面运行正确。helper/模板生成成功同样不是兼容证据；生成接口代码前仍按 `SKILL.md` 使用任务版本和目标声明/SDK/官方适用版本。运行验证仍需设计器/元数据证据和目标页面样本。
 

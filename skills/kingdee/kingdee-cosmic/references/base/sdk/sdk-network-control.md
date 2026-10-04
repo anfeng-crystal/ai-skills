@@ -1,5 +1,7 @@
 # 网络控制 (Data Mutex / NetCtrl)
 
+实例上下文、时长资料冲突与证据范围见 [云端知识：网控实例与释放边界](https://chatgpt.com/space/page_84dfd3c11a188191964de7308f2137de)；本页保留执行合同与示例。
+
 ## 选路与生命周期
 
 用于单据的功能互斥（冲突操作）和数据互斥（同一数据并发操作）。跨服务通用资源锁见 [分布式锁](sdk-lock.md)。标准页面和操作已有网控时，先核元数据和 `MutexHelper` 的管理边界，避免额外申请后释放了原页面仍需持有的锁。
@@ -18,8 +20,10 @@
 |批量申请|`Map<String, Boolean> batchrequire(List<Map<String, Object>> data)`|方法名中的 `require` 确为小写；逐项检查|
 |单条释放|`boolean release(String dataObjId, String entityKey, String operationKey)`|第二、三参是实体和操作，不能填互斥组|
 |批量释放|`Map<String, Boolean> batchRelease(List<Map<String, Object>> data)`|逐项检查释放结果|
-|占用信息|`Map<String, String> getLockInfo(String dataObjId, String groupId, String entityKey)`|与 `release` 参数语义不同；无参重载只获取同线程此前单条申请的上下文信息|
+|占用信息|`Map<String, String> getLockInfo(String dataObjId, String groupId, String entityKey)`|与 `release` 参数语义不同；无参重载限同线程内使用，并复用同一 `DataMutex` 实例此前单条申请保存的上下文（本机已核 7.0 实现）|
 |页面辅助|`kd.bos.form.operate.MutexHelper`|有页面/实体等重载，按目标页面生命周期选用，不能把 DataMutex 签名直接套过去|
+
+同线程新建 `DataMutex` 不会继承另一实例的申请上下文；已知数据、组、实体标识或使用新实例诊断时，调用带参 `getLockInfo(dataObjId, groupId, entityKey)`。无参方法在新实例返回 `null` 不等于目标没有锁。此实例范围依据本机 `bos-mutex-7.0.jar`（manifest 分支 `hotfix_7.0.16_20250925`），不能仅凭在线“同线程”等表述推定跨实例共享，其他目标版本仍按实际依赖核验。
 
 批量 Map 使用 `DataMutex.PARAMNAME_DATAOBJID`、`PARAMNAME_GROUPID`、`PARAMNAME_ENTITYKEY`、`PARAMNAME_OPERATIONKEY`、`PARAMNAME_ISSTRICT`；申请可补 `PARAMNAME_DATA_OBJ_NUMBER` 和 `PARAMNAME_DATA_CALL_SOURCE`。为避免把重入已有锁当作本次新获取，示例批量申请同样显式设 `PARAMNAME_ISSTRICT=true`。返回 Map 按数据 ID 给出布尔结果，不把非空 Map 当整批成功。部分成功时只对本次确认获取的锁执行业务/释放；需要“全成功才执行”时，先收集成功项，任一失败就释放已获项并报告失败。不要无条件对整批输入解锁。
 

@@ -1,5 +1,7 @@
 # 缓存服务 (Cache Service)
 
+详细知识与证据边界见 [云端缓存知识](https://chatgpt.com/space/page_4887970ebdd48191b69aae5afc1d7f54)。
+
 ## TL;DR
 - 适用：页面缓存和应用缓存，解决跨操作临时数据与应用级共享数据。
 - 先抓：表单内优先 `IPageCache`，跨页面/应用再用 `AppCache`。

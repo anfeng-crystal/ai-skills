@@ -1,5 +1,7 @@
 # 异常、错误码与多语言提示
 
+详细知识与证据边界见 [云端异常与多语言知识](https://chatgpt.com/space/page_1eae4449e42c8191b48920230e72045e)。
+
 ## 入口与真实合同
 
 适用：业务拒绝、系统异常包装、错误码和多语言消息；日志写法见 `sdk-log.md`，事务回滚按实际操作/事务入口处理。以下 API 以本次实际 7.0 JAR 核验，并与官方 V7.0.1 Javadoc 分开记录。
@@ -75,7 +77,7 @@ public abstract class OrderProcessor {
 
 ## `ErrorCode.of` 的版本边界
 
-官方 V7.0.1 公开五参 `of(errorCode, project, key, desc, staticResource)`，其注释限定 BOS 静态资源多语言改造场景；不能当作所有二开工程的通用入口。本机实际 7.0 JAR 只有已标 `@Deprecated` 的四参 `of(String,String,String,String)`，五参负编译失败。不要直接搬另一版本重载，也不因四参可编译就作为新推荐。普通构造器的 `getLangMessage()` 在本机为 null，只能证明未通过它绑定该资源描述，不否定平台外部配置或响应层的其他本地化处理。
+官方 V7.0.1 公开五参 `of(errorCode, project, key, desc, staticResource)`，其注释限定 BOS 静态资源多语言改造场景；不能当作所有二开工程的通用入口。本机实际 7.0 JAR 中的四 String 参数重载 `of(String,String,String,String)` 已标 `@Deprecated`，未提供上述五参重载。不要直接搬另一版本重载，也不因四参可编译就作为新推荐。普通构造器的 `getLangMessage()` 在本机为 null，只能证明未通过它绑定该资源描述，不否定平台外部配置或响应层的其他本地化处理。
 
 ## 依据与验证边界
 

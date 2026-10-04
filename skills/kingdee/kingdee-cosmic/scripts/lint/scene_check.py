@@ -276,7 +276,7 @@ def check(filepath: str, lines: List[str]) -> List[LintIssue]:
     is_op, is_ui, is_other = detect_plugin_type(lines)
     is_inheritable = is_op or is_ui or is_other
     if is_inheritable:
-        _check_missing_super(filepath, lines, plugin_context, issues, tree=tree, lang=lang)
+        _check_missing_super(filepath, lines, issues, tree=tree, lang=lang)
 
     return issues
 
@@ -325,7 +325,7 @@ def _check_unguarded_setvalue_in_property_changed(
             ))
 
 
-# 继承型插件生命周期方法（需要调 super 的方法名，全小写）
+# 继承型插件生命周期候选（是否必须调用及其位置须核父实现，全小写）
 _LIFECYCLE_METHODS = {
     "initialize", "registerlistener", "preopenform",
     "createnewdata", "aftercreatenewdata", "loaddata", "afterloaddata",
@@ -342,17 +342,44 @@ _LIFECYCLE_METHODS = {
     "setfilter", "beforedoselectrow",
 }
 
-_OVERRIDE_PATTERN = re.compile(r"@Override")
-_METHOD_NAME_PATTERN = re.compile(
-    r"(?:public|protected)\s+\w[\w<>\[\], ?.]*\s+([A-Za-z_]\w*)\s*\("
-)
-_SUPER_CALL_PATTERN_TEMPLATE = r"\bsuper\s*\.\s*{method}\s*\("
+def _is_inherited_plugin_method(method_node) -> bool:
+    """只认方法所属类的显式插件父类，不把外层/implements 上下文套进来。"""
+    body = method_node.parent
+    owner = body.parent if body is not None and body.type == "class_body" else None
+    if owner is None or owner.type != "class_declaration":
+        return False
+    superclass = owner.child_by_field_name("superclass")
+    return superclass is not None and any(detect_plugin_type([
+        superclass.text.decode("utf-8")
+    ]))
+
+
+def _has_same_scope_super_call(body_node, method_name: str) -> bool:
+    """检测当前执行作用域内的调用；不证明分支覆盖、参数或调用顺序。"""
+    separate_scopes = {
+        "class_body", "class_declaration", "interface_declaration",
+        "enum_declaration", "record_declaration", "annotation_type_declaration",
+        "lambda_expression",
+    }
+    pending = [body_node]
+    while pending:
+        node = pending.pop()
+        if node.type in separate_scopes:
+            continue
+        if node.type == "method_invocation":
+            receiver = node.child_by_field_name("object")
+            name = node.child_by_field_name("name")
+            if (receiver is not None and receiver.type == "super"
+                    and name is not None and name.text.decode("utf-8") == method_name):
+                return True
+        pending.extend(node.named_children)
+    return False
 
 
 def _check_missing_super(filepath: str, lines: List[str],
-                         plugin_context: List, issues: List[LintIssue],
+                         issues: List[LintIssue],
                          tree=None, lang=None):
-    """检测继承型插件中 @Override 生命周期方法是否遗漏 super 调用。"""
+    """提示核对缺少同作用域 super 调用的继承型生命周期方法。"""
     try:
         if tree is None or lang is None:
             tree, lang = parse_java(lines)
@@ -391,32 +418,22 @@ def _check_missing_super(filepath: str, lines: List[str],
             if method_name.lower() not in _LIFECYCLE_METHODS:
                 continue
 
-            # Check Plugin Context for this method
-            # Just take the context of the line where method name is
+            # Use the AST owner, not the surrounding line's plugin context.
             method_line = name_node.start_point[0]
-            if method_line < len(plugin_context) and plugin_context[method_line] not in {"op", "ui", "other"}:
+            if not _is_inherited_plugin_method(method_node):
                 continue
 
             # Check if super.methodName() exists in the body
             body_node = _first_capture(captures, "body")
             if body_node is None:
                 continue
-            raw_body_text = body_node.text.decode('utf-8')
-
-            clean_body_lines = [code_for_structure(l) for l in raw_body_text.splitlines()]
-            body_text = "\n".join(clean_body_lines)
-
-            super_pattern = re.compile(
-                _SUPER_CALL_PATTERN_TEMPLATE.format(method=re.escape(method_name))
-            )
-
-            if not super_pattern.search(body_text):
+            if not _has_same_scope_super_call(body_node, method_name):
                 issues.append(LintIssue(
                     file=filepath, line=method_line + 1,
                     severity=Severity.WARNING,
                     rule_id="SCENE-011",
-                    message=f"继承型插件 @Override {method_name}() 未调用 super.{method_name}()，基类初始化逻辑可能不执行",
-                    fix_hint=f"在方法体首行添加 super.{method_name}(...)；接口型插件（如 IWorkflowPlugin）无需此调用",
+                    message=f"继承型插件 @Override {method_name}() 未发现当前方法作用域中的 super.{method_name}() 调用，需核对父实现",
+                    fix_hint=f"核对实际父实现及生命周期合同；有必要逻辑时按规定位置调用 super.{method_name}(...)，已确认空实现可有意省略；接口型插件无需补类 super 调用",
                     source_line=method_name,
                 ))
     except Exception:

@@ -1,5 +1,7 @@
 # 增强型 Token 鉴权(getToken)
 
+版本背景、令牌恢复案例及验证边界见[云端知识](https://chatgpt.com/space/page_125cd85e83cc8191bcc827023310f8b3)；本页保留直接执行所需的请求与恢复合同。
+
 ## 版本与认证模式
 
 执行 `SKILL.md` 的目标版本检查。下列版本记录说明能力边界，不证明当前项目已安装对应补丁。若只确认 `7.0`，不能断言 `refreshToken` 已下架或直接使用 V7.0.13 的 UTC 格式；复用目标已支持的取令牌方式/时间戳格式即可继续，不必为未用到的补丁能力停问。版本与实际依赖/环境证据不一致时先报告冲突，不擅自采用新版。
@@ -27,14 +29,26 @@
 
 ## 缓存与刷新
 - 依据响应接收时间和 `data.expires_in` 计算缓存期限；可预留最多 5 分钟且小于剩余寿命的提前量重新取 token，避免每次业务调用都取 token。缓存与秘密值仍遵守入口的凭据门禁。
+- 官方列出 `getToken` / `verifyToken` 调用频率为每分钟 30 次，未说明限流计数维度；以目标实际限制为准。并发客户端合并同一认证上下文的取令牌请求，避免每个业务请求或失败重试都重新鉴权；缓存按环境、数据中心、应用、代理用户与令牌类型隔离，不跨身份复用。
 - 官方调用流程使用请求头 `access_token: {token}`；目标网关若已验证使用兼容头 `accesstoken`，按该目标合同生成。旧示例的 `accessToken` 与 `accesstoken` 仅大小写不同；不要据此认定它必然失效，也不要自动修改 Nginx 配置。
 - `token_type: Bearer` 不等于业务接口接受 `Authorization: Bearer`；以目标接口实际请求头合同为准。令牌不放 URL。
+
+## 按需验证令牌
+
+已有 Token 需确认有效性且鉴权检查已获授权时，使用目标支持的 `POST {api_host}/kapi/oauth2/verifyToken`，请求类型为 `application/json`。Body 为 `client_id`、`token_type_hint`（`access_token` 或 `id_token`）、`token`、`accountId`、新 `nonce` 和符合目标版本格式的 `timestamp`；不套用 `getToken` 的完整凭据体，也不把页面 Cookie 或 MCP 发现令牌送入该接口。
+
+- 先判断顶层请求状态，再读取 `data.active` 与 `data.expires_in`（剩余毫秒）；请求成功不等于 `active=true`，验证只反映当前有效性，不代表续期。`active=false` 时失效该认证上下文及该类型的缓存；原文参数表是 Int，示例含数字字符串，客户端可校验后解析，缺失、非法或非正寿命不默认补两小时。
+- 第三方应用启用 JWT 时，`getToken` 还可能返回 `id_token` 与独立的 `id_token_expires_in`；只选目标接口明确接受的类型，分别管理寿命，不因字段存在或寿命更长就切换，不把两种令牌及其缓存期限混用。该能力不证明目标附件免登接口兼容增强型认证。
+- `verifyToken` 的 `612` 表示令牌校验失败/过期，`603` 表示参数错误；业务 403 仍先核权限与该端点错误合同，不能一律取新 Token。重新鉴权不自动重放结果不明的业务写请求，按原操作的查询与幂等合同恢复。
+- `withdrawToken` 会撤回令牌，且原文说明暂不支持 JWT；它不是健康检查、刷新或通用失败恢复步骤。只在明确撤回授权和目标合同齐备时处理，不因验证失败自动调用。
 
 ## 错误解释
 - `getToken` 文档中，`401` 为 `client_id` 或 `client_secret` 不正确，`603` 为请求参数错误；结合脱敏 `message` 定位具体字段。
 - 不把 `603` 统一翻译为“用户无效”，也不把 `500` 固定映射到时间戳错误。业务 API 的同一错误码可能有不同含义，使用该端点文档和本次脱敏响应。
+- “未经授权”还可能来自第三方应用禁用、未在启用时间内、缺少 API 授权或代理丢弃请求头；先核目标状态与链路，避免无效重复取令牌。启用应用、修改有效期、API 授权或代理配置均是独立变更，不能从错误恢复自动推导授权。
 
 ## 官方依据
 
 - [金蝶AI苍穹OpenAPI增强型Token认证](https://developer.kingdee.com/knowledge/specialDetail/226337046514476288?category=490566498872597760&id=489812471545485056&type=Knowledge&productLineId=29&lang=zh-CN)，更新于 2025-12-19 10:12；版本记录 V6.0.1 / V7.0.8 / V7.0.13。`expires_in` 定义的关键原文：“单位：毫秒”。
 - [金蝶AI苍穹OpenAPI调用流程](https://developer.kingdee.com/knowledge/specialDetail/226337046514476288?category=239331354741842688&id=213309216805890816&type=Knowledge&productLineId=29&lang=zh-CN)，更新于 2025-12-19 10:04；V4.0.006 初始、V6.0.1 调整认证。使用其请求头和服务分类说明，续期接口以较新的 Token 变更记录为准。
+- [access_token报错合集](https://developer.kingdee.com/knowledge/specialDetail/226337046514476288?category=226337785987048960&id=473850934762799616&type=Knowledge&productLineId=29&lang=zh-CN)，更新于 2024-11-19 18:29；未列统一产品版本，混含旧 `appToken/login.do` 与业务 API 故障，按实际端点取证，不泛化错误码。

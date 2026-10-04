@@ -2,6 +2,7 @@
 import argparse
 import json
 import shutil
+import stat
 from pathlib import Path
 
 
@@ -9,17 +10,47 @@ def skill_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def validate_target(output: Path, relative: Path) -> None:
+    current = output
+    for index, part in enumerate(relative.parts):
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(mode):
+            raise SystemExit(f"harness output contains a symbolic link: {current}")
+        is_target = index == len(relative.parts) - 1
+        expected_type = stat.S_ISREG if is_target else stat.S_ISDIR
+        if not expected_type(mode):
+            expected = "regular file" if is_target else "directory"
+            raise SystemExit(f"harness output requires a {expected}: {current}")
+    try:
+        current.resolve().relative_to(output)
+    except ValueError:
+        raise SystemExit(f"harness target resolves outside output directory: {current}")
+
+
 def copy_harness(output: Path, force: bool) -> dict:
     source = skill_root() / "assets" / "java-test-harness"
     if not source.exists():
         raise SystemExit(f"missing harness asset directory: {source}")
-    output.mkdir(parents=True, exist_ok=True)
-    copied = []
-    skipped = []
+    output = output.resolve()
+    if output.exists() and not output.is_dir():
+        raise SystemExit(f"harness output must be a directory: {output}")
+    planned = []
     for path in sorted(source.rglob("*")):
         if path.is_dir():
             continue
         relative = path.relative_to(source)
+        validate_target(output, relative)
+        planned.append((path, relative))
+
+    # Validate the whole copy plan before writing any template, including with --force.
+    output.mkdir(parents=True, exist_ok=True)
+    copied = []
+    skipped = []
+    for path, relative in planned:
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists() and not force:

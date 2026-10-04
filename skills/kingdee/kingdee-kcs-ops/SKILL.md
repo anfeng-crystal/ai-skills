@@ -42,7 +42,7 @@ python scripts/kcs_ops.py rollback --plan "<task-root>/.kcs-ops/plan.json" --tas
 ## 凭据与输出
 
 - 凭据只通过计划里的 `headers_from_env` 引用并注入当前进程；不接受命令行密钥，不读 `.env`、MEMORY、TOOLS 或聊天历史，不写凭据文件。
-- 不输出请求头、响应头、原始请求体或未脱敏错误体。JSON 响应按敏感键和值脱敏；非 JSON 只输出字节数和摘要。
+- 不输出请求头、响应头、原始请求体或未脱敏错误体。JSON 响应按敏感键、凭据样式及本次请求注入的已知凭据值脱敏；已知值只在内存传递，不进入计划或审计。非 JSON 只输出字节数和摘要。
 - TLS 校验始终开启；拒绝跨主机重定向和非 loopback 的明文 HTTP。
 - 计划或结果文件只允许写到 `--task-root` 内；写入使用同目录临时文件与原子替换。
 
@@ -51,7 +51,7 @@ python scripts/kcs_ops.py rollback --plan "<task-root>/.kcs-ops/plan.json" --tas
 - `apply-approved`/`rollback` 必须同时匹配计划内摘要、`--expected-sha256` 和当前任务的一次性授权引用。
 - 计划 target、action、body、风险、验证或 rollback 任一变化都会改变摘要，必须重新批准。
 - apply 中的 write/destructive action 必须有预定义 rollback，或写明 `irreversible_reason` 并由用户在批准摘要时接受；apply/rollback 都必须绑定只读 verify action。
-- 失败时保留已完成动作的审计结果，转 `verify` 或既定 `rollback`；不扩大 endpoint 或权限范围。
+- 失败时保留已完成动作的审计结果，转 `verify` 或既定 `rollback`；不扩大 endpoint 或权限范围。响应超过解析器数值/递归限制、客户端 100 层容器限制，或脱敏结果无法编码为 UTF-8 时同样失败，不输出响应原文；`summary` 仍须通过解析与期望检查。
 
 ## 资源
 

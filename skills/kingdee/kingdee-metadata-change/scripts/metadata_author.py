@@ -34,6 +34,7 @@ from metadata_knowledge import (  # noqa: E402
     metadata_value,
 )
 from metadata_schema import SCHEMA_VERSION, value_shape  # noqa: E402
+from metadata_references import external_references  # noqa: E402
 
 
 CONTRACT_VERSION = 2
@@ -57,18 +58,6 @@ BASE_KIND = {
 SAFE_BASELINE_CLASSES = {"platform-exported", "user-confirmed-original", "repository-canonical"}
 IDENTITY_PROPERTIES = {"Id", "PkId", "Key", "MasterId", "oid"}
 BINDING_PROPERTIES = {"FieldId", "ListFieldId", "FieldName"}
-REFERENCE_PROPERTIES = {
-    "ParentId",
-    "FieldId",
-    "ListFieldId",
-    "FieldName",
-    "EntityId",
-    "BaseEntityId",
-    "MasterId",
-    "ReferenceId",
-    "ItemId",
-    "OperationKey",
-}
 PLUGIN_NODE_TYPES = {"Plugin", "Plugins", "JsPlugins"}
 
 
@@ -928,34 +917,6 @@ def operation_binding_issues(
     return [f"OperationKey={operation_key} 既不是同业务对象实体操作，也不是该模型/控件的实际标准表单动作"]
 
 
-def external_references(units: list[dict[str, Any]], node: ET.Element, standard_node: ET.Element | None) -> list[dict[str, str]]:
-    identities = {
-        value
-        for name, value in effective_properties(node, standard_node).items()
-        if name in {"Id", "PkId", "Key"} and value
-    }
-    if not identities:
-        return []
-    references = []
-    for unit in units:
-        for candidate in editable_root(unit).iter():
-            if candidate is node:
-                continue
-            for property_name, value in direct_properties(candidate).items():
-                if property_name not in REFERENCE_PROPERTIES or value not in identities:
-                    continue
-                references.append(
-                    {
-                        "unit": unit_number(unit),
-                        "kind": unit["kind"],
-                        "node_type": local_tag(candidate.tag),
-                        "node_key": direct_properties(candidate).get("Key", ""),
-                        "property": property_name,
-                    }
-                )
-    return references
-
-
 def resolve_change(
     knowledge: Knowledge,
     artifact: Artifact,
@@ -1145,7 +1106,11 @@ def resolve_change(
     if action == "delete" and element_action(node):
         issues.append("继承差量节点不能按完整业务节点删除；使用 restore 或经 DEV 验证的 delete 合同")
     if action == "delete" and not element_action(node):
-        references = external_references(units, node, standard_node)
+        references = external_references(
+            ((unit_number(item), item["kind"], editable_root(item)) for item in units),
+            node,
+            direct_properties(standard_node) if standard_node is not None else None,
+        )
         if references:
             issues.append(f"目标仍被 {len(references)} 个 ParentId/字段/操作引用")
     else:

@@ -57,6 +57,13 @@ Rules:
 - `entryKey`、`physicalColumn` 未确认时必须是 `null`。
 - `evidence` 必须是数组，常见值：`entitydesign`、`formdesign`、`source`、`jar`、`cache`。
 - 不能把字段标识推断成物理列名。
+- `sourceEntity/sourceDepth/inherited_from/action/oid` 存在时原样保留；来自不同设计层的同 Key 候选不自动合并。
+
+## 完整性与来源
+
+- `warnings` 汇集输入原有值，列表元素或非列表值都不转换成猜测的警告格式；原始状态同时保存在 `sourceEvidence.inventory/quickCache`。
+- `sourceEvidence` 保留输入的 `warnings/fieldEvidence/complete/completeness/truncated`，不把 false 或未知改成 true。旧字段缓存缺少 `fieldEvidence` 时增加 `field_evidence_status_unknown`，不能由字段非空认定完整。
+- `fieldEvidence` 的设计候选、祖先遍历与未解析差量边界见 [字段证据](field-evidence.md)。`--fields` 产生的警告包含差量未解析、设计层未合并、未请求祖先、祖先缺失/无法解析、循环、深度上限和 XML 无效；缓存与摘要均须保留。
 
 ## 生成方式
 

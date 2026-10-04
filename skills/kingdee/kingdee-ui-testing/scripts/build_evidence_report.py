@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from validate_execution_contract import validate_contract
+from page_evidence import check_page
 
 
 STATUSES = {"passed", "failed", "blocked", "skipped", "not-run"}
@@ -35,9 +36,25 @@ def redact_text(value: str) -> str:
     )
 
 
+def redact_route(value: str) -> str:
+    # Routing query/fragment values may use arbitrary or encoded credential keys.
+    # Keep only the path for location context; identity has dedicated fields.
+    path, fragment_separator, _ = value.partition("#")
+    path, query_separator, _ = path.partition("?")
+    if path.startswith("//"):
+        _, separator, suffix = path[2:].partition("/")
+        path = "//[REDACTED_HOST]" + (separator + suffix if separator else "")
+    path = redact_text(path)
+    return path + ("?[REDACTED_QUERY]" if query_separator else "") + (
+        "#[REDACTED_FRAGMENT]" if fragment_separator else ""
+    )
+
+
 def redact(value: Any, key: str = "") -> Any:
     if key and SENSITIVE_KEY.search(key):
         return "[REDACTED]"
+    if key == "route":
+        return redact_route(value) if isinstance(value, str) else "[INVALID_ROUTE]"
     if isinstance(value, dict):
         return {str(item_key): redact(item, str(item_key)) for item_key, item in value.items()}
     if isinstance(value, list):
@@ -88,11 +105,12 @@ def build_report(
         if key in result_map:
             raise ValueError(f"duplicate result for {key[0]}/{key[1]}")
         status = str(result.get("status") or "").lower()
-        if status not in STATUSES - {"not-run"}:
+        if status not in STATUSES:
             raise ValueError(f"result {index} has invalid status {status!r}")
         result_map[key] = result
 
     status_counts: Counter[str] = Counter()
+    page_passed_count = 0
     report_cases = []
     for case in cases:
         case_id = str(case.get("caseId") or "")
@@ -119,9 +137,19 @@ def build_report(
                         "createdIds",
                         "cleanup",
                         "rollback",
+                        "page",
                     )
                     if key in result
                 }
+            page_check = check_page(step, evidence.get("page"))
+            block_reason = None
+            if status == "passed":
+                if page_check["status"] == "wrong_page":
+                    status, block_reason = "blocked", "blocked_wrong_page"
+                elif page_check["status"] == "missing":
+                    status, block_reason = "blocked", "blocked_missing_page_evidence"
+                elif page_check["status"] == "matched":
+                    page_passed_count += 1
             status_counts[status] += 1
             step_reports.append(
                 {
@@ -131,6 +159,10 @@ def build_report(
                     "target": step.get("target"),
                     "mutates": step.get("mutates", False),
                     "status": status,
+                    "rawStatus": result.get("status") if result is not None else None,
+                    "pageCheck": page_check,
+                    **({"page": step["page"]} if "page" in step else {}),
+                    **({"blockReason": block_reason} if block_reason else {}),
                     "evidence": redact(evidence),
                 }
             )
@@ -150,6 +182,7 @@ def build_report(
             "caseCount": len(report_cases),
             "stepCount": sum(status_counts.values()),
             "statusCounts": {status: status_counts.get(status, 0) for status in sorted(STATUSES)},
+            "pagePassedCount": page_passed_count,
             "unexpectedResultCount": len(result_map),
         },
         "cases": report_cases,

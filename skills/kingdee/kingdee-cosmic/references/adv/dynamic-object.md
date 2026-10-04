@@ -1,113 +1,77 @@
-# 动态对象处理全览 (DynamicObject & DynamicObjectUtils)
+# 动态对象与项目包装 DynamicObjectUtils
 
-## TL;DR
-- 适用：`DynamicObject` 安全取值、分录提取、批量扁平化和序列化。
-- 先抓：优先 `DynamicObjectUtils`，避免原生 `get()` + 强转连写导致空指针和类型错误。
-- 跳转：看字段结构/属性元数据改读 `entity-metadata.md`；查询取数改读 `query-dataset.md`。
-- 继续读全文：当你要写深路径取值、批量提取或克隆/状态判断代码时。
+详细知识与证据边界见 [云端动态对象知识](https://chatgpt.com/space/page_6dc95317103c8191a16c59507f9dfa31)。
 
-## 概述
-`DynamicObject` 是苍穹数据的核心载体（内存中的数据包）。`DynamicObjectUtils` (位于 `kd.cd.common.util`) 提供了对这些对象及其集合的高效、安全操作。由于原生 API 容易引发 `NullPointerException` 或类型转换异常，推荐一律使用工具类进行数据存取。
+## 适用范围
 
-> **适用边界**
-> ✅ 适用：DynamicObject 安全取值/批量提取/集合操作。
-> ❌ 不适用：元数据结构解析请用 `entity-metadata.md`；查询构建请用 `query-dataset.md`。
+`DynamicObject` 是内存数据包；`kd.cd.common.util.DynamicObjectUtils` 是项目包装，不能假定所有苍穹工程都有它。以下包装合同核于 `kd-cd-cosmic-commons` 的 `RELEASE-26-0424`（manifest 声明 `Cosmic-Version: 7.0+`）及本机 7.0 依赖（dataentity/ormengine manifest 为 `hotfix_7.0.16_20250730`）；其他版本先核实际依赖。项目已提供时复用，缺少时用[原生 DynamicObject 合同](../base/sdk/sdk-dynamic-object.md)。
 
-## 核心类
-- **`kd.bos.dataentity.entity.DynamicObject`**: 基础数据载体（单对象）。
-- **`kd.bos.dataentity.entity.DynamicObjectCollection`**: 动态对象集合（通常用于表示单据的分录）。
-- **`kd.cd.common.util.DynamicObjectUtils`**: **核心工具类**。
+字段结构与类型读[实体元数据](entity-metadata.md)，查询取数读[查询与 DataSet](query-dataset.md)。工具名中的 safe/nullSafe 不代表字段、路径、类型和业务空值都经过校验。
 
-## 常用 API 方法
+## 已核包装方法
 
-### 1. 安全取值与设置 (单对象)
-- `safeGetValue(DynamicObject dyn, String propKey)`: **最常用**。安全获取字段值，字段不存在时返回 null。
-- `safeSetValue(DynamicObject dyn, String propKey, Object value)`: 安全设置值，字段不存在时不抛异常。
-- `nullSafeGet(DynamicObject dyn, String field)`: 空安全获取字段值。
-- `getPkValue(DynamicObject dyn)`: 获取主键。
-- `containsKey(DynamicObject dyn, String key)`: 判断是否包含某字段属性。
-- `containsKey(DynamicObjectCollection coll, String key)`: 判断集合是否包含某字段。
+| 能力 | 方法与返回值 | 执行边界 |
+|---|---|---|
+| 取值 | `<T> T safeGetValue(DynamicObject, String)` | 对象为 null 或当前属性不存在时返回 null；存在时仍调用原生 `get`，不保证保留原始 null，也不校验调用方的泛型类型。 |
+| 条件写 | `void safeSetValue(DynamicObject, String, Object)` | 对象为 null 或当前属性不存在时不写；不会新增字段，存在时仍调用原生 `set`。 |
+| 根对象空值保护 | `<T> T nullSafeGet(DynamicObject, String)` | 只保护根对象为 null；其余直接 `get(field)`。缺字段、路径和类型问题仍按原生行为处理。 |
+| 主键与属性检查 | `<T> T getPkValue(DynamicObject)`；`boolean containsKey(DynamicObject / DynamicObjectCollection, String)` | 主键优先取原生 PK，null 时再安全读取 `id`。主键类型按实际模型确认，不统一假设为 Long。 |
+| 深路径提取 | `<T> Set<T> flatSetOf(DynamicObject, String)`；`<T> List<T> flatListOf(...)` | 如 `entry.subentry.field`；根对象不得为 null、表达式不得为空，路径各层必须符合实际模型。遍历真实对象/集合，不验证任意输入路径。 |
+| 批量提取 | `Object[] arrayOfIds(...)`；`<T> Set<T> setOfIds(...)`、`setOf(..., String)`；`<T> List<T> listOf(..., String)` | 均有 `DynamicObject[]` 与 `Collection<DynamicObject>` 重载；按真实字段/路径和类型提取，Set 去重，List 保留列表结果。 |
+| 汇总 | `BigDecimal sumOf(Collection<DynamicObject>, String)` | 空集合返回零；非空时逐行 `getBigDecimal` 再相加，不自动跳过可空金额。先明确 null 的业务规则。 |
+| 转 DataSet | `DataSet toDataSet(DynamicObjectCollection)`；`DataSet toDataSet(DynamicObjectCollection, String...)` | 根据集合类型中的现有属性取列；先核选择字段，不能靠转换创建缺失字段。调用方管理 DataSet 生命周期，无性能保证。 |
+| 转对象集合 | `DynamicObjectCollection fromDataSet(DataSet)` | 委托 `ORM.create().toPlainDynamicObjectCollection`；不能据此承诺还原原单据模型、分录关系或保存语义。 |
+| 序列化 | `String serialize(DynamicObject...)`；`DynamicObject[] deSerialize(String, DynamicObjectType)` | 序列化以首个对象的类型为依据；反序列化要求类型非 null。跨进程/缓存使用还须验证模型、版本、数据规模与敏感字段边界。 |
+| 创建 | `DynamicObject newDynamicObject(String)`；`newDynamicObject(DynamicObjectType)` | 前者通过表单标识查主实体类型，依赖平台元数据；后者用已知类型创建实例。都不等于保存单据。 |
+| 克隆 | `DynamicObject clone(DynamicObject)` | 本版包装配置 `new CloneUtils(false, true)`，启用清主键。需另行核关系对象及业务编号的复制策略，不能将所有引用一概视为独立深拷贝。 |
+| 属性信息 | `List<String> getPropKeys(DynamicObject / DynamicObjectCollection)`；`Map<String, Object> dump(DynamicObject)` | 属性标识返回 List。dump 是内容转储，不承诺不可变深拷贝或自动脱敏。 |
+| 状态 | `boolean isNewCreate(DynamicObject)`；`void clearDirty(DynamicObject / DynamicObjectCollection)` | 前者仅取反内存 `fromDatabase` 标记；后者委托 ORMUtil 修改状态。两者都不是数据库是否存在记录的证明。 |
 
-### 2. 扁平提取 (深层路径)
-- `flatSetOf(DynamicObject dyn, String expr)`: **深路径提取**。扁平列出动态对象中某字段的所有值，收集为 Set。示例：`"entry.subentry.field"`。
-- `flatListOf(DynamicObject dyn, String expr)`: 同上，返回 List。
+## 示例：明确字段与空金额规则
 
-### 3. 批量属性提取 (集合/分录)
-- `arrayOfIds(DynamicObject[] array)`: 快速提取数组内所有对象的主键 ID。
-- `arrayOfIds(Collection<DynamicObject> coll)`: 快速提取集合内所有对象的主键 ID。
-- `setOfIds(DynamicObject[] array)`: 提取主键 ID，返回 Set。
-- `setOfIds(Collection<DynamicObject> coll)`: 提取主键 ID，返回 Set。
-- `setOf(Collection<DynamicObject> coll, String field)`: 提取并去重某一属性。
-- `listOf(Collection<DynamicObject> coll, String field)`: 提取属性，返回列表。
-- `sumOf(Collection<DynamicObject> coll, String decimalField)`: 对数值字段执行内存汇总。
+下例假设已核实 `org.name`、`billentry.amount` 和 `billentry.material.id` 的真实模型及加载字段。金额规则示例选择“遇 null 拒绝汇总”；若业务允许 null 按零处理，应显式实现该规则，不能认为 `sumOf` 已处理。完整类可按当前依赖编译，字段名称需替换为项目真实标识。
 
-### 4. 数据集转换与序列化
-- `toDataSet(DynamicObjectCollection coll)`: 集合转数据集（DataSet）以执行高性能计算。
-- `toDataSet(DynamicObjectCollection coll, String... selectFields)`: 选择字段转换。
-- `fromDataSet(DataSet ds)`: 将计算结果转换回对象集合。
-- `serialize(DynamicObject... dynArr)`: 序列化动态对象。
-- `deSerialize(String serialized, DynamicObjectType dt)`: 反序列化动态对象。
-
-### 5. 对象创建与克隆
-- `clone(DynamicObject dyn)`: 深度克隆数据对象，默认清除主键值。
-- `newDynamicObject(String formId)`: 根据表单标识生成新的动态对象。
-- `newDynamicObject(DynamicObjectType dt)`: 根据类型生成新的动态对象。
-
-### 6. 属性信息
-- `getPropKeys(DynamicObject dyn)`: 获取属性标识集。
-- `getPropKeys(DynamicObjectCollection coll)`: 获取集合属性标识集。
-- `dump(DynamicObject dyn)`: 转储 DynamicObject 为 Map。
-
-### 7. 状态判断
-- `isNewCreate(DynamicObject dyn)`: 判断数据包是否为新增（不来源于数据库）。
-
-## 示例代码
-
-### 安全链式取值与分录统计
 ```java
 package kd.cd.common.demo;
 
-import kd.cd.common.util.DynamicObjectUtils;
-import kd.bos.dataentity.entity.DynamicObjectCollection;
 import java.math.BigDecimal;
+import java.util.Set;
+import kd.bos.dataentity.entity.DynamicObject;
+import kd.bos.dataentity.entity.DynamicObjectCollection;
+import kd.cd.common.util.DynamicObjectUtils;
 
-public class DataDemo {
-    public void process(DynamicObject bill) {
-        // 1. 安全获取基础资料名称，无视空指针风险
-        String orgName = DynamicObjectUtils.nullSafeGet(bill, "org.name");
+public final class DataDemo {
+    public String orgName(DynamicObject bill) {
+        if (bill == null) return null;
+        DynamicObject org = bill.getDynamicObject("org");
+        return org == null ? null : org.getString("name");
+    }
 
-        // 2. 统计分录中所有行特定金额之和
-        DynamicObjectCollection entry = bill.getDynamicObjectCollection("billentry");
-        BigDecimal totalAmount = DynamicObjectUtils.sumOf(entry, "amount");
+    public BigDecimal totalAmount(DynamicObject bill) {
+        if (bill == null) throw new IllegalArgumentException("bill is required");
+        DynamicObjectCollection rows = bill.getDynamicObjectCollection("billentry");
+        if (rows == null) throw new IllegalStateException("billentry was not loaded");
+        for (DynamicObject row : rows) {
+            if (row.getBigDecimal("amount", true) == null) {
+                throw new IllegalStateException("amount is required for this calculation");
+            }
+        }
+        return DynamicObjectUtils.sumOf(rows, "amount");
+    }
 
-        // 3. 提取分录中所有物料ID
-        Set<Object> materialIds = DynamicObjectUtils.setOf(entry, "material.id");
-
-        // 4. 深路径扁平提取
-        Set<Object> allSubValues = DynamicObjectUtils.flatSetOf(bill, "entry.subentry.field");
+    public Set<Object> materialIds(DynamicObject bill) {
+        if (bill == null) throw new IllegalArgumentException("bill is required");
+        return DynamicObjectUtils.flatSetOf(bill, "billentry.material.id");
     }
 }
 ```
 
-### 判断单据是否新增
-```java
-public void checkBillStatus(DynamicObject bill) {
-    if (DynamicObjectUtils.isNewCreate(bill)) {
-        // 新增单据，尚未保存到数据库
-    } else {
-        // 已存在的单据
-    }
-}
-```
+## 状态、引用与字段约束
 
-## 实践建议
-1. **优先使用 Path 取值**: 在处理多级关联（如单据->物料->规格型号）时，使用 `flatSetOf("material.model")` 而不是逐层 `.get(...)`。
-2. **批量查询原则**: 严禁在分录循环中查询数据库。应先提取分录中所有 ID（使用 `setOfIds`），执行一次批量查询后，再进行内存匹配。
-3. **内存字段管理**: 动态添加的字段在使用 `toDataSet` 前需确保已注册在元数据中。
-4. **序列化场景**: `serialize`/`deSerialize` 适用于跨进程传递或缓存存储。
-
-## 常见坑位
-1. **类型强转错误**: 从 `safeGetValue` 获取的值必须根据元数据定义的字段类型进行强转（如 `Long`, `BigDecimal`, `Date`），严禁凭经验判断。
-2. **脏数据未提交**: 手动修改 `DynamicObject` 的值后，如果不希望触发操作插件的变更逻辑，需通过 `clearDirty` 控制。
-3. **集合引用失效**: 对 `DynamicObjectCollection` 执行 `clear()` 后，之前获取的引用将变为空，操作前需确认状态。
-4. **克隆后主键**: `clone` 方法默认清除主键值，如需保留主键请手动设置。
+- `clearDirty` 不是绕过操作插件的开关。本机 ORMUtil 实现会递归调整 dirty/fromDatabase 等状态；不得为了跳过校验或业务操作随意清理。内存修改、页面模型联动和正式保存分别遵循各自合同。
+- `isNewCreate` 只能用于已知数据包状态的判断；手动修改状态即可改变结果，不能据此断言“从未保存”或“数据库中已存在”。
+- 集合 `clear()` 使指向同一集合的引用看到空集合；已取出的行对象引用仍指向该对象，不会自动变成 null。是否删除持久化分录或刷新界面另核对应流程。
+- 克隆清主键不等于完成新增业务对象初始化；是否恢复主键、业务编号、引用和状态须按明确的新增/更新用途决定，不能把手动设 PK 当作通用保存方案。
+- 数值的 null、零、默认值以及缺字段不同；按[原生数据包合同](../base/sdk/sdk-dynamic-object.md)处理。元数据缓存中的主实体模型不能原地修改；需要自定义内存类型时使用独立模型。
+- 不得用 `safeSetValue` 吞掉虚构字段。仅有明确跨版本兼容需求且至少一个受支持环境真实存在该字段时才可条件写；否则先核外部值是查询参数还是持久化字段，再核精确编码体系与真实 F7/业务字段。
+- 分录循环前批量提取需要的 ID，集中查询后在内存匹配；避免逐行查询。序列化和 DataSet 转换也应核容量、资源释放与目标版本，不由方法名称推断性能或可移植性。

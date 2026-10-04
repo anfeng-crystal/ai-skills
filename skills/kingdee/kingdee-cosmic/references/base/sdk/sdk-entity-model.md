@@ -1,5 +1,7 @@
 # 动态领域模型：实体与属性
 
+详细知识与证据边界见 [云端实体模型知识](https://chatgpt.com/space/page_520cd1d4ff3481918163501cd358a1e3)。
+
 ## 类型与适用范围
 
 用于读取主实体、分录和字段结构；只操作字段值时转 `sdk-dynamic-object.md`，团队封装见 [entity-metadata.md](../../adv/entity-metadata.md)。以下继承与签名由实际 7.0 JAR 和官方 V7.0.1 Javadoc 互核，不把文档版本当成项目补丁版本。

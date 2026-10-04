@@ -18,71 +18,7 @@ import re
 import sys
 
 
-def normalize_sql(sql: str) -> str:
-    """预处理SQL：去除单行/多行注释，标准化空白，保留字符串字面量。"""
-    # 去除多行注释 /* ... */
-    sql = re.sub(r'/\*.*?\*/', ' ', sql, flags=re.DOTALL)
-    # 去除单行注释 -- ...
-    sql = re.sub(r'--[^\n]*', ' ', sql)
-    # 标准化空白
-    sql = re.sub(r'\s+', ' ', sql).strip()
-    return sql
-
-
-def tokenize_preserve_strings(sql: str):
-    """
-    将SQL分词，保留字符串字面量作为单个token。
-    返回 (token列表, token位置列表)。
-    """
-    tokens = []
-    positions = []
-    i = 0
-    n = len(sql)
-    while i < n:
-        # 跳过空白
-        if sql[i].isspace():
-            i += 1
-            continue
-        # 字符串字面量 '...' 或 "..."
-        if sql[i] in ("'", '"'):
-            quote = sql[i]
-            start = i
-            i += 1
-            while i < n:
-                if sql[i] == quote:
-                    # 检查是否是转义（连续两个引号）
-                    if i + 1 < n and sql[i + 1] == quote:
-                        i += 2
-                        continue
-                    i += 1
-                    break
-                i += 1
-            tokens.append(sql[start:i])
-            positions.append(start)
-            continue
-        # 方括号标识符 [ ... ]
-        if sql[i] == '[':
-            start = i
-            i += 1
-            while i < n and sql[i] != ']':
-                i += 1
-            if i < n:
-                i += 1
-            tokens.append(sql[start:i])
-            positions.append(start)
-            continue
-        # 普通token：连续字母/数字/下划线，或单个非空白字符
-        if sql[i].isalnum() or sql[i] == '_' or sql[i] == '.':
-            start = i
-            while i < n and (sql[i].isalnum() or sql[i] == '_' or sql[i] == '.'):
-                i += 1
-            tokens.append(sql[start:i])
-            positions.append(start)
-        else:
-            tokens.append(sql[i])
-            positions.append(i)
-            i += 1
-    return tokens, positions
+from ksql_lexer import normalize_sql, tokenize_preserve_strings
 
 
 def get_statement_type(tokens: list) -> str:
@@ -439,8 +375,12 @@ def validate(sql: str) -> dict:
     if not sql or not sql.strip():
         return {"valid": False, "statement_type": "EMPTY", "errors": ["SQL语句为空。"], "warnings": []}
 
-    normalized = normalize_sql(sql)
-    tokens, _ = tokenize_preserve_strings(normalized)
+    try:
+        normalized = normalize_sql(sql)
+        tokens, _ = tokenize_preserve_strings(normalized)
+    except ValueError as exc:
+        return {"valid": False, "statement_type": "UNKNOWN",
+                "errors": [str(exc)], "warnings": []}
 
     if not tokens:
         return {"valid": False, "statement_type": "EMPTY", "errors": ["SQL语句为空或仅包含注释。"], "warnings": []}

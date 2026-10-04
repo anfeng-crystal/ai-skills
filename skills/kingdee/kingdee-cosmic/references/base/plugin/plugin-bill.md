@@ -1,5 +1,8 @@
 # 单据界面插件
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_9aa888dff7848191b4386011cc427738)。
+
+
 ## TL;DR
 - 适用：单据界面插件的原生兜底，封装层没覆盖到的单据事件时再读本页。
 - 先抓：`AbstractBillPlugIn`、额外监听器和单据特有事件时机。
@@ -32,7 +35,8 @@
 
 ## 核心事件
 
-- `afterLoadData(EventObject e)`：// 单据数据加载完成后触发，适合做加载后初始化
+- `afterLoadData(EventObject e)`：// 已有单据数据包加载完成后触发，适合按已存数据调整界面
+- `afterCreateNewData(EventObject e)`：// 新数据包创建并填好默认值后触发，适合加工新增默认值和默认分录
 - `beforeDoOperation(BeforeDoOperationEventArgs e)`：// 操作执行前触发，适合做前置校验/参数整理
 - `afterDoOperation(AfterDoOperationEventArgs e)`：// 操作执行后触发；成功提示先检查操作结果
 - `propertyChanged(PropertyChangedArgs e)`：// 字段值变更后触发，适合做联动赋值
@@ -68,9 +72,10 @@ view.setEnable(false, "fieldkey");
 
 ## 实践建议
 
-1. 加载后初始化优先放 `afterLoadData`。
+1. 已有单据加载后处理放 `afterLoadData`；新增默认值放 `afterCreateNewData`。一次加载/刷新按数据包来源触发其中一个，避免把新增默认值覆盖到已存单据。
 2. 事务级校验放操作插件，UI 插件只做交互提示与轻校验。
-3. 字段联动优先在 `propertyChanged`，避免分散在多个事件。
+3. 字段联动优先在 `propertyChanged`；用户录入先执行相关实体服务规则，再触发此事件。初始化期间（包括 `afterCreateNewData` 内）赋值不触发它，需要的初始联动在初始化路径完成。
+4. 变更值类型须与字段模型一致；模板的 `qty` 使用 `BigDecimal`。分录或多项变更使用 `e.getChangeSet()` 中各项的值与行索引，不能把包装层取首项的 helper 当成整个变更集合。
 
 ## 常见坑位
 

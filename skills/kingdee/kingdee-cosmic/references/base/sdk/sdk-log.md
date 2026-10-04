@@ -1,5 +1,7 @@
 # 日志框架 (Logging Framework)
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_f563cc1fce008191b83e9adf3c9e63a3)。
+
 ## TL;DR
 - 适用：统一日志记录、级别判断和异常堆栈输出。
 - 先抓：优先 `LogFactory.getLog(Class)`，避免 `System.out.println`。
@@ -7,7 +9,7 @@
 - 继续读全文：当你要确认参数化日志、异常记录和生产级日志建议时。
 
 ## 概述
-苍穹平台提供了一套统一的日志处理接口，底层默认基于 Logback 实现。它支持标准的日志级别（DEBUG, INFO, WARN, ERROR），并具备异步写入、链路追踪及集群环境下的统一日志收集能力。
+苍穹提供 `kd.bos.logging.Log` 统一接口，支持 DEBUG、INFO、WARN、ERROR。已核本机 7.0 构件在未指定自定义日志工厂时选择 Logback；这是可配置的实现路径，不是所有版本/部署的保证。异步写入、链路字段和集中采集由目标实现及部署配置决定，不能仅凭 `Log` 接口认定已启用。
 
 ## 核心类
 - **`kd.bos.logging.LogFactory`**: 获取日志对象的工厂类。
@@ -24,40 +26,55 @@
 ### 记录日志
 - `debug(String message, Object... args)`
 - `info(String message, Object... args)`
-- `warn(String message, Object... args)`
-- `error(String message, Throwable t)`: 记录错误及异常堆栈。
+- `warn(String message, Object... args)` / `error(String message, Object... args)`
+- `warn(String message, Throwable t)` / `error(String message, Throwable t)`，以及 `warn(Throwable)` / `error(Throwable)`：明确传递异常对象。
+
+V7.0.1 文档把数组形式显示为 `Object[]`；本机 7.0 的上述四级数组重载带 `ACC_VARARGS`，可按 `Object...` 调用。`{}` 是已核的参数占位符，不是 `String.format` 的 `%s`。完整堆栈是否输出及采集仍依赖目标日志布局和配置。
 
 ## 示例代码
 ```java
 import kd.bos.logging.Log;
 import kd.bos.logging.LogFactory;
 
-public class LogDemo {
+public abstract class LogDemo {
     // 1. 定义静态常量日志对象
     private static final Log logger = LogFactory.getLog(LogDemo.class);
 
-    public void doWork(String billNo) {
-        // 2. 先判断级别，再输出（减少字符串拼接开销）
+    // safeBillNo 由调用方提供已脱敏、适合单行日志的业务定位信息。
+    public void doWork(String safeBillNo) throws Exception {
+        // 2. 级别判断也可保护有计算成本的日志参数。
         if (logger.isInfoEnabled()) {
-            logger.info("开始处理单据: {}", billNo);
+            logger.info("开始处理单据: {}", safeBillNo);
         }
 
         try {
             process();
         } catch (Exception e) {
-            // 3. 记录异常堆栈
-            logger.error("单据处理失败: " + billNo, e);
+            // 3. 本层承担一次错误记录，保留异常对象并继续传播失败。
+            logger.error("单据处理失败: " + safeBillNo, e);
+            throw e;
         }
     }
+
+    protected abstract void process() throws Exception;
 }
 ```
 
+本例不实现业务动作；子类提供 `process()`。记录日志不等于恢复业务，失败仍传给调用方。若上层已有统一错误记录，应按项目错误处理合同选择一个记录位置，避免同一异常重复记录；需要包装异常时保留原始 cause。
+
 ## 实践建议
-1. **先判断后输出**：输出 DEBUG 或较长的 INFO 日志时，务必包裹在 `isXXXEnabled()` 判断中，以避免在高并发下产生大量的字符串计算开销。
+1. **按需判断级别**：级别检查是官方推荐，尤其用于有计算成本的参数。参数化日志不会推迟 Java 参数求值；不要先做昂贵计算再期望日志级别替你省掉它。
 2. **占位符写法**：推荐使用 `{}` 占位符，而不是手写字符串拼接。
-3. **异常完整记录**：在 `error` 级别中，务必将异常对象 `e` 作为最后一个参数传入，以便记录完整的堆栈信息。
+3. **异常对象单独传递**：需要记录堆栈时优先使用已核的 `warn/error(String, Throwable)`；不要只记录 `e.getMessage()`，也不把任意最后一个 Object 参数一概当作异常重载。级别按错误语义选择，不机械把所有异常都记为 ERROR。
+4. **只记录必要内容**：大列表和完整数据包先评估并按需选字段；官方规范禁止仅为打日志把页面/数据对象 `toJson`。保留定位所需的业务上下文，参数也先脱敏。
 
 ## 常见坑位
-1. **`System.out` 滥用**：严禁在生产代码中使用 `System.out.println`，这些输出无法被集中收集和管理。
-2. **循环内输出**：避免在处理几万行的循环内输出大量的日志，这会导致严重的 IO 瓶颈。
+1. **`System.out` 滥用**：官方规范要求程序日志使用 `Log`，特殊工具除外。stdout 是否被采集由部署决定，不能宣称技术上永远无法集中收集，也不能用它替代统一日志接口。
+2. **循环内输出**：避免分录/大循环逐行输出，优先汇总必要数量与失败定位；日志量和开销需按目标环境验证。
 3. **敏感信息泄露**：记录日志时注意脱敏，避免将用户的密码、个人手机号等敏感信息直接打入日志。
+
+## 依据与验证边界
+
+- [Log V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/javadoc/kd/bos/logging/Log.html) 与 [LogFactory V7.0.1](https://dev.kingdee.com/sdk/Cosmic%20V7.0.1/index.html?nav=class&module=kd.bos.logging&package=kd.bos.logging&name=LogFactory)：公开方法与占位符合同。
+- [金蝶AI苍穹定制化开发规范](https://vip.kingdee.com/knowledge/498888207505798912)，2025-12-23 更新，3.11/3.12：异常处理及日志强制/推荐规则，未列精确 SDK 补丁。
+- 本机 `bos-log-7.0.jar`（manifest：`hotfix_7.0.16_20250730`）确认本卡签名及所述工厂/SLF4J 委托。示例仅以实际依赖、Java 8 目标离线编译；未初始化日志系统，也未验证真实输出、异步传输、链路字段、集中采集或业务异常处理。

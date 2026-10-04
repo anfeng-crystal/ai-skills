@@ -1,5 +1,7 @@
 # Cosmic Runtime Harness
 
+本地预检与测试执行结果的复核依据见[云端知识](https://chatgpt.com/space/page_ef4ccf12b8c881919ccc548f277fa6e4)；本文保留骨架使用规则。
+
 ## Purpose
 
 The harness is a local scaffold for testing Kingdee Cosmic Java business logic without mutating online metadata or production configuration.
@@ -7,6 +9,7 @@ The harness is a local scaffold for testing Kingdee Cosmic Java business logic w
 ## Safe Boundaries
 
 - The harness may create files under a user-specified output directory.
+- The generator resolves the explicit output root, then checks every template destination before copying. Symbolic links below that root and file/directory type conflicts are rejected even with `--force`; existing regular files are skipped unless `--force` is supplied. This preflight does not protect against concurrent filesystem changes.
 - It must not edit business repository build files unless the user explicitly asks.
 - It must not write online metadata, production config, or database data.
 - It may contain fake context, mock collaborators, and example test classes.

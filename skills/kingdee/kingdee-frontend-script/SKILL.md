@@ -43,10 +43,10 @@ metadata:
    - 前后端通信 / PC·移动端扩展入口:`references/server-and-extend.md`
    - 高级模式与调试(React Hooks/iframe/不生效排查):`references/advanced-debugging.md`
    - 自定义 CSS 选择器与限制:`references/custom-style.md`
-   - 生命周期/样式确定性校验:`references/validation-contract.md`
+   - 生命周期/样式静态检查及边界:`references/validation-contract.md`
 3. 控件标识、字段 key 不能猜:用设计器或 `kingdee-metadata-analyzer` 确认。
 4. 表格/树读取初始化后数据或 DOM 前等待 `onInit()` Promise；其他懒加载控件的 DOM 用 `wait()` 获取。渲染器配置等注册动作按目标合同，不一律延后。嵌套回调用箭头函数保 `this`；`didMount` 注册的监听在 `willUnmount` 配对清理。
-5. 生成或修改 JS/CSS 后，对本次文件运行 `python3 scripts/validate_frontend.py <file-or-directory>`；仅解释 API 或审阅已有结果不为校验新建文件。控件标识、事件时机和 PC/移动端入口仍需目标版本证据，页面验证按当前模式执行。
+5. 生成或修改 JS/CSS 后，对本次文件运行 `python3 scripts/validate_frontend.py <file-or-directory>`；JS 检查使用有界代码视图，`partial` 表示有未覆盖语法。按 `references/validation-contract.md` 复核实际执行代码与清理路径，不能以未报错断言清理或 origin 白名单正确。仅解释 API 或审阅已有结果不为校验新建文件。控件标识、事件时机和 PC/移动端入口仍需目标版本证据，页面验证按当前模式执行。
 
 ## References
 - 事件体系与 7 类控件 API:`references/events-and-api.md`
@@ -65,7 +65,7 @@ metadata:
 - 自定义样式:`$` 代表当前控件 className(不可自定义),`$` 后接后代选择器必须留空格;主题色 `'themeColor'` 必须单引号;**不支持 `@keyframes`/`@media`/`@import` 等 at-rules**;只作用子孙元素(body 下弹窗/下拉不受影响);表格字段定位必须用 `[data-code="..."]`,禁用编译产物 hash 类名。
 - 元素选取用浏览器 F12(Elements 选中目标)跨平台完成;不依赖 `Start-Process` 或任何单平台本地工具页。
 - 不在脚本/样式/输出中写真实地址、账号、密码、Cookie、token 或内部 URL。
-- helper/内置模板提供候选写法；校验器通过只代表确定性规则未命中，不证明平台接口在目标版本存在或目标页面运行通过。
+- helper/内置模板提供候选写法；校验器通过只代表静态模式未命中，不证明平台接口在目标版本存在或目标页面运行通过。
 
 ## Output
 使用简体中文，先给结论，再按任务相关项报告模式/契约、入口与事件依据、代码或样式、控件标识依据（已确认/未确认）、已完成的静态校验、页面验证状态与清理点。仅解释 API 或审阅时不补写代码或样式；实现任务明确已完成的适用验证与未验证项，待授权的真实动作单独说明。

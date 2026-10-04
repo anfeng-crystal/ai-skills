@@ -96,6 +96,7 @@ def main() -> int:
     env = os.environ.copy()
     process = subprocess.run(command, cwd=gradlew.parent, env=env)
     result["returncode"] = process.returncode
+    result["ok"] = process.returncode == 0
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     return process.returncode

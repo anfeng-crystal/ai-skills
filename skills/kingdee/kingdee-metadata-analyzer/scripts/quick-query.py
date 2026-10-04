@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime
 
 from db_connection import MetadataDbConnectionError, connect_with_retry
+from field_evidence import collect_field_evidence, extract_fields
 
 # 确保 stdout/stderr 使用 UTF-8 编码
 if hasattr(sys.stdout, 'buffer'):
@@ -54,48 +55,6 @@ FORM_AP_NAMES = {
 }
 
 BUILTIN_EDIT_ORDER = ["save(暂存)", "submit(提交)", "audit(审核)", "unaudit(反审核)"]
-
-# 字段类型标签集合
-FIELD_TAGS = {
-    'Field', 'Column', 'VarField', 'PKField',
-    'BillNoField', 'BillStatusField', 'CreatorField',
-    'ModifierField', 'AuditField', 'CreateTimeField',
-    'ModifyTimeField', 'AuditTimeField', 'MasterIdField',
-    'BasedataField', 'MulBasedataField', 'AmountField',
-    'TextField', 'IntegerField', 'LongField', 'DecimalField',
-    'DateField', 'DateTimeField', 'TimeField', 'BooleanField',
-    'LargeTextField', 'FlexField', 'UserField', 'OrgField',
-    'CurrencyField', 'ExchangeRateField', 'GroupField',
-    'SubEntryField', 'RelatedFlexField', 'ItemClassField',
-    'ComboField',
-}
-
-BASEDATA_FIELD_SUFFIXES = (
-    'BasedataField',
-    'PersonField',
-    'UserField',
-    'OrgField',
-    'CustomerField',
-    'SupplierField',
-    'MaterielField',
-    'AssistantField',
-    'UnitField',
-    'CurrencyField',
-    'AdminDivisionField',
-    'CityField',
-    'CostCenterField',
-    'AccountField',
-)
-
-
-def is_field_tag(tag: str) -> bool:
-    """按苍穹字段控件命名识别字段，未知 *Field 也作为字段候选。"""
-    return tag in FIELD_TAGS or tag.endswith('Field')
-
-
-def is_basedata_field_tag(tag: str) -> bool:
-    """识别基础资料类字段及其平台派生字段。"""
-    return tag in ('BasedataField', 'MulBasedataField') or tag.endswith(BASEDATA_FIELD_SUFFIXES)
 
 
 # ── 配置加载与数据库连接 ──────────────────────────────────────────────────
@@ -283,77 +242,6 @@ def print_table(headers: List[str], rows: List[List[str]]):
             pad = widths[i] - display_width(v)
             line += v + " " * (pad + 2)
         print(line)
-
-
-# ── 字段提取 ──────────────────────────────────────────────────────────────
-def extract_fields(root, entry_tag: Optional[str] = None) -> List[Dict[str, Any]]:
-    """从实体 XML 提取字段列表
-
-    Args:
-        root: XML 根节点
-        entry_tag: 如果指定，只提取该分录下的字段；None 则提取所有
-
-    Returns:
-        list of dict: 字段列表
-    """
-    fields = []
-    if root is None:
-        return fields
-
-    search_root = root
-    if entry_tag:
-        # 查找指定分录节点
-        for node in root.iter():
-            key = node.findtext('Key', '').strip()
-            if key == entry_tag:
-                search_root = node
-                break
-
-    for node in search_root.iter():
-        tag = node.tag
-        if not is_field_tag(tag):
-            continue
-
-        key = node.findtext('Key', '').strip()
-        if not key:
-            key = node.get('key', '').strip()
-        if not key:
-            continue
-
-        # 获取中文名
-        name = ''
-        name_node = node.find('Name')
-        if name_node is not None:
-            # 多语言：尝试找 zh_CN
-            loc = name_node.find(f".//{ZH_LOCALE}")
-            if loc is not None:
-                name = (loc.text or '').strip()
-            if not name:
-                name = (name_node.text or '').strip()
-        if not name:
-            name = node.findtext('Name', '').strip()
-
-        field_type = tag  # 标签名即类型
-        ref_entity = ''
-        # 基础资料类型提取关联实体
-        if is_basedata_field_tag(tag):
-            ref_entity = node.findtext('RefEntityNumber', '').strip()
-            if not ref_entity:
-                ref_entity = node.findtext('LookUpObject', '').strip()
-            if not ref_entity:
-                ref_entity = node.findtext('BaseEntityId', '').strip()
-
-        is_basedata = is_basedata_field_tag(tag)
-
-        fields.append({
-            "fieldKey": key,
-            "name": name,
-            "type": field_type,
-            "refEntity": ref_entity,
-            "isBasedata": is_basedata,
-        })
-
-    return fields
 
 
 # ── 操作提取 ──────────────────────────────────────────────────────────────
@@ -638,82 +526,50 @@ def query_parent_entity(cur, root) -> Optional[Tuple]:
 
 
 def command_fields(args):
-    """查询字段列表"""
+    """查询各层设计字段候选，不模拟平台的继承合并。"""
     config = load_config(Path(args.config))
     conn = get_conn(config, Path(args.config))
     cur = conn.cursor()
-
-    row = query_entity(cur, args.entityNumber)
-    if not row:
-        suggestions = search_entities(cur, args.entityNumber)
+    try:
+        row = query_entity(cur, args.entityNumber)
+        if not row:
+            suggestions = search_entities(cur, args.entityNumber)
+            print(f"[ERROR] 未找到实体 '{args.entityNumber}'", file=sys.stderr)
+            if suggestions:
+                print("\n你是否要找以下实体？\n", file=sys.stderr)
+                table_rows = [(str(i + 1), s[1], s[2] or '') for i, s in enumerate(suggestions)]
+                print_table(["序号", "entityNumber", "实体名称"], table_rows)
+            return 1
+        evidence = collect_field_evidence(
+            row, args.inherit, lambda root: query_parent_entity(cur, root), parse_fdata,
+        )
+    finally:
         cur.close()
         conn.close()
-        print(f"[ERROR] 未找到实体 '{args.entityNumber}'", file=sys.stderr)
-        if suggestions:
-            print("\n你是否要找以下实体？\n", file=sys.stderr)
-            table_rows = [(str(i + 1), s[1], s[2] or '') for i, s in enumerate(suggestions)]
-            print_table(["序号", "entityNumber", "实体名称"], table_rows)
-        return 1
 
-    entity_fid, entity_fnumber, entity_fdata, entity_fname = row
-    root = parse_fdata(entity_fdata)
-    all_fields = extract_fields(root)
-
-    # 处理继承链
-    if args.inherit:
-        inherit_chain = []
-        current_root = root
-        while True:
-            parent_row = query_parent_entity(cur, current_root)
-            if parent_row:
-                p_fid, p_fnumber, p_fdata, p_fname = parent_row
-                proot = parse_fdata(p_fdata)
-                if proot is not None:
-                    inherit_chain.append(p_fnumber)
-                    parent_fields = extract_fields(proot)
-                    # 标记来源
-                    for f in parent_fields:
-                        f["inherited_from"] = p_fnumber
-                    all_fields.extend(parent_fields)
-                    current_root = proot
-                else:
-                    break
-            else:
-                break
-
-    cur.close()
-    conn.close()
-
-    print(f"实体 {entity_fnumber}({entity_fname or ''}) 共 {len(all_fields)} 个字段：\n")
+    _, entity_fnumber, _, entity_fname = row
+    all_fields = evidence["fields"]
+    for warning in evidence["warnings"]:
+        print(f"[WARNING] {warning}", file=sys.stderr)
+    print(f"实体 {entity_fnumber}({entity_fname or ''}) 共 {len(all_fields)} 个字段设计候选（未计算运行期有效全集）：\n")
     table_rows = []
-    for i, f in enumerate(all_fields):
-        inherited = f.get("inherited_from", "")
-        ref = f.get("refEntity", "")
-        extra = ""
-        if inherited:
-            extra += f"[继承自:{inherited}]"
-        if ref:
-            extra += f"[关联:{ref}]"
-        table_rows.append((
-            str(i + 1),
-            f["fieldKey"],
-            f["name"],
-            f["type"],
-            "是" if f.get("isBasedata") else "",
-            extra,
-        ))
+    for i, field in enumerate(all_fields):
+        extra = f"[设计层:{field['sourceEntity']}]"
+        if field.get("refEntity"):
+            extra += f"[关联:{field['refEntity']}]"
+        if field.get("action"):
+            extra += f"[差量:{field['action']}]"
+        table_rows.append((str(i + 1), field["fieldKey"], field["name"], field["type"],
+                           "是" if field.get("isBasedata") else "", extra))
     print_table(["序号", "fieldKey", "中文名", "类型", "基础资料", "备注"], table_rows)
 
-    # 保存缓存
     if CACHE_DIR:
-        cache_data = {
+        save_cache(entity_fnumber, {
             "entityNumber": entity_fnumber,
             "entityName": entity_fname,
-            "fields": all_fields,
+            **evidence,
             "timestamp": datetime.now().isoformat(),
-        }
-        save_cache(entity_fnumber, cache_data)
-
+        })
     return 0
 
 

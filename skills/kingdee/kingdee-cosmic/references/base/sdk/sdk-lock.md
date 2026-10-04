@@ -1,5 +1,7 @@
 # 分布式锁 (Distributed Lock)
 
+事务时序、故障诊断与来源边界见 [云端知识：分布式锁与故障诊断](https://chatgpt.com/space/page_f724cc823c4c8191a4435395fbbf1084)；本页保留执行合同与示例。
+
 ## TL;DR
 - 适用：跨实例并发互斥，需要排他处理共享资源时。
 - 先抓：`DLock.tryLock(long timeoutMillis)` 的等待单位是毫秒；仅获得锁后执行受保护业务，并在 `finally` 释放。

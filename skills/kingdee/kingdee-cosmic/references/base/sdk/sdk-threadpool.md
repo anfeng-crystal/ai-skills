@@ -1,5 +1,7 @@
 # 线程池 (Unified Thread Pool)
 
+详细知识与证据边界见 [云端线程池知识](https://chatgpt.com/space/page_8f8f165a83b48191b414a5dc149527e3)。
+
 ## 选路
 
 平台内异步任务使用 `kd.bos.threads.ThreadPools` 创建/提交，复用命名线程池以纳入平台生命周期管理。只恢复上下文见 [请求上下文](../../adv/request-context.md)；需要持久任务、调度、重试和完成追踪时使用相应任务机制，不能用进程内线程池承诺可靠交付。

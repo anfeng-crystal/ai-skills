@@ -1,5 +1,8 @@
 # 引入引出插件
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_c407fa7b3e2081918882cb0de6cb322f)。
+
+
 ## TL;DR
 - 适用：Excel 导入流程扩展，包括导入前校验、保存拦截、日志和结果加工。
 - 先抓：`BatchImportPlugin` 和导入生命周期，不要套用普通表单插件思路。

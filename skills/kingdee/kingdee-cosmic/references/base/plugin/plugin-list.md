@@ -1,5 +1,8 @@
 # 标准单据列表插件
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_1cfe78ea6718819191e7e590267b279a)。
+
+
 ## TL;DR
 - 适用：标准/基础资料/左树右表列表的原生兜底事件与取数控制。
 - 先抓：`AbstractListPlugin`、过滤容器、列定义、行点击和打开单据回调。
@@ -151,9 +154,9 @@ public void listRowDoubleClick(ListRowClickEvent e) {
    - 菜单按钮用 itemClick
    - 避免混淆
 
-5. **单据打开回调用 billClosedCallBack**
-   - 不要在打开前后分散写逻辑
-   - 统一由 billClosedCallBack 处理返回
+5. **单据打开前与关闭返回分别处理**
+   - `beforeShowBill(BeforeShowBillFormEvent)` 调整打开参数或取消打开；`billClosedCallBack(BillClosedCallBackEvent)` 处理列表打开单据后的关闭返回。
+   - 本地 7.0 的关闭事件提供 `getPkId()`（`Object`）与 `getCloseCallBack()`；发生回调或存在主键不代表保存成功。是否刷新或提示成功须依据已确认的业务结果，不能虚构保存状态 getter。
 
 ## 常见坑位
 

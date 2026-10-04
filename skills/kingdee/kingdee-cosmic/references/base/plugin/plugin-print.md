@@ -1,5 +1,8 @@
 # 打印插件
 
+详细知识、官方来源与验证边界：[云端专题](https://chatgpt.com/space/page_c6cf5db9bdd48191a49a2d55ec2c2adc)。
+
+
 ## TL;DR
 - 适用：打印数据加载、自定义数据源和打印前后加工。
 - 先抓：`AbstractPrintPlugin` 以及 `beforeLoadData` / `loadCustomData` 两类核心入口。
