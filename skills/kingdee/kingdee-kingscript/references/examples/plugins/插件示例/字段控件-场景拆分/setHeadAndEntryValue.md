@@ -15,7 +15,9 @@
 - `click(e: $.java.util.EventObject): void`
 - 插件基类：`AbstractBillPlugIn`
 
-## 完整 Kingscript 示例
+## KingScript 场景示例
+
+本地 `@cosmic/bos-core` 声明包 `1.0.0` / buildTime `2025-11-12 15:28:03` 将 `addClickListeners` 声明为 `...keys:string[]`，因此传入按钮标识，不把数组作为一个参数。包标识不代表目标部署补丁；示例字段、按钮、父子分录关系和日期桥接须按实际元数据与运行时核对。本轮仅核本地声明，没有编译或平台运行验收。
 
 ```typescript
 import { AbstractBillPlugIn } from "@cosmic/bos-core/kd/bos/bill";
@@ -25,7 +27,7 @@ class SetValueScenePlugin extends AbstractBillPlugIn {
 
   registerListener(e: $.java.util.EventObject): void {
     super.registerListener(e);
-    this.addClickListeners(["btn_fill_default"]);
+    this.addClickListeners("btn_fill_default");
   }
 
   click(e: $.java.util.EventObject): void {
@@ -90,3 +92,5 @@ export { plugin };
 - 子单据体赋值依赖父分录上下文，漏掉 `setEntryCurrentRowIndex` 时经常会出现“写到错误行”或“写不进去”的问题。
 - 如果赋值后界面没有即时刷新，可以补 `this.getView().updateView()` 或只刷新具体控件。
 - 这类案例适合回答“怎么写赋值链路”；如果你只想看某个字段事件的触发时机，应该回到事件拆分目录。
+
+延伸核验：[云端 KingScript 与 ISCB 运行时边界](https://chatgpt.com/space/page_e22ab958bea4819195a0e5ffd3b154c2)。
