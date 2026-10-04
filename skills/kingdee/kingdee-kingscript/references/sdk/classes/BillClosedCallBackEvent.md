@@ -9,7 +9,7 @@
 - 所属包：`kd/bos/list/events`
 - 类型：列表侧单据关闭回调事件
 - 来源：
-  - TS 声明：待按本地 `@cosmic/bos-core` 中 `kd/bos/list/events` 相关声明核对
+  - TS 声明：已核本地 `@cosmic/bos-core` 的事件声明与导出映射，目标部署版本仍需另核；[构件身份与声明边界](https://chatgpt.com/space/page_e22ab958bea4819195a0e5ffd3b154c2)。
   - 相关示例：[billClosedCallBack.md](../../examples/plugins/插件示例/列表插件-事件拆分/billClosedCallBack.md)
   - Javadoc：Cosmic V8.0.1
 
@@ -28,14 +28,14 @@
 | 方法 | 作用 | 关键参数 | 返回值 | 说明 |
 |------|------|----------|--------|------|
 | `getCloseCallBack` | 获取关闭回调对象 | 无 | `CloseCallBack` | 读取 `actionId`、类名等 |
-| `getPkId` | 获取单据主键 | 无 | `Object` | 判断是否创建成功、定位记录 |
+| `getPkId` | 获取单据主键 | 无 | `any`（已核 TS）/ `Object`（Java） | 读取、定位主键；不单独证明创建或保存成功 |
 | `getSource` | 获取事件源 | 无 | `Object` | 辅助区分来源 |
 
 ## 运行时注意事项
 
 - 只有打开子单据时显式设置 `CloseCallBack`，关闭回调才会回来。
 - 列表刷新后如果需要恢复选中，要同步处理选中状态。
-- `pkId` 为 `0`、空值或无效值时，通常表示未形成有效单据。
+- 主键有效性按目标实体合同判断；关闭发生、主键存在、空值或某个特定值都不能通用推断创建或保存结果。
 
 ## 常见搭配
 
