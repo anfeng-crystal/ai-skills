@@ -116,13 +116,15 @@ Keep the selected tab explicit when working across pages:
 
 ```bash
 pwcli --session research open https://example.com
-pwcli tab-new https://example.com/docs
-pwcli tab-list
-pwcli tab-select 1
-pwcli snapshot
-pwcli tab-select 0
-pwcli snapshot
+pwcli --session research tab-new https://example.com/docs
+pwcli --session research tab-list
+pwcli --session research tab-select 1
+pwcli --session research snapshot
+pwcli --session research tab-select 0
+pwcli --session research snapshot
 ```
+
+`--session` applies to that invocation only. Repeat it on each command, or set `PLAYWRIGHT_CLI_SESSION` for the shell as shown below.
 
 ## DevTools
 

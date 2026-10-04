@@ -5,13 +5,13 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { loadCategoryNames } from "./config.mjs";
 import { buildPlan, applyPlan, listSourceSkills } from "./sync-links.mjs";
+import { copyInstallSource } from "./install-copy.mjs";
 
 const execFileAsync = promisify(execFile);
-const EXCLUDED_DIRS = new Set([".git", "node_modules", "dist", ".cache", "tmp", "temp"]);
-const EXCLUDED_FILES = new Set([".DS_Store"]);
 
 export async function buildInstallPlan(options) {
   const prepared = await prepareInstallSource(options);
+  let retainForApply = false;
   try {
     const sourceSkillDir = options.path
       ? path.resolve(prepared.rootPath, options.path)
@@ -36,7 +36,7 @@ export async function buildInstallPlan(options) {
     const collidingSkills = await findCollidingSkills(options.sourceRoot, skillName, targetRelativePath);
     const willSync = category !== "incoming";
 
-    return installResult(options, prepared, {
+    const plan = installResult(options, prepared, {
       ok: !targetExists && collidingSkills.length === 0,
       status: targetExists
         ? "target_exists"
@@ -63,8 +63,11 @@ export async function buildInstallPlan(options) {
       plannedSyncSkill: willSync ? targetRelativePath : null,
       frontmatter,
     });
+    // Only an applicable plan transfers ownership of the clone to apply.
+    retainForApply = Boolean(options.apply && plan.ok);
+    return plan;
   } finally {
-    if (prepared.cleanupPath && !options.apply) {
+    if (prepared.cleanupPath && !retainForApply) {
       await fs.rm(prepared.cleanupPath, { recursive: true, force: true });
     }
   }
@@ -76,32 +79,47 @@ async function findCollidingSkills(sourceRoot, skillName, targetRelativePath) {
 }
 
 export async function applyInstallPlan(plan) {
-  if (!plan.ok || plan.status === "target_exists" || !plan.sourceSkillDir || !plan.targetPath) {
-    return {
-      ...plan,
-      applied: false,
-    };
-  }
-
   try {
-    await copySkillDirectory(plan.sourceSkillDir, plan.targetPath);
-
-    let syncPlan = null;
-    if (plan.willSync) {
-      syncPlan = await buildPlan({
-        ...plan.options,
-        skills: [plan.targetRelativePath],
-      });
-      await applyPlan(syncPlan.records);
+    if (!plan.ok || plan.status === "target_exists" || !plan.sourceSkillDir || !plan.targetPath) {
+      return {
+        ...plan,
+        applied: false,
+      };
     }
 
+    const copied = await copyInstallSource(plan.sourceSkillDir, plan.targetPath);
+    if (!copied.ok) return { ...plan, ...copied };
+
+    let syncPlan = null;
+    let syncVerification = null;
+    let syncError = null;
+    if (plan.willSync) {
+      const syncOptions = { ...plan.options, skills: [plan.targetRelativePath] };
+      try {
+        syncPlan = await buildPlan(syncOptions);
+        await applyPlan(syncPlan.records);
+        syncVerification = await buildPlan(syncOptions);
+      } catch (error) {
+        syncError = { code: error.code || null, message: error.message };
+      }
+    }
+
+    const syncComplete = !plan.willSync || (!syncError && syncVerification.records.every(
+      (record) => ["already_linked", "managed_via_external_dir", "optional_host_unavailable"].includes(record.status),
+    ));
     return {
       ...plan,
-      status: "installed",
-      reason: plan.willSync ? "installed_and_synced" : "installed_to_incoming",
+      ok: syncComplete,
+      status: syncComplete ? "installed" : "installed_sync_incomplete",
+      reason: !syncComplete ? "source_installed_host_sync_incomplete"
+        : plan.willSync ? "installed_and_synced" : "installed_to_incoming",
       targetExists: true,
       applied: true,
+      sourceInstalled: true,
+      synced: plan.willSync && syncComplete,
       syncPlan,
+      syncVerification,
+      syncError,
     };
   } finally {
     if (plan.cleanupPath) {
@@ -118,7 +136,12 @@ async function prepareInstallSource(options) {
   if (isGitUrl(options.installSource)) {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "skill-installer-install-"));
     const clonePath = path.join(tempRoot, "repo");
-    await execFileAsync("git", ["clone", "--depth", "1", options.installSource, clonePath]);
+    try {
+      await execFileAsync("git", ["clone", "--depth", "1", options.installSource, clonePath]);
+    } catch (error) {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+      throw error;
+    }
     return {
       input: options.installSource,
       type: "git",
@@ -268,28 +291,5 @@ async function pathExists(targetPath) {
     return true;
   } catch {
     return false;
-  }
-}
-
-async function copySkillDirectory(sourceDir, targetDir) {
-  await fs.mkdir(path.dirname(targetDir), { recursive: true });
-  await copyRecursive(sourceDir, targetDir);
-}
-
-async function copyRecursive(source, target) {
-  const stat = await fs.lstat(source);
-  if (stat.isDirectory()) {
-    await fs.mkdir(target, { recursive: true });
-    const entries = await fs.readdir(source, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isDirectory() && EXCLUDED_DIRS.has(entry.name)) continue;
-      if (entry.isFile() && EXCLUDED_FILES.has(entry.name)) continue;
-      await copyRecursive(path.join(source, entry.name), path.join(target, entry.name));
-    }
-    return;
-  }
-
-  if (stat.isFile()) {
-    await fs.copyFile(source, target);
   }
 }

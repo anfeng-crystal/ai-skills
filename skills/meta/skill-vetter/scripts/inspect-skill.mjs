@@ -4,164 +4,14 @@
  * 对本地 skill 路径做静态风险审查，输出 allow / review_needed / block 建议。
  */
 
-import fs from "node:fs/promises";
 import path from "node:path";
 
-const MAX_SKILL_DEPTH = 4;
-const MAX_SCAN_BYTES = 256 * 1024;
-const IGNORED_DIRS = new Set([
-  ".git",
-  ".svn",
-  ".hg",
-  "node_modules",
-  "dist",
-  "build",
-  "__pycache__",
-  ".idea",
-  ".vscode",
-]);
-const TEXT_EXTENSIONS = new Set([
-  ".md",
-  ".txt",
-  ".json",
-  ".yaml",
-  ".yml",
-  ".toml",
-  ".ini",
-  ".sh",
-  ".bash",
-  ".zsh",
-  ".py",
-  ".js",
-  ".mjs",
-  ".cjs",
-  ".ts",
-  ".tsx",
-  ".bat",
-  ".ps1",
-]);
-const BINARY_EXTENSIONS = new Set([
-  ".jar",
-  ".db",
-  ".sqlite",
-  ".class",
-  ".pyc",
-  ".zip",
-  ".exe",
-  ".dll",
-  ".so",
-  ".dylib",
-]);
-const AGENT_FILES = new Set(["AGENTS.md", "CLAUDE.md", "openai.yaml", "plugin.json"]);
-const HOST_TARGETS = [
-  { name: "codex", pattern: /(?:\/|~\/|\$HOME\/)\.codex\/skills|CODEX_HOME/i },
-  { name: "claude", pattern: /(?:\/|~\/|\$HOME\/)\.claude\/skills|CLAUDE\.md/i },
-  { name: "agents", pattern: /(?:\/|~\/|\$HOME\/)\.agents\/skills|AGENTS\.md/i },
-  { name: "junie", pattern: /(?:\/|~\/|\$HOME\/)\.junie\/skills/i },
-];
-const RULES = [
-  {
-    id: "destructive_rm",
-    severity: "critical",
-    category: "destructive_command",
-    reason: "发现 rm -rf，存在强删除风险。",
-    regex: /\brm\s+-rf\b/,
-  },
-  {
-    id: "git_hard_reset",
-    severity: "critical",
-    category: "destructive_command",
-    reason: "发现 git 强制回滚命令，可能覆盖用户现有改动。",
-    regex: /\bgit\s+reset\s+--hard\b|\bgit\s+checkout\s+--\b/,
-  },
-  {
-    id: "remote_pipe_shell",
-    severity: "critical",
-    category: "remote_bootstrap",
-    reason: "发现远程脚本直接管道执行模式，需要强人工复核。",
-    regex: /\b(?:curl|wget)\b[^\n|]*\|\s*(?:sh|bash)\b|\bbash\s*<\(\s*(?:curl|wget)\b/,
-  },
-  {
-    id: "host_path_write",
-    severity: "high",
-    category: "host_integration",
-    reason: "发现宿主 skills 目录写入或覆盖痕迹。",
-    regex: /(?:\/|~\/|\$HOME\/)\.(?:codex|claude|agents|junie)\/skills|CODEX_HOME|\.claude\/skills|\.agents\/skills|\.junie\/skills/,
-  },
-  {
-    id: "symlink_ops",
-    severity: "high",
-    category: "symlink_or_copy",
-    reason: "发现软链接或链接重写操作，需要人工确认是否覆盖现有链接。",
-    regex: /\bln\s+-s(?:[A-Za-z]*)\b|\bmklink\b|symlink\(/,
-  },
-  {
-    id: "force_copy_move",
-    severity: "high",
-    category: "symlink_or_copy",
-    reason: "发现复制、移动或替换目录行为，需要确认是否影响宿主目录。",
-    regex: /\bcp\s+-R\b|\bcp\s+-r\b|\bmv\b|copy_dir_contents|copy_file_to_root/,
-  },
-  {
-    id: "install_commands",
-    severity: "medium",
-    category: "install_or_bootstrap",
-    reason: "发现安装或拉取依赖命令，需要确认运行前提和副作用。",
-    regex: /\b(?:npm|pnpm|yarn|pip|pip3|uv|brew|apt|apt-get|cargo|go)\s+install\b|\buv\s+tool\s+install\b|\bgit\s+clone\b/,
-  },
-  {
-    id: "network_fetch",
-    severity: "medium",
-    category: "network_access",
-    reason: "发现主动联网获取资源或远程接口调用。",
-    regex: /\b(?:curl|wget)\b|fetch\(|requests\.(?:request|get|post|put|patch|delete|head)|axios\.|httpx\.|aiohttp\.|urllib\.request|from\s+urllib\.request\s+import|http\.client|java\.net\.http|HttpClient\.newHttpClient|URLConnection/i,
-  },
-  {
-    id: "database_access",
-    severity: "medium",
-    category: "database_access",
-    reason: "发现数据库访问或连接痕迹，需要确认数据来源和权限边界。",
-    regex: /sqlite3\.connect|psycopg|postgres(?:ql)?|jdbc:|create_engine\(|mysql/i,
-  },
-  {
-    id: "exec_apis",
-    severity: "high",
-    category: "system_execution",
-    reason: "发现系统命令执行接口，需要人工复核真实执行面。",
-    regex: /child_process\.(?:exec|execSync|spawn|spawnSync)|subprocess\.(?:run|Popen)|os\.system\(|shell=True/,
-  },
-  {
-    id: "eval_like",
-    severity: "medium",
-    category: "dynamic_execution",
-    reason: "发现动态执行模式，需确认是否会放大脚本风险。",
-    regex: /\beval\s*\(|new Function\s*\(/,
-  },
-  {
-    id: "secrets_or_auth",
-    severity: "medium",
-    category: "secrets_or_auth",
-    reason: "发现 Token、API Key、密码或 Basic Auth 提示。",
-    regex: /\b(?:OPENAI_API_KEY|GITHUB_TOKEN|GH_TOKEN|API_KEY|AUTH_TOKEN|password=|Basic Auth)\b/i,
-  },
-  {
-    id: "absolute_user_path",
-    severity: "medium",
-    category: "hardcoded_path",
-    reason: "发现用户目录或绝对路径硬编码，兼容性和安全边界都需要确认。",
-    regex: /\/Users\/[^/\s]+|[A-Z]:\\Users\\|~\/\./,
-  },
-  {
-    id: "auto_action",
-    severity: "high",
-    category: "auto_action",
-    reason: "发现默认自动执行、自动修复或自动写回倾向，需要人工确认是否越权。",
-    regex: /ALWAYS TRIGGER|自动触发|自动修复|自动写回|第一个动作.*执行脚本|必须直接执行脚本/i,
-  },
-];
+import { HOST_TARGETS, RULES } from "./risk-rules.mjs";
+import { resolveSkillTarget, collectFiles, readScanText, BINARY_EXTENSIONS, AGENT_FILES } from "./scan-files.mjs";
+import { redactReportPaths, redactSourceText } from "./redaction.mjs";
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(redactSourceText(error instanceof Error ? error.message : String(error)));
   process.exit(1);
 });
 
@@ -173,7 +23,7 @@ async function main() {
 
   const inputPath = path.resolve(options.path);
   const report = await inspectPath(inputPath);
-  printReport(report, options.json);
+  printReport(redactReportPaths(report), options.json);
 
   if (options.strict && report.recommendation !== "allow") {
     process.exitCode = 2;
@@ -190,9 +40,14 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     switch (token) {
-      case "--path":
-        parsed.path = argv[++index];
+      case "--path": {
+        const value = argv[++index];
+        if (!value || value.startsWith("--")) {
+          throw new Error("--path requires a path value");
+        }
+        parsed.path = value;
         break;
+      }
       case "--json":
         parsed.json = true;
         break;
@@ -214,7 +69,15 @@ function parseArgs(argv) {
 
 async function inspectPath(inputPath) {
   const target = await resolveSkillTarget(inputPath);
-  const files = await collectFiles(target.scanRoot);
+  const { files: discoveredFiles, unscanned } = await collectFiles(target.scanRoot);
+  // A known entry can remain readable even when its directory cannot be listed.
+  // Include it once so both its cached read result and risk evidence are reported.
+  const files = [...new Set([
+    ...discoveredFiles,
+    ...target.skillRoots.map((root) => path.join(root, "SKILL.md")),
+  ])].sort();
+  const directoryGaps = [...unscanned, ...(target.discoveryGaps || [])];
+  const textCache = new Map();
   const report = {
     scannedAt: new Date().toISOString(),
     inputPath,
@@ -237,6 +100,7 @@ async function inspectPath(inputPath) {
       installScripts: 0,
       readmeFiles: 0,
       skippedBinaryOrLarge: 0,
+      unscannedDirectories: new Set(directoryGaps.map((gap) => gap.filePath)).size,
     },
     hostTargetsDetected: [],
     findings: [],
@@ -251,13 +115,24 @@ async function inspectPath(inputPath) {
     autoActionHits: [],
   };
 
+  for (const gap of directoryGaps) {
+    addFinding(report, {
+      severity: "medium",
+      category: "unscanned_content",
+      file: relativeFile(target.scanRoot, gap.filePath),
+      line: 1,
+      match: gap.reason,
+      reason: "目录内容或入口发现未完成；需补充审查后才能完成安装前判断。",
+    });
+  }
+
   if (target.skillRoots.length > 1) {
     addFinding(report, {
       severity: "medium",
       category: "multiple_skill_roots",
       file: ".",
       line: 1,
-      match: target.skillRoots.map((item) => relativeFile(target.scanRoot, item)).join(", "),
+      match: redactSourceText(target.skillRoots.map((item) => relativeFile(target.scanRoot, item)).join(", ")),
       reason: "同一输入路径下发现多个 SKILL.md，需要人工确认要安装或审查哪一个宿主 variant。",
     });
     report.manualReview.push("这是一个多宿主 skill bundle；安装前请先确认实际要落到哪个宿主 variant。");
@@ -265,8 +140,9 @@ async function inspectPath(inputPath) {
 
   for (const skillRoot of target.skillRoots) {
     const skillMdPath = path.join(skillRoot, "SKILL.md");
-    const skillMdText = await fs.readFile(skillMdPath, "utf8");
-    const frontmatter = parseFrontmatter(skillMdText);
+    const result = await readScanText(skillMdPath);
+    textCache.set(skillMdPath, result);
+    const frontmatter = parseFrontmatter(result.text || "");
     report.skills.push({
       root: skillRoot,
       relativeRoot: relativeFile(target.scanRoot, skillRoot),
@@ -333,18 +209,21 @@ async function inspectPath(inputPath) {
       report.fileSummary.installScripts += 1;
     }
 
-    if (!TEXT_EXTENSIONS.has(ext) && base !== "SKILL.md") {
+    const result = textCache.get(filePath) || await readScanText(filePath);
+    if (result.reason) {
       report.fileSummary.skippedBinaryOrLarge += 1;
+      addFinding(report, {
+        severity: "medium",
+        category: "unscanned_content",
+        file: relative,
+        line: 1,
+        match: result.reason,
+        reason: "内容未扫描；需核对该文件及其真实目标后才能完成安装前审查。",
+      });
       continue;
     }
 
-    const stat = await fs.stat(filePath);
-    if (stat.size > MAX_SCAN_BYTES) {
-      report.fileSummary.skippedBinaryOrLarge += 1;
-      continue;
-    }
-
-    const text = await fs.readFile(filePath, "utf8");
+    const text = result.text;
     report.fileSummary.textScanned += 1;
     recordHostTargets(report, text);
     scanText(report, relative, text);
@@ -364,114 +243,8 @@ async function inspectPath(inputPath) {
   return report;
 }
 
-async function resolveSkillRoot(inputPath) {
-  const stat = await fs.stat(inputPath).catch(() => null);
-  if (!stat) {
-    throw new Error(`Path not found: ${inputPath}`);
-  }
-
-  if (stat.isFile()) {
-    if (path.basename(inputPath) !== "SKILL.md") {
-      throw new Error(`Expected a skill directory or SKILL.md, got file: ${inputPath}`);
-    }
-    return path.dirname(inputPath);
-  }
-
-  const directSkill = path.join(inputPath, "SKILL.md");
-  if (await existsFile(directSkill)) {
-    return inputPath;
-  }
-
-  const skillRoots = [];
-  await searchSkillRoots(inputPath, 0, skillRoots);
-
-  if (skillRoots.length === 1) {
-    return skillRoots[0];
-  }
-  if (skillRoots.length === 0) {
-    throw new Error(`No SKILL.md found under: ${inputPath}`);
-  }
-  throw new Error(`Multiple skill roots found under ${inputPath}; pass a narrower path.`);
-}
-
-async function resolveSkillTarget(inputPath) {
-  const stat = await fs.stat(inputPath).catch(() => null);
-  if (!stat) {
-    throw new Error(`Path not found: ${inputPath}`);
-  }
-
-  if (stat.isFile()) {
-    if (path.basename(inputPath) !== "SKILL.md") {
-      throw new Error(`Expected a skill directory or SKILL.md, got file: ${inputPath}`);
-    }
-    return {
-      scanRoot: path.dirname(inputPath),
-      skillRoots: [path.dirname(inputPath)],
-    };
-  }
-
-  const directSkill = path.join(inputPath, "SKILL.md");
-  if (await existsFile(directSkill)) {
-    return {
-      scanRoot: inputPath,
-      skillRoots: [inputPath],
-    };
-  }
-
-  const skillRoots = [];
-  await searchSkillRoots(inputPath, 0, skillRoots);
-
-  if (skillRoots.length === 0) {
-    throw new Error(`No SKILL.md found under: ${inputPath}`);
-  }
-
-  return {
-    scanRoot: inputPath,
-    skillRoots: skillRoots.sort(),
-  };
-}
-
-async function searchSkillRoots(dirPath, depth, skillRoots) {
-  if (depth > MAX_SKILL_DEPTH) {
-    return;
-  }
-
-  const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory() || IGNORED_DIRS.has(entry.name)) {
-      continue;
-    }
-    const child = path.join(dirPath, entry.name);
-    if (await existsFile(path.join(child, "SKILL.md"))) {
-      skillRoots.push(child);
-      continue;
-    }
-    await searchSkillRoots(child, depth + 1, skillRoots);
-  }
-}
-
-async function collectFiles(root) {
-  const collected = [];
-  await walk(root, collected);
-  return collected.sort();
-}
-
-async function walk(dirPath, collected) {
-  const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (IGNORED_DIRS.has(entry.name)) {
-        continue;
-      }
-      await walk(path.join(dirPath, entry.name), collected);
-      continue;
-    }
-    collected.push(path.join(dirPath, entry.name));
-  }
-}
-
 function parseFrontmatter(text) {
-  const match = text.match(/^---\n([\s\S]*?)\n---/);
+  const match = text.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
   if (!match) {
     return {
       hasFrontmatter: false,
@@ -481,13 +254,23 @@ function parseFrontmatter(text) {
   }
 
   const body = match[1];
-  const name = body.match(/^\s*name:\s*["']?(.+?)["']?\s*$/m)?.[1] ?? null;
-  const description = body.match(/^\s*description:\s*["']?([\s\S]+?)["']?\s*$/m)?.[1] ?? null;
   return {
     hasFrontmatter: true,
-    name,
-    description,
+    name: readFrontmatterValue(body, "name"),
+    description: readFrontmatterValue(body, "description"),
   };
+}
+
+function readFrontmatterValue(body, key) {
+  // Keep empty fields on their own line: newline whitespace must never supply
+  // another field's value. This remains a scalar excerpt, not a YAML parser.
+  const raw = body.match(new RegExp(`^[\\t ]*${key}:[\\t ]*([^\\r\\n]*)$`, "m"))?.[1]?.trim();
+  if (!raw) return null;
+  const quote = raw[0];
+  const value = (quote === '"' || quote === "'") && raw.at(-1) === quote
+    ? raw.slice(1, -1).trim()
+    : raw;
+  return value ? redactSourceText(value) : null;
 }
 
 function scanText(report, relative, text) {
@@ -661,18 +444,9 @@ function isTopLevelReadme(relative) {
 }
 
 function trimExcerpt(line) {
-  return line.trim().slice(0, 160);
+  return redactSourceText(line.trim()).slice(0, 160);
 }
 
 function relativeFile(root, filePath) {
   return path.relative(root, filePath) || path.basename(filePath);
-}
-
-async function existsFile(filePath) {
-  try {
-    const stat = await fs.stat(filePath);
-    return stat.isFile();
-  } catch {
-    return false;
-  }
 }

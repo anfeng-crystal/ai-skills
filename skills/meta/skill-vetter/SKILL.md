@@ -33,6 +33,7 @@ metadata:
    ```
    看人类摘要可去掉 `--json`；自动化门禁需要非 `allow` 失败时加 `--strict`。
 3. 先看 `recommendation`，再看 `findings`、`destructiveOps`、`filesystemWrites`、`secretHits`、`networkDbAccess`、`manualReview`。
+   `unscanned_content` 表示包内链接、超限、无法读取、未支持/编码无效的文件、排除目录或入口发现深度限制导致审查不完整，至少为 `review_needed`；包内符号链接不自动跟随。报告保留行号，凭据上下文、敏感路径片段和 URL 脱敏后输出；需要核对原文时只在已授权范围内读取并继续脱敏。脱敏和风险规则均为启发式，不保证识别所有秘密或执行行为。
 4. 命中 medium+，或命中 secret、network、filesystem、destructive 时，必须手动读被引用片段；只读目标文件，不运行目标命令。
 5. 判定：
    - `allow`：当前静态证据下无阻断风险。

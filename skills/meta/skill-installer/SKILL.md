@@ -37,11 +37,15 @@ metadata:
 - `orphan_link`：全量同步中发现指向当前 source root 内部但目标已不存在的托管 symlink；`--apply` 时只删除该 symlink。
 - `needs_external_dir_config`：Hermes 需要配置或跳过。
 - `needs_review`：install 被归到 `incoming`；审核/分类前不分发。
-- `migrated`：根级迁移完成。
+- `install_incomplete`：源复制未完成，不执行宿主同步；核对 `installError`、`targetExists` 和 `cleanup`。确认目标已清除后可重试安装；目标仍在或状态未知时先检查残留，不覆盖或递归删除。
+- `installed_sync_incomplete`：source tree 已写入，但宿主同步冲突或失败；检查 `syncVerification` / `syncError` 和精确目标，修复后只重试链接同步，不重复 install 或覆盖已安装源目录。
+- `migrated`：根级迁移完成；非 `incoming` 对象已核对选定宿主链接。
+- `migrated_sync_incomplete`：源目录已迁移，宿主同步冲突或执行失败；根据 `syncVerification` / `syncError` 修复精确目标，再按 `targetRelativePath` 仅重试链接同步，不重复迁移。零个根级候选时不执行全量同步。
+- `updated_sync_incomplete`：上游内容已写入源目录，但请求的宿主同步未完成；检查 `syncVerification` / `syncError`，保留成功链接，修复目标后仅重试链接同步，不重复下载更新。
 
 ## 门禁
 - 没有用户要求或已批准 handoff，不执行真实安装、同步或 pull；内部 CLI 的 `install` 先看无 `--apply` 计划，再按确认范围执行 `--apply`。
-- 不删除真实目录、外部链接或未知文件；只清理可证明指向当前 source root 内部的断裂托管 symlink。
+- 不删除既有真实目录、外部链接或未知文件；同步只清理可证明指向当前 source root 内部的断裂托管 symlink。安装复制失败时，只逐项清理本次已确认创建且身份未变的文件及空目录；无法确认归属的对象保留并报告。
 - 不接受白名单外任意目标目录。
 - 根 `install.mjs` 只有显式 `--dry-run` 才审计，默认行为是 apply；`--dry-run` 与 `--apply` 不应混用。
 - 内部 CLI 的 `install` 无 `--apply` 不写入；`--apply` 写入 source tree，并仅为非 `incoming` 分类 apply 选定宿主链接。

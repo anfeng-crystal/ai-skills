@@ -3,10 +3,12 @@
  */
 
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { readMeta, updateLastChecked, updateUpstreamHash } from "./meta.mjs";
+import { readMeta, updateLastChecked } from "./meta.mjs";
+import { listSourceSkills } from "./sync-links.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -25,31 +27,19 @@ export async function getUpstreamCommit(repoUrl, branch = "main") {
 }
 
 /**
- * 从 GitHub raw URL 获取 SKILL.md 的内容 hash
- */
-export async function fetchSkillMdHash(repoUrl, skillPath, branch = "main") {
-  // 转换为 raw URL
-  const rawUrl = repoUrl
-    .replace("github.com", "raw.githubusercontent.com")
-    + `/${branch}/${skillPath}/SKILL.md`;
-
-  try {
-    const response = await fetch(rawUrl);
-    if (!response.ok) return null;
-
-    const content = await response.text();
-    // 简单 hash：使用内容长度 + 前 100 字符的 hash
-    const simpleHash = `${content.length}-${content.slice(0, 100).replace(/\s/g, "")}`;
-    return simpleHash;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * 检查单个 skill 的更新
  */
-export async function checkSkillUpdate(skillDir) {
+export async function checkSkillUpdate(skillDir, { dryRun = false } = {}) {
+  // A missing source record is a normal skip only for a usable Skill entry.
+  try {
+    if (!(await fs.stat(path.join(skillDir, "SKILL.md"))).isFile()) {
+      return { status: "check_failed", reason: "Skill 入口 SKILL.md 不是普通文件", code: null };
+    }
+  } catch (error) {
+    const code = typeof error?.code === "string" && Object.hasOwn(os.constants.errno, error.code)
+      ? error.code : null;
+    return { status: "check_failed", reason: "无法确认 Skill 入口 SKILL.md", code };
+  }
   const meta = await readMeta(skillDir);
   if (!meta || !meta.source) {
     return {
@@ -73,10 +63,20 @@ export async function checkSkillUpdate(skillDir) {
 
     // 对比 hash
     const localHash = meta.lastUpstreamHash;
-    const isUpdatable = localHash && localHash !== upstreamHash;
+    // 远端分支只证明上游版本，不能替代所安装内容的版本证据。
+    // 保留未知基线；显式 update 成功后由更新器写入实际下载的 commit。
+    if (!localHash) {
+      return {
+        status: "baseline_unknown",
+        reason: "未记录已安装版本；先用 diff 核对内容，再按授权显式 update 建立版本基线",
+        source: source.url,
+        upstreamHash,
+      };
+    }
+    const isUpdatable = localHash !== upstreamHash;
 
     // 更新检查时间
-    await updateLastChecked(skillDir);
+    if (!dryRun) await updateLastChecked(skillDir);
 
     if (isUpdatable) {
       return {
@@ -85,11 +85,6 @@ export async function checkSkillUpdate(skillDir) {
         localHash,
         upstreamHash,
       };
-    }
-
-    // 如果没有本地 hash 记录，记录当前上游 hash
-    if (!localHash) {
-      await updateUpstreamHash(skillDir, upstreamHash);
     }
 
     return {
@@ -124,8 +119,9 @@ export async function checkSkillUpdate(skillDir) {
 /**
  * 批量检查更新
  */
-export async function checkAllUpdates(sourceRoot, skills = []) {
+export async function checkAllUpdates(sourceRoot, skills = [], options = {}) {
   const skillDirs = [];
+  const results = {};
 
   if (skills.length > 0) {
     // 检查指定的 skill
@@ -135,40 +131,41 @@ export async function checkAllUpdates(sourceRoot, skills = []) {
         const stat = await fs.stat(skillDir);
         if (stat.isDirectory()) {
           skillDirs.push({ name: skill, dir: skillDir });
+        } else {
+          results[skill] = { status: "missing_skill", reason: "skill_path_not_directory" };
         }
-      } catch {
-        // skill 目录不存在
+      } catch (error) {
+        results[skill] = { status: "missing_skill", reason: error.code || "skill_unavailable" };
       }
     }
   } else {
-    // 扫描所有 skill
-    const entries = await fs.readdir(sourceRoot, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-
-      const skillDir = path.join(sourceRoot, entry.name);
-      try {
-        const skillMd = path.join(skillDir, "SKILL.md");
-        await fs.stat(skillMd);
-        skillDirs.push({ name: entry.name, dir: skillDir });
-      } catch {
-        // 没有 SKILL.md，跳过
-      }
+    // 复用分发入口的发现规则，覆盖分类路径并保持 incoming 的默认隔离。
+    for (const name of await listSourceSkills(sourceRoot)) {
+      skillDirs.push({ name, dir: path.join(sourceRoot, name) });
     }
   }
 
-  // 并行检查所有 skill
-  const results = {};
+  // 逐个检查所有 skill
   for (const { name, dir } of skillDirs) {
-    results[name] = await checkSkillUpdate(dir);
+    try {
+      results[name] = await checkSkillUpdate(dir, options);
+    } catch (error) {
+      // A metadata I/O failure belongs to this item; preserve later independent checks.
+      results[name] = {
+        status: "check_failed",
+        reason: "更新检查未完成",
+        code: error.code || null,
+      };
+    }
   }
 
   // 统计
   const summary = {
-    total: skillDirs.length,
+    total: Object.keys(results).length,
     updatable: 0,
     upToDate: 0,
     noSource: 0,
+    local: 0,
     failed: 0,
   };
 
@@ -176,10 +173,12 @@ export async function checkAllUpdates(sourceRoot, skills = []) {
     if (result.status === "updatable") summary.updatable++;
     else if (result.status === "up_to_date") summary.upToDate++;
     else if (result.status === "no_source") summary.noSource++;
+    else if (result.status === "local") summary.local++;
     else summary.failed++;
   }
 
   return {
+    ok: summary.failed === 0,
     summary,
     skills: results,
   };

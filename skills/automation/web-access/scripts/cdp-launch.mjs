@@ -1,130 +1,136 @@
 #!/usr/bin/env node
-/**
- * 检测 CDP 是否可达；不可达时自动临时启动 Chrome headless。
- * 输出 JSON：{ ok, launched, host, port, webSocketDebuggerUrl, pid, tmpDir }
- * 用法：node scripts/cdp-launch.mjs [--kill [pid]]
- */
-import { spawn } from "node:child_process";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+/** Probe CDP, launch an isolated local browser when needed, or stop one owned instance. */
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { allowRemoteHost, localHost, validateEndpoint, versionUrl, detectBrowserPath, optionValue } from './cdp-environment.mjs';
+import { findOwnedProfile, saveOwner, stopOwned, sleep } from './cdp-ownership.mjs';
+import { readCdpVersion } from './cdp-response.mjs';
 
-const HOST = process.env.WEB_ACCESS_CDP_HOST || "127.0.0.1";
-const PORT = Number(process.env.WEB_ACCESS_CDP_PORT || "9222");
-const MAX_WAIT = 10_000;
-const POLL = 300;
+function printHelp() {
+  console.log(`Usage:
+  node scripts/cdp-launch.mjs
+  node scripts/cdp-launch.mjs --kill <pid>
 
-function log(s) { if (process.env.WEB_ACCESS_QUIET !== "1") console.error(`[cdp-launch] ${s}`); }
+Uses WEB_ACCESS_CDP_HOST, WEB_ACCESS_CDP_PORT and WEB_ACCESS_BROWSER_PATH.
+--kill stops only one uniquely recorded instance after checking its process identity.
+Legacy/unowned profiles and profiles with uncertain termination are preserved.
+--help shows this help without probing or launching.`);
+}
 
-function findBrowser() {
-  for (const p of browserCandidates()) {
-    try {
-      fs.accessSync(p, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
-      return p;
-    } catch {
-      continue;
+function parseArgs(args) {
+  if (args.length === 1 && ['--help', '-h'].includes(args[0])) return { help: true };
+  if (args[0] === '--kill') {
+    const value = optionValue(args, 1, '--kill');
+    const pid = Number(value);
+    if (args.length !== 2 || !/^\d+$/.test(value) || !Number.isSafeInteger(pid) || pid < 1 || pid > 2147483647) {
+      throw new Error('--kill requires one positive process ID');
     }
+    return { pid };
   }
-  return null;
+  if (args.length) throw new Error(`Unknown argument: ${args[0]}`);
+  const host = process.env.WEB_ACCESS_CDP_HOST || '127.0.0.1';
+  const port = Number(process.env.WEB_ACCESS_CDP_PORT || '9222');
+  validateEndpoint(host, port);
+  return { host, port };
 }
 
-function browserCandidates() {
-  const home = os.homedir();
-  const localAppData = process.env.LOCALAPPDATA || path.join(home, "AppData", "Local");
-  const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
-  const programFilesX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
-  const byPlatform = {
-    darwin: [
-      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      "/Applications/Chromium.app/Contents/MacOS/Chromium",
-      "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-      path.join(home, "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-    ],
-    win32: [
-      path.join(programFiles, "Google/Chrome/Application/chrome.exe"),
-      path.join(programFilesX86, "Google/Chrome/Application/chrome.exe"),
-      path.join(localAppData, "Google/Chrome/Application/chrome.exe"),
-      path.join(programFiles, "Microsoft/Edge/Application/msedge.exe"),
-      path.join(programFilesX86, "Microsoft/Edge/Application/msedge.exe"),
-      path.join(localAppData, "Microsoft/Edge/Application/msedge.exe"),
-      path.join(programFiles, "BraveSoftware/Brave-Browser/Application/brave.exe"),
-      path.join(programFilesX86, "BraveSoftware/Brave-Browser/Application/brave.exe"),
-      path.join(localAppData, "BraveSoftware/Brave-Browser/Application/brave.exe"),
-    ],
-    linux: [
-      "/usr/bin/google-chrome",
-      "/usr/bin/google-chrome-stable",
-      "/usr/bin/chromium",
-      "/usr/bin/chromium-browser",
-      "/snap/bin/chromium",
-      "/usr/bin/microsoft-edge",
-      "/usr/bin/brave-browser",
-    ],
-  };
-  return [
-    process.env.WEB_ACCESS_BROWSER_PATH,
-    ...(byPlatform[process.platform] || byPlatform.linux),
-  ].filter(Boolean);
-}
-
-async function probe() {
+async function probe(host, port) {
   try {
-    const r = await fetch(`http://${HOST}:${PORT}/json/version`, { signal: AbortSignal.timeout(1500) });
-    if (!r.ok) return { ok: false };
-    const j = await r.json();
-    return { ok: true, ws: j.webSocketDebuggerUrl || null, browser: j.Browser || null };
+    const response = await fetch(versionUrl(host, port), { signal: AbortSignal.timeout(1500) });
+    if (!response.ok) return { ok: false };
+    return await readCdpVersion(response);
   } catch { return { ok: false }; }
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+async function launch({ host, port }) {
+  if (!allowRemoteHost(host)) return { ok: false, reason: 'remote_host_blocked' };
+  const existing = await probe(host, port);
+  if (existing.ok) {
+    return { ok: true, launched: false, host, port, webSocketDebuggerUrl: existing.ws, browser: existing.browser, pid: null, tmpDir: null };
+  }
+  // A responding non-CDP service already occupies this endpoint; do not launch over it.
+  if (existing.reason === 'invalid_cdp_response') return { ...existing, host, port };
+  // A local child cannot bring a remote CDP endpoint online.
+  if (!localHost(host)) return { ok: false, reason: 'remote_launch_unsupported', host, port };
+  const browser = detectBrowserPath();
+  if (!browser) return { ok: false, reason: 'browser_not_found' };
 
-async function main() {
-  const args = process.argv.slice(2);
-
-  if (args.includes("--kill")) {
-    const pid = args[args.indexOf("--kill") + 1];
-    if (pid) {
-      try { process.kill(Number(pid), "SIGTERM"); await sleep(2000); process.kill(Number(pid), 0); } catch { /* exited */ }
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'web-access-cdp-'));
+  let proc;
+  try {
+    proc = spawn(browser, [
+      `--remote-debugging-port=${port}`, `--user-data-dir=${tmpDir}`,
+      '--no-first-run', '--no-default-browser-check', '--headless=new',
+      '--disable-gpu', '--disable-dev-shm-usage', '--no-sandbox', 'about:blank',
+    ], { detached: true, stdio: ['ignore', 'ignore', 'ignore'] });
+  } catch (error) {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    return { ok: false, reason: 'spawn_failed', detail: error.message };
+  }
+  let spawnError;
+  let exited = false;
+  proc.on('error', error => { spawnError = error; });
+  proc.on('exit', () => { exited = true; });
+  const childExited = () => exited || proc.exitCode != null || proc.signalCode != null;
+  const exitedResult = () => ({ ok: false, reason: 'launch_exited', pid: proc.pid, tmpDir,
+    exitCode: proc.exitCode ?? null, signalCode: proc.signalCode ?? null });
+  // Detached children otherwise keep the launcher (and synchronous preflight) alive.
+  proc.unref();
+  let owner;
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    if (childExited()) return exitedResult();
+    const status = await probe(host, port);
+    if (spawnError) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      return { ok: false, reason: 'spawn_failed', detail: spawnError.message };
     }
-    for (const e of fs.readdirSync(os.tmpdir())) {
-      if (/^web-access-cdp-/.test(e)) {
-        try { fs.rmSync(path.join(os.tmpdir(), e), { recursive: true, force: true }); } catch {}
+    if (childExited()) return exitedResult();
+    if (!owner && proc.pid) {
+      try { owner = saveOwner(tmpDir, proc.pid, browser); }
+      catch (error) {
+        return { ok: false, reason: 'process_identity_unavailable', detail: error.message, pid: proc.pid, tmpDir };
       }
     }
-    process.exit(0);
-  }
-
-  const existing = await probe();
-  if (existing.ok) {
-    console.log(JSON.stringify({ ok: true, launched: false, host: HOST, port: PORT, webSocketDebuggerUrl: existing.ws, browser: existing.browser, pid: null, tmpDir: null }, null, 2));
-    return;
-  }
-
-  const browser = findBrowser();
-  if (!browser) { console.log(JSON.stringify({ ok: false, reason: "browser_not_found" }, null, 2)); process.exit(2); }
-
-  const tmpDir = path.join(os.tmpdir(), `web-access-cdp-${Date.now()}`);
-  fs.mkdirSync(tmpDir, { recursive: true });
-  const proc = spawn(browser, [
-    `--remote-debugging-port=${PORT}`, `--user-data-dir=${tmpDir}`,
-    "--no-first-run", "--no-default-browser-check", "--headless=new",
-    "--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox", "about:blank",
-  ], { detached: true, stdio: ["ignore", "ignore", "ignore"] });
-
-  const t0 = Date.now();
-  while (Date.now() - t0 < MAX_WAIT) {
-    const s = await probe();
-    if (s.ok) {
-      console.log(JSON.stringify({ ok: true, launched: true, host: HOST, port: PORT, webSocketDebuggerUrl: s.ws, browser: s.browser, pid: proc.pid, tmpDir }, null, 2));
-      return;
+    // Let pending child exit events run before claiming ownership of a ready endpoint.
+    await new Promise(resolve => setImmediate(resolve));
+    if (childExited()) return exitedResult();
+    if (status.ok && owner) {
+      return { ok: true, launched: true, host, port, webSocketDebuggerUrl: status.ws, browser: status.browser, pid: proc.pid, tmpDir };
     }
-    await sleep(POLL);
+    await sleep(300);
   }
-
-  try { proc.kill("SIGKILL"); fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
-  console.log(JSON.stringify({ ok: false, reason: "launch_timeout" }, null, 2));
-  process.exit(2);
+  try {
+    if (!owner) throw new Error('process_identity_unavailable');
+    await stopOwned({ tmpDir, owner });
+    return { ok: false, reason: 'launch_timeout' };
+  } catch (error) {
+    return { ok: false, reason: 'launch_timeout', cleanupError: error.message, pid: proc.pid, tmpDir };
+  }
 }
 
-main().catch(e => { log(`Fatal: ${e.message}`); process.exit(2); });
+async function main() {
+  let options;
+  try { options = parseArgs(process.argv.slice(2)); }
+  catch (error) { console.error(error.message); process.exitCode = 1; return; }
+  if (options.help) { printHelp(); return; }
+  let result;
+  if (options.pid) {
+    try {
+      const profile = findOwnedProfile(options.pid);
+      await stopOwned(profile);
+      result = { ok: true, stopped: true, pid: options.pid, tmpDir: profile.tmpDir };
+    } catch (error) { result = { ok: false, reason: error.message, pid: options.pid }; }
+  } else {
+    result = await launch(options);
+  }
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.ok) process.exitCode = 2;
+}
+
+main().catch(error => {
+  console.log(JSON.stringify({ ok: false, reason: error.message }, null, 2));
+  process.exitCode = 2;
+});

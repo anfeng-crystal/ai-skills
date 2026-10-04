@@ -6,6 +6,8 @@
  */
 
 import fs from "node:fs";
+import { getBrowserEndpoint, listTargets, nextCdpRequestId, sendCdpCommand, resolveTargetSession, openTarget, closeTarget } from "./cdp-transport.mjs";
+import { parseProxyOptions, resolveHttpEndpoint, reportCliError } from "./cdp-cli-options.mjs";
 
 const HARD_BLOCKED_METHODS = new Set(["Browser.close", "Browser.crash", "Page.crash"]);
 const UNSAFE_PREFIXES = [
@@ -60,122 +62,6 @@ Options:
 `);
 }
 
-function parseGlobalOptions(argv) {
-  const parsed = {
-    host: process.env.WEB_ACCESS_CDP_HOST || "127.0.0.1",
-    port: Number(process.env.WEB_ACCESS_CDP_PORT || "9222"),
-    endpoint: null,
-    wsUrl: process.env.WEB_ACCESS_CDP_WS_URL || null,
-    timeout: 5000,
-    json: false,
-    dryRun: false,
-    allowUnsafe: false,
-    method: null,
-    params: null,
-    id: null,
-    file: null,
-    selector: null,
-    x: 0,
-    y: null,
-    direction: null,
-    positionals: [],
-    help: false,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    switch (token) {
-      case "--endpoint":
-        parsed.endpoint = argv[++index];
-        break;
-      case "--host":
-        parsed.host = argv[++index];
-        break;
-      case "--port":
-        parsed.port = Number(argv[++index]);
-        break;
-      case "--ws-url":
-        parsed.wsUrl = argv[++index];
-        break;
-      case "--method":
-        parsed.method = argv[++index];
-        break;
-      case "--params":
-        parsed.params = argv[++index];
-        break;
-      case "--id":
-        parsed.id = Number(argv[++index]);
-        break;
-      case "--timeout":
-        parsed.timeout = Number(argv[++index]);
-        break;
-      case "--file":
-        parsed.file = argv[++index];
-        break;
-      case "--selector":
-        parsed.selector = argv[++index];
-        break;
-      case "--x":
-        parsed.x = Number(argv[++index]);
-        break;
-      case "--y":
-        parsed.y = Number(argv[++index]);
-        break;
-      case "--direction":
-        parsed.direction = argv[++index];
-        break;
-      case "--json":
-        parsed.json = true;
-        break;
-      case "--dry-run":
-        parsed.dryRun = true;
-        break;
-      case "--allow-unsafe":
-        parsed.allowUnsafe = true;
-        break;
-      case "--help":
-      case "-h":
-        parsed.help = true;
-        break;
-      default:
-        parsed.positionals.push(token);
-        break;
-    }
-  }
-
-  return parsed;
-}
-
-function resolveHttpEndpoint(options) {
-  if (options.endpoint) {
-    const normalized = /^https?:\/\//i.test(options.endpoint) ? options.endpoint : `http://${options.endpoint}`;
-    const url = new URL(normalized);
-    return {
-      base: normalized.replace(/\/+$/, ""),
-      host: url.hostname,
-      port: Number(url.port || (url.protocol === "https:" ? "443" : "80")),
-    };
-  }
-
-  return {
-    base: `http://${options.host}:${options.port}`,
-    host: options.host,
-    port: options.port,
-  };
-}
-
-function assertAllowedHost(host) {
-  const localHosts = new Set(["127.0.0.1", "localhost", "::1"]);
-  if (!localHosts.has(host) && process.env.WEB_ACCESS_ALLOW_REMOTE !== "1") {
-    throw new Error(`Refusing remote host ${host}; set WEB_ACCESS_ALLOW_REMOTE=1 to override.`);
-  }
-}
-
-function assertAllowedWsUrl(wsUrl) {
-  const url = new URL(wsUrl);
-  assertAllowedHost(url.hostname);
-}
-
 function classifyMethodSafety(method) {
   if (HARD_BLOCKED_METHODS.has(method)) {
     return "hard-blocked";
@@ -202,153 +88,6 @@ function parseParams(rawParams) {
     return {};
   }
   return JSON.parse(rawParams);
-}
-
-async function getBrowserEndpoint(endpoint, wsUrlOverride) {
-  if (wsUrlOverride) {
-    assertAllowedWsUrl(wsUrlOverride);
-    return {
-      browserWSEndpoint: wsUrlOverride,
-      source: "explicit_ws_url",
-    };
-  }
-
-  assertAllowedHost(endpoint.host);
-  let response;
-  try {
-    response = await fetch(`${endpoint.base}/json/version`, {
-      signal: AbortSignal.timeout(2000),
-    });
-  } catch (error) {
-    throw new Error(
-      `Failed to reach CDP version endpoint at ${endpoint.base}/json/version: ${
-        error instanceof Error ? error.message : "unknown_error"
-      }`,
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to reach /json/version: HTTP ${response.status}`);
-  }
-
-  const payload = await response.json();
-  return {
-    browserWSEndpoint: payload.webSocketDebuggerUrl || null,
-    browser: payload.Browser || null,
-    protocolVersion: payload["Protocol-Version"] || null,
-    source: "http_version_endpoint",
-  };
-}
-
-async function listTargets(endpoint) {
-  assertAllowedHost(endpoint.host);
-  let response;
-  try {
-    response = await fetch(`${endpoint.base}/json/list`, {
-      signal: AbortSignal.timeout(2000),
-    });
-  } catch (error) {
-    throw new Error(
-      `Failed to reach CDP list endpoint at ${endpoint.base}/json/list: ${
-        error instanceof Error ? error.message : "unknown_error"
-      }`,
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to reach /json/list: HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-function resolveTarget(targets, query) {
-  const normalized = String(query || "").trim();
-  if (!normalized) {
-    throw new Error("Target is required.");
-  }
-
-  return (
-    targets.find((target) => String(target.id).startsWith(normalized)) ||
-    targets.find((target) => target.url === normalized) ||
-    targets.find(
-      (target) =>
-        String(target.url || "").includes(normalized) ||
-        String(target.title || "").includes(normalized),
-    ) ||
-    null
-  );
-}
-
-let cdpRequestCounter = 1;
-function nextCdpRequestId() {
-  const id = cdpRequestCounter;
-  cdpRequestCounter += 1;
-  if (cdpRequestCounter > 2_000_000_000) {
-    cdpRequestCounter = 1;
-  }
-  return id;
-}
-
-async function sendCdpCommand(webSocketUrl, method, params = {}, timeout = 5000, id = nextCdpRequestId()) {
-  assertAllowedWsUrl(webSocketUrl);
-
-  return new Promise((resolve, reject) => {
-    const socket = new WebSocket(webSocketUrl);
-    const timer = setTimeout(() => {
-      try {
-        socket.close();
-      } catch {}
-      reject(new Error(`CDP request timed out after ${timeout}ms`));
-    }, timeout);
-
-    socket.addEventListener("open", () => {
-      socket.send(
-        JSON.stringify({
-          id,
-          method,
-          params,
-        }),
-      );
-    });
-
-    socket.addEventListener("message", (event) => {
-      try {
-        const payload = JSON.parse(String(event.data));
-        if (payload.id !== id) {
-          return;
-        }
-        clearTimeout(timer);
-        socket.close();
-        if (payload.error) {
-          reject(new Error(JSON.stringify(payload.error)));
-          return;
-        }
-        resolve(payload.result ?? null);
-      } catch (error) {
-        clearTimeout(timer);
-        reject(error);
-      }
-    });
-
-    socket.addEventListener("error", () => {
-      clearTimeout(timer);
-      reject(new Error("WebSocket connection failed."));
-    });
-
-    socket.addEventListener("close", () => {
-      clearTimeout(timer);
-    });
-  });
-}
-
-async function resolveTargetSession(endpoint, targetQuery) {
-  const targets = await listTargets(endpoint);
-  const target = resolveTarget(targets, targetQuery);
-  if (!target?.webSocketDebuggerUrl) {
-    throw new Error(`Target not found or not attachable: ${targetQuery}`);
-  }
-  return { target, wsUrl: target.webSocketDebuggerUrl };
 }
 
 function jsString(value) {
@@ -448,26 +187,7 @@ async function runOpen(options) {
     throw new Error("open mutates browser state; rerun with --allow-unsafe");
   }
 
-  assertAllowedHost(endpoint.host);
-  let response;
-  try {
-    response = await fetch(`${endpoint.base}/json/new?${encodeURIComponent(url)}`, {
-      method: "PUT",
-      signal: AbortSignal.timeout(2000),
-    });
-  } catch (error) {
-    throw new Error(
-      `Failed to reach CDP open endpoint at ${endpoint.base}/json/new: ${
-        error instanceof Error ? error.message : "unknown_error"
-      }`,
-    );
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to open new target: HTTP ${response.status}`);
-  }
-
-  const payload = await response.json();
+  const payload = await openTarget(endpoint, url);
   if (options.json) {
     console.log(JSON.stringify(payload, null, 2));
   } else {
@@ -623,14 +343,7 @@ async function runClose(options) {
   }
 
   const { target } = await resolveTargetSession(endpoint, targetQuery);
-  assertAllowedHost(endpoint.host);
-  const response = await fetch(`${endpoint.base}/json/close/${target.id}`, {
-    signal: AbortSignal.timeout(2000),
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to close target: HTTP ${response.status}`);
-  }
-  const text = await response.text();
+  const text = await closeTarget(endpoint, target.id);
   console.log(JSON.stringify({ target: { id: target.id, title: target.title, url: target.url }, result: text.trim() || "ok" }, null, 2));
 }
 
@@ -725,21 +438,13 @@ if (!command || command === "--help" || command === "-h") {
 }
 
 const normalizedCommand = command === "probe" ? "doctor" : command;
-let options;
 try {
-  options = parseGlobalOptions(args.slice(1));
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  printHelp();
-  process.exit(1);
-}
+  const options = parseProxyOptions(args.slice(1), normalizedCommand);
+  if (options.help) {
+    printHelp();
+    process.exit(0);
+  }
 
-if (options.help) {
-  printHelp();
-  process.exit(0);
-}
-
-try {
   switch (normalizedCommand) {
     case "doctor":
       await runDoctor(options);
@@ -775,26 +480,8 @@ try {
       await runSend(options);
       break;
     default:
-      console.error(`Unknown command: ${command}`);
-      printHelp();
-      process.exit(1);
+      throw new Error(`Unknown command: ${command}`);
   }
 } catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  if (options.json) {
-    console.log(
-      JSON.stringify(
-        {
-          ok: false,
-          command: normalizedCommand,
-          error: message,
-        },
-        null,
-        2,
-      ),
-    );
-  } else {
-    console.error(message);
-  }
-  process.exitCode = 1;
+  reportCliError(error, args.includes("--json"), normalizedCommand);
 }

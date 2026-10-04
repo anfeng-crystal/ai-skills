@@ -141,22 +141,29 @@ def _normalize_download_candidates(
     allowed = set(platforms or [])
     normalized: List[Dict[str, Any]] = []
     seen_urls = set()
+    source_indices: Dict[str, int] = {}
 
     for item in candidates:
         if not isinstance(item, dict):
             continue
         platform = str(item.get("platform") or "unknown")
-        if allowed and platform not in allowed:
+        url = str(item.get("url") or "").strip()
+        if not url:
             continue
 
-        url = str(item.get("url") or "").strip()
-        if not url or url in seen_urls:
+        # Number the complete source before filtering so --select keeps the
+        # indices displayed by search. Older payloads without indices still work.
+        source_index = source_indices.setdefault(url, len(source_indices) + 1)
+        index = item.get("index")
+        if isinstance(index, bool) or not isinstance(index, int) or index <= 0:
+            index = source_index
+        if (allowed and platform not in allowed) or url in seen_urls:
             continue
 
         seen_urls.add(url)
         normalized.append(
             {
-                "index": len(normalized) + 1,
+                "index": index,
                 "platform": platform,
                 "title": str(item.get("title") or "").strip(),
                 "url": url,
@@ -182,25 +189,17 @@ def build_download_candidates(
         return _normalize_download_candidates(existing, platforms=platforms, select=select, limit=limit)
 
     generated: List[Dict[str, Any]] = []
-    allowed = set(platforms or [])
-    seen_urls = set()
     for platform, item in _iter_search_items(payload):
-        if allowed and platform not in allowed:
-            continue
         url = _extract_url_from_item(item, platform)
-        if not url or url in seen_urls:
-            continue
-        seen_urls.add(url)
         generated.append(
             {
-                "index": len(generated) + 1,
                 "platform": platform,
                 "title": _extract_title(item),
                 "url": url,
             }
         )
 
-    return _select_and_limit_candidates(generated, select=select, limit=limit)
+    return _normalize_download_candidates(generated, platforms=platforms, select=select, limit=limit)
 
 
 def collect_urls_from_search_output(

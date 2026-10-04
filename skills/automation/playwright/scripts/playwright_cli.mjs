@@ -56,12 +56,20 @@ function runCli(command, cliArgs, options) {
     });
     let timedOut = false;
     let stderr = "";
+    let forceKillTimeout = null;
     const timeout = options.timeoutMs > 0
       ? setTimeout(() => {
           timedOut = true;
+          // Give the CLI time to clean up, but do not wait forever if it ignores SIGTERM.
+          forceKillTimeout = setTimeout(() => child.kill("SIGKILL"), 1_000);
           child.kill(process.platform === "win32" ? undefined : "SIGTERM");
         }, options.timeoutMs)
       : null;
+
+    function clearTimers() {
+      if (timeout) clearTimeout(timeout);
+      if (forceKillTimeout) clearTimeout(forceKillTimeout);
+    }
 
     if (child.stderr) {
       child.stderr.on("data", (chunk) => {
@@ -72,16 +80,12 @@ function runCli(command, cliArgs, options) {
     }
 
     child.on("error", (error) => {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
+      clearTimers();
       resolve({ ok: false, code: 1, signal: null, stderr, error, timedOut });
     });
 
     child.on("exit", (code, signal) => {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
+      clearTimers();
       if (timedOut) {
         resolve({ ok: false, code: 124, signal, stderr, timedOut: true });
         return;

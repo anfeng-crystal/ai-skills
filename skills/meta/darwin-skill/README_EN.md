@@ -14,7 +14,7 @@ English | **[中文](README.md)**
 
 Inspired by [Karpathy's autoresearch](https://github.com/karpathy/autoresearch). Autonomous experiment loops, applied to skill optimization. A ratchet that only turns forward.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#license)
 [![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Compatible-blueviolet)](https://skills.sh)
 [![Skills](https://img.shields.io/badge/skills.sh-Compatible-green)](https://skills.sh)
 
@@ -28,85 +28,52 @@ npx skills add alchaincyf/darwin-skill
 
 ## The Core Loop
 
-![Core Loop](assets/chart-loop-en.png)
+Identify a concrete problem → preserve the relevant capabilities → make a scoped change → verify the result → keep or restore that change.
 
-Evaluate → Improve → Test → Human Confirm → Keep or Revert. Repeat.
+The current execution contract is [SKILL.md](SKILL.md). Follow user-selected review gates; authorized continuous work proceeds without repeated confirmation. Git, publication, and paid operations still require their corresponding authorization.
 
----
+## What Gets Optimized
 
-## Why This Exists
+A Skill includes its entrypoint and the references, scripts, templates, and assets that implement its capabilities. Before editing, record triggers, routing, inputs and outputs, authorization, privacy, recovery, and verification. Change only the files needed to fix the confirmed problem, with a baseline that preserves existing work.
 
-Agent skill ecosystems are expanding fast. Claude Code, Codex, OpenClaw, Trae, CodeBuddy and more all support the SKILL.md format. When you have 10 skills, you can maintain them by hand. When you have 60+, you need a system.
+| Principle | Application |
+| --- | --- |
+| Scoped experiments | One independently verifiable problem may require several related files. |
+| Proportionate validation | Compare capabilities and references for wording changes; use representative cases for behavior changes and regression tests for scripts. |
+| Evidence before scores | Keep changes only with improvement evidence and no capability, correctness, or permission regression. |
+| Independent review | Use an available independent reviewer for core-purpose, authorization, or complex recovery changes. Record unavailable review separately from execution mode. |
+| Precise recovery | Restore only the current change if it regresses or lacks evidence; preserve unrelated work and respect Git authorization. |
 
-Traditional skill review is purely structural: does the frontmatter look right? Are the steps numbered? Do the file paths exist? But a perfectly formatted skill can still produce terrible output.
+## Optional Evaluation
 
-darwin.skill evaluates both **structure** and **real-world effectiveness**, then keeps only the changes that actually improve things.
+Use the [evaluation contract](references/evaluation-contract.md) and [rubric](references/rubric-detail.md) when comparable scores or batch records are useful. A 100-point rubric with a 60/40 structure/effectiveness split is an option, not a completion target. No score is needed for a demonstrated script fix or a scoped wording correction.
 
----
-
-## From autoresearch to Skill Optimization
-
-This project maps Karpathy's autoresearch directly onto skill optimization:
-
-| autoresearch | darwin.skill | Why |
-|:---|:---|:---|
-| `program.md` | This SKILL.md | Defines evaluation criteria and constraints |
-| `train.py` | Each target SKILL.md | The single editable asset per experiment |
-| `val_bpb` | 8-dimension weighted score (max 100) | Quantifiable optimization target |
-| `git ratchet` | keep / revert mechanism | Keep evidence-backed improvements; Git actions follow task authorization |
-| `test set` | test-prompts.json | Validates whether improvements are real |
-| Fully autonomous | **Human in the loop** | Skill quality is more subjective than loss |
-
-Skill quality requires evidence and sometimes human judgment. When the user chooses staged review, darwin.skill waits after test prompts, baseline evaluation, and each skill. An authorized continuous optimization proceeds across these stages without repeated confirmation. Plan-first requests and separate publication, payment, or Git approvals remain binding.
-
----
-
-## Five Core Principles
-
-| # | Principle | Details |
-|:---|:---|:---|
-| 01 | **Single editable asset** | One SKILL.md per experiment. One change, one measurement, one decision |
-| 02 | **Dual evaluation** | Structure scoring (static analysis) + effectiveness scoring (live test execution) |
-| 03 | **Ratchet mechanism** | Score can only go up. Regressions are auto-reverted |
-| 04 | **Independent scoring** | Prefer available independent review; when unavailable, label dry_run and never present self-review as an independent live test |
-| 05 | **Human in the loop** | Preserve user-selected review gates; do not repeat approval during authorized continuous work |
-
----
-
-## 8-Dimension Evaluation Rubric
-
-Total: 100 points. Structure (60) + Effectiveness (40).
-
-![Evaluation Rubric](assets/chart-rubric-en.png)
-
-> Live test performance has the highest weight (25 points). A beautifully written skill that produces bad output is still a bad skill.
-
----
+`full_test` means the task was actually executed and its result checked; predicted behavior is `dry_run`. Independent review, operating-system coverage, real-service coverage, and measured token savings are separate claims that each need evidence. Missing measurements stay unavailable.
 
 ## The Optimization Cycle
 
-Five phases. Only one is the core. The diagram shows stage relationships; review gates follow the selected staged or continuous mode.
+1. Identify the maintainable source, authorized scope, existing changes, and a recoverable baseline.
+2. Reproduce the problem or compare the conflicting instructions against representative cases.
+3. Edit the necessary entrypoint or supporting resources without silently dropping capabilities.
+4. Run relevant checks and obtain independent review when the impact requires it.
+5. Keep an evidence-backed improvement without regression; otherwise restore only this round's changes.
+6. Deliver paths, differences, verification, limitations, and recovery guidance. Continue only for a remaining concrete problem or the user's requested scope; scores and round counts are not reasons to invent work.
 
-![Optimization Lifecycle](assets/chart-phases-en.png)
+Batch and staged-review details are in [optimization-loop.md](references/optimization-loop.md). Evaluation artifacts belong in the task output directory unless the user requests otherwise. Git staging and commits follow existing task authorization.
 
-**Phase 2 (the heart):**
+## Design Illustrations
 
-1. Find the lowest-scoring dimension
-2. Generate one targeted improvement
-3. Edit SKILL.md; stage exact paths and commit only with existing Git authorization
-4. Re-score with available independent review; otherwise record dry_run and its limitations
-5. Keep evidence-backed improvements without capability, correctness, or permission regressions; otherwise restore only this task's changes, respecting Git authorization for committed changes
-6. Show the diff, outcome evidence, and score delta; wait in staged review mode or continue within existing continuous-work authorization
+The original diagrams below illustrate the project's early scoring workflow. Their fixed dimensions, Human Confirm steps, and git commit/revert labels do not override the current contract above. Keep/revert decisions require evidence and capability preservation; a higher score alone is insufficient. The sample numbers are illustrative, not measured optimization results.
 
----
+<details>
+<summary>Original loop, rubric, lifecycle, and ratchet diagrams</summary>
 
-## The Ratchet
+![Original Core Loop](assets/chart-loop-en.png)
+![Original Evaluation Rubric](assets/chart-rubric-en.png)
+![Original Optimization Lifecycle](assets/chart-phases-en.png)
+![Illustrative Ratchet](assets/chart-ratchet-en.png)
 
-Scores can only go up. Failed experiments are cleanly reverted. No regressions accumulate over time.
-
-![Ratchet Mechanism](assets/chart-ratchet-en.png)
-
-Round 2 scored 75, below the current best of 78. Auto-reverted. Effective baseline stays at 78. Subsequent improvements build from 78, not 75.
+</details>
 
 ---
 
@@ -126,7 +93,7 @@ For offline installation, use an acquired and reviewed complete Skill directory,
 
 Directly inspired by **Andrej Karpathy's [autoresearch](https://github.com/karpathy/autoresearch)**.
 
-The core mechanism is identical: **keep only measurable improvements, revert everything else.**
+The experimental approach informs this Skill: **judge improvements with evidence, preserve capabilities, and precisely restore unsuccessful changes.**
 
 ---
 

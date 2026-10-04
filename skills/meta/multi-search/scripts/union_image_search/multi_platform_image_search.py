@@ -43,6 +43,9 @@ SUPPORTED_PLATFORMS = {
     'volcengine': 'VolcengineAdapter',  # 火山引擎 (API-based)
 }
 
+# API-backed volcengine requires explicit selection; credentials alone do not opt in.
+DEFAULT_PLATFORMS = [name for name in SUPPORTED_PLATFORMS if name != "volcengine"]
+
 DEFAULT_SAVE_SUFFIX = "image_search_results"
 UNLIMITED_SEARCH_LIMIT = 10000
 
@@ -112,7 +115,7 @@ def parse_args():
     parser.add_argument("keyword", nargs="?", help="Search keyword (positional)")
     parser.add_argument("--keyword", dest="keyword_opt", help="Search keyword (overrides positional)")
     parser.add_argument("--platforms", nargs="+", choices=list(SUPPORTED_PLATFORMS.keys()),
-                       help="Specify platform list (default: all platforms)")
+                       help="Specify platform list (default: all except paid volcengine)")
     parser.add_argument("--num", type=int, help="Images per platform, <=0 means unlimited (default: 10)")
     parser.add_argument("--output", help="Output directory (default: image_downloads)")
     parser.add_argument("--threads", type=int, help="Download threads (default: 5)")
@@ -290,7 +293,7 @@ def search_platform(platform, keyword, num_images, output_dir, num_threads, save
 
 def search_all_platforms(keyword, num_images, platforms, output_dir, num_threads, save_meta, delay):
     """在所有平台搜索图片"""
-    platforms = platforms or list(SUPPORTED_PLATFORMS.keys())
+    platforms = platforms or list(DEFAULT_PLATFORMS)
 
     print(f"\n{'='*70}")
     print(f"多平台图片搜索")

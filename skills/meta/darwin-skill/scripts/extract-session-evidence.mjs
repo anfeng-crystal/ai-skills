@@ -22,6 +22,10 @@ async function main() {
     for (const candidate of report.candidates) {
       process.stdout.write(`${JSON.stringify(candidate)}\n`);
     }
+    // Keep stdout candidate-only while making partial extraction failures discoverable.
+    for (const error of report.errors) {
+      process.stderr.write(`${JSON.stringify({ type: "extraction_error", ...error })}\n`);
+    }
   } else {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   }
@@ -101,7 +105,7 @@ async function extract(options) {
       continue;
     }
     const rootKind = path.basename(root) === "archived_sessions" ? "archived" : "active";
-    for (const file of walkJsonl(root)) {
+    for (const file of walkJsonl(root, errors)) {
       stats.files += 1;
       let meta = null;
       let sessionKind;
@@ -110,10 +114,13 @@ async function extract(options) {
       let sourceLine = 0;
       const calls = new Map();
       const failures = new Map();
-      const bytesAtOpen = fs.statSync(file).size;
-      const input = fs.createReadStream(file, { encoding: "utf8", ...(bytesAtOpen ? { end: bytesAtOpen - 1 } : {}) });
-      const lines = readline.createInterface({ input, crlfDelay: Infinity });
+      let bytesAtOpen = null;
+      let input;
+      let lines;
       try {
+        bytesAtOpen = fs.statSync(file).size;
+        input = fs.createReadStream(file, { encoding: "utf8", ...(bytesAtOpen ? { end: bytesAtOpen - 1 } : {}) });
+        lines = readline.createInterface({ input, crlfDelay: Infinity });
         for await (const line of lines) {
           sourceLine += 1;
           if (!line.trim()) continue;
@@ -122,6 +129,11 @@ async function extract(options) {
           catch {
             // Parser messages can contain private source text. Keep only its location.
             errors.push({ file, sourceLine, message: "invalid JSONL" });
+            continue;
+          }
+          // JSON scalars and arrays are valid JSON, but cannot be session events.
+          if (record === null || typeof record !== "object" || Array.isArray(record)) {
+            errors.push({ file, sourceLine, message: "invalid JSONL record" });
             continue;
           }
           if (!meta) {
@@ -178,13 +190,14 @@ async function extract(options) {
             continue;
           }
           if (payload.type !== "message") continue;
+          if (!["assistant", "user"].includes(payload.role)) continue;
+          const { text, invalid } = messageText(payload.content, payload.role);
+          if (invalid) errors.push({ file, sourceLine, message: "invalid message content" });
           if (payload.role === "assistant") {
-            const text = messageText(payload.content);
-            if (text) previousAssistant = sanitize(text, options.maxChars);
+            // An unreadable assistant message must not inherit an older response's text.
+            if (text || invalid) previousAssistant = sanitize(text, options.maxChars);
             continue;
           }
-          if (payload.role !== "user") continue;
-          const text = userText(payload.content);
           if (!text) continue;
           userMessageIndex += 1;
           stats.userMessages += 1;
@@ -195,8 +208,8 @@ async function extract(options) {
       } catch {
         errors.push({ file, sourceLine, message: "cannot read JSONL" });
       } finally {
-        lines.close();
-        input.destroy();
+        lines?.close();
+        input?.destroy();
         if (options.toolErrorsOnly) coverage.push({ root: rootKind, sourceFile: path.relative(root, file),
           sessionKind: sessionKind || null, rolloutId: meta?.id || null, bytesAtOpen, lines: sourceLine });
       }
@@ -240,22 +253,24 @@ function errorCategories(output) {
   return Object.entries(patterns).filter(([, pattern]) => pattern.test(text)).map(([category]) => category);
 }
 
-function userText(content) {
-  return (Array.isArray(content) ? content : [])
-    .filter((item) => item && ["input_text", "text"].includes(item.type))
-    .map((item) => item.text || "")
-    .filter((text) => text.trim() && !isInjectedBlock(text))
-    .join("\n")
-    .trim();
-}
-
-function messageText(content) {
-  return (Array.isArray(content) ? content : [])
-    .filter((item) => item && ["output_text", "input_text", "text"].includes(item.type))
-    .map((item) => item.text || "")
-    .filter(Boolean)
-    .join("\n")
-    .trim();
+function messageText(content, role) {
+  if (!Array.isArray(content)) return { text: "", invalid: true };
+  const types = role === "user" ? ["input_text", "text"] : ["output_text", "input_text", "text"];
+  const texts = [];
+  let invalid = false;
+  for (const item of content) {
+    if (!item || typeof item !== "object" || Array.isArray(item) || typeof item.type !== "string") {
+      invalid = true;
+      continue;
+    }
+    if (!types.includes(item.type)) continue;
+    if (typeof item.text !== "string") {
+      invalid = true;
+      continue;
+    }
+    if (role === "user" ? item.text.trim() && !isInjectedBlock(item.text) : item.text) texts.push(item.text);
+  }
+  return { text: texts.join("\n").trim(), invalid };
 }
 
 function isInjectedBlock(text) {
@@ -270,13 +285,14 @@ function isInjectedBlock(text) {
 }
 
 function sanitize(text, maxChars) {
+  // Quoted credential values consume escape pairs so an escaped quote cannot expose the tail.
   const redacted = text
     .replace(/-----BEGIN [^-\r\n]*PRIVATE KEY-----[\s\S]*?-----END [^-\r\n]*PRIVATE KEY-----/g, "<redacted-private-key>")
     .replace(/(https?:\/\/)[^\s\/@:]+:[^\s\/@]+@/gi, "$1<redacted-userinfo>@")
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer <redacted>")
     .replace(/(^|\r?\n)([ \t]*(?:authorization|cookie|set-cookie)\s*:\s*)[^\r\n]+/gim, "$1$2<redacted>")
     .replace(/\b(?:eyJ[A-Za-z0-9_-]{10,}\.){2}[A-Za-z0-9_-]{10,}\b/g, "<redacted-jwt>")
-    .replace(/\b((?:[A-Za-z0-9]+[_-])*(?:password|passwd|pwd|client[_-]?secret|access[_-]?token|refresh[_-]?token|id[_-]?token|token|authorization|cookie|csrf(?:[_-]?token)?|api[_-]?key|access[_-]?key|signature|secret|tenant[_-]?id|account[_-]?id|user[_-]?id|person[_-]?id))["']?\s*[:=]\s*(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,;&\r\n]+)/gi, "$1=<redacted>")
+    .replace(/\b((?:[A-Za-z0-9]+[_-])*(?:password|passwd|pwd|client[_-]?secret|access[_-]?token|refresh[_-]?token|id[_-]?token|token|authorization|cookie|csrf(?:[_-]?token)?|api[_-]?key|access[_-]?key|signature|secret|tenant[_-]?id|account[_-]?id|user[_-]?id|person[_-]?id))["']?\s*[:=]\s*(?:"(?:\\[^\r\n]|[^"\\\r\n])*"|'(?:\\[^\r\n]|[^'\\\r\n])*'|[^\s,;&\r\n]+)/gi, "$1=<redacted>")
     .replace(/\bAKIA[0-9A-Z]{16}\b/g, "<redacted-access-key>")
     .replace(/\bjdbc:[^\s"'<>]+/gi, "<redacted-dsn>")
     .replace(/\bhttps?:\/\/[^\s"'<>]+/gi, "<redacted-url>")
@@ -295,10 +311,17 @@ function sanitize(text, maxChars) {
   return `${codePoints.slice(0, maxChars).join("")}…`;
 }
 
-function* walkJsonl(root) {
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+function* walkJsonl(root, errors) {
+  let entries;
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch {
+    errors.push({ directory: root, message: "cannot read directory" });
+    return;
+  }
+  for (const entry of entries) {
     const target = path.join(root, entry.name);
-    if (entry.isDirectory()) yield* walkJsonl(target);
+    if (entry.isDirectory()) yield* walkJsonl(target, errors);
     else if (entry.isFile() && entry.name.endsWith(".jsonl")) yield target;
   }
 }
@@ -313,11 +336,12 @@ Options:
   --include-realtime    Include realtime voice sessions.
   --include-subagents   Include child sessions (both metadata layouts).
   --tool-errors-only    Emit call-linked error categories and script names, no message/output text.
-  --format json|jsonl   Output format; default json.
+  --format json|jsonl   Default json; jsonl writes candidates to stdout, errors to stderr.
   --max-chars <number>  Per text field limit; default 1200.
   --help                Show this help.
 
 The output is evidence discovery only. A matched message is not a confirmed skill defect
 until its preceding action, task scope, and actual runtime evidence are reviewed.
+Read or parse errors preserve other candidates and exit 1; JSONL errors have type extraction_error.
 `);
 }

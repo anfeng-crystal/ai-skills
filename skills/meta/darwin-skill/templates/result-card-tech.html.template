@@ -142,10 +142,6 @@
       font-weight: 600;
     }
 
-    .delta::before {
-      content: '+';
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -274,7 +270,7 @@
       <h1>$skill_name</h1>
       <div class="meta">
         <span>优化日期: $date</span>
-        <span>评估模型: Claude Opus 4.7</span>
+        <span>评估模型: $model_set</span>
         <span>优化工具: Darwin Skill v1.0</span>
       </div>
     </header>

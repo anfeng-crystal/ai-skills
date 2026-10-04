@@ -6,25 +6,37 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_COUNT = 5;
 const TIMEOUT_MS = 8000;
 const PRESET_MAP = { small: 3, medium: 5, large: 10, extra: 20 };
+const USAGE = "Usage: search-aggregator.mjs <query> [--count N] [--json] [--preset small|medium|large|extra] [--backend brave|tavily|google_cse|bing|serpapi|duckduckgo] [--help]";
 
 function log(s) { if (process.env.WEB_ACCESS_QUIET !== "1") console.error(`[search] ${s}`); }
 
 function parseArgs(argv) {
-  const parsed = { query: "", count: DEFAULT_COUNT, json: false, backend: null };
+  const parsed = { query: "", count: DEFAULT_COUNT, json: false, backend: null, help: false };
   for (let i = 0; i < argv.length; i++) {
     const t = argv[i];
-    if (t === "--count") parsed.count = Number(argv[++i]);
+    if (["--count", "--backend", "--preset"].includes(t) &&
+        (!argv[i + 1] || argv[i + 1].startsWith("--"))) {
+      throw new Error(`Missing value for ${t}.`);
+    }
+    if (t === "--help" || t === "-h") parsed.help = true;
+    else if (t === "--count") parsed.count = Number(argv[++i]);
     else if (t === "--json") parsed.json = true;
     else if (t === "--backend") parsed.backend = argv[++i];
     else if (t === "--preset") {
       const preset = argv[++i];
-      parsed.count = PRESET_MAP[preset] ?? DEFAULT_COUNT;
+      if (!Object.hasOwn(PRESET_MAP, preset)) throw new Error(`Unknown preset: ${preset}.`);
+      parsed.count = PRESET_MAP[preset];
     }
-    else if (!parsed.query) parsed.query = t;
+    else if (!t.startsWith("-") && !parsed.query) parsed.query = t;
+    else throw new Error(`Unknown argument: ${t}`);
+  }
+  if (!Number.isSafeInteger(parsed.count) || parsed.count <= 0) {
+    throw new Error("--count must be a positive integer.");
   }
   return parsed;
 }
@@ -64,7 +76,7 @@ function braveSearch(query, count) {
   if (!key) return null;
   try {
     const out = execFileSync(process.execPath, [
-      new URL("./brave-search.mjs", import.meta.url).pathname,
+      fileURLToPath(new URL("./brave-search.mjs", import.meta.url)),
       query, "--count", String(count), "--json"
     ], { encoding: "utf-8", timeout: TIMEOUT_MS, env: { ...process.env, WEB_ACCESS_QUIET: "1" } });
     const data = JSON.parse(out);
@@ -153,9 +165,20 @@ async function duckDuckGo(query, count) {
 }
 
 async function main() {
-  const opts = parseArgs(process.argv.slice(2));
+  let opts;
+  try {
+    opts = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(error.message);
+    console.error(USAGE);
+    process.exit(1);
+  }
+  if (opts.help) {
+    console.log(USAGE);
+    return;
+  }
   if (!opts.query) {
-    console.error("Usage: search-aggregator.mjs <query> [--count N] [--json] [--preset small|medium|large|extra] [--backend brave|tavily|google_cse|bing|serpapi|duckduckgo]");
+    console.error(USAGE);
     process.exit(1);
   }
 
@@ -170,19 +193,18 @@ async function main() {
 
   let backends;
   if (opts.backend) {
-    const chosen = backendMap[opts.backend];
-    if (!chosen) {
+    if (!Object.hasOwn(backendMap, opts.backend)) {
       console.error(`Unknown backend: ${opts.backend}. Available: ${Object.keys(backendMap).join(", ")}`);
       process.exit(1);
     }
-    backends = [chosen];
+    backends = [backendMap[opts.backend]];
   } else {
     backends = Object.values(backendMap);
   }
 
   for (const backend of backends) {
     const result = await backend();
-    if (result) {
+    if (result?.data.results.length > 0) {
       if (opts.json) {
         console.log(JSON.stringify({ ok: true, source: result.source, results: result.data }, null, 2));
       } else {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -86,9 +87,14 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     switch (token) {
-      case "--source-root":
-        parsed.sourceRoot = path.resolve(argv[++index]);
+      case "--source-root": {
+        const value = argv[++index];
+        if (!value || value.startsWith("--") || value === "-h") {
+          throw new Error("--source-root requires a path value");
+        }
+        parsed.sourceRoot = path.resolve(value);
         break;
+      }
       case "--json":
         parsed.json = true;
         break;
@@ -118,7 +124,8 @@ function printHelp() {
   node skills/meta/darwin-skill/scripts/validate-skill-assets.mjs [options]
 
 Options:
-  --source-root <path>   Skills source root. Defaults to AI_SKILLS_HOME or the current source tree.
+  --source-root <path>   Category root containing <category>/<skill>/SKILL.md (repository: skills/).
+                         Defaults to AI_SKILLS_HOME or this script's bundled skills/ directory.
   --json                 Emit JSON.
   --strict-results       Treat legacy results.tsv headers as errors.
   --include-incoming     Include incoming/ skills in the scan.
@@ -130,9 +137,9 @@ Options:
 function buildReport(options) {
   const errors = [];
   const warnings = [];
-  const skills = findSkills(options.sourceRoot, options.includeIncoming);
+  const skills = findSkills(options.sourceRoot, options.includeIncoming, errors);
 
-  if (skills.length === 0) {
+  if (skills.length === 0 && errors.length === 0) {
     errors.push({
       code: "no_skills_found",
       message: `No SKILL.md files found under ${options.sourceRoot}`,
@@ -143,7 +150,7 @@ function buildReport(options) {
     checkEvalAssets(skill, options, errors, warnings);
   }
 
-  checkPortableText(options.sourceRoot, errors);
+  checkPortableText(options.sourceRoot, options.includeIncoming, errors);
 
   return {
     ok: errors.length === 0,
@@ -160,18 +167,18 @@ function buildReport(options) {
   };
 }
 
-function findSkills(sourceRoot, includeIncoming) {
+function findSkills(sourceRoot, includeIncoming, errors) {
   if (!fs.existsSync(sourceRoot)) return [];
 
   const skills = [];
-  for (const category of fs.readdirSync(sourceRoot).sort()) {
+  for (const category of readDirectory(sourceRoot, errors).sort()) {
     if (category.startsWith(".")) continue;
     if (!includeIncoming && category === "incoming") continue;
 
     const categoryDir = path.join(sourceRoot, category);
     if (!isDirectory(categoryDir)) continue;
 
-    for (const name of fs.readdirSync(categoryDir).sort()) {
+    for (const name of readDirectory(categoryDir, errors).sort()) {
       const dir = path.join(categoryDir, name);
       const skillPath = path.join(dir, "SKILL.md");
       if (isDirectory(dir) && fs.existsSync(skillPath)) {
@@ -192,8 +199,8 @@ function checkEvalAssets(skill, options, errors, warnings) {
     return;
   }
 
-  checkPromptAsset(skill, promptPath, hasPrompt, options.requireEvalAssets, errors, warnings);
-  checkResultAsset(skill, resultPath, hasResult, options, errors, warnings);
+  const promptIds = checkPromptAsset(skill, promptPath, hasPrompt, options.requireEvalAssets, errors, warnings);
+  checkResultAsset(skill, resultPath, hasResult, options, promptIds, errors, warnings);
 }
 
 function checkPromptAsset(skill, file, exists, required, errors, warnings) {
@@ -203,11 +210,20 @@ function checkPromptAsset(skill, file, exists, required, errors, warnings) {
     return;
   }
 
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (error) {
+    errors.push(issue(skill, "test_prompts_read_failed", `Cannot read test-prompts.json (${readErrorCode(error)})`));
+    return;
+  }
+
   let prompts;
   try {
-    prompts = JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch (error) {
-    errors.push(issue(skill, "invalid_test_prompts_json", `Invalid JSON: ${error.message}`));
+    prompts = JSON.parse(text);
+  } catch {
+    // Parser messages can include raw prompt content.
+    errors.push(issue(skill, "invalid_test_prompts_json", "test-prompts.json contains invalid JSON"));
     return;
   }
 
@@ -236,22 +252,34 @@ function checkPromptAsset(skill, file, exists, required, errors, warnings) {
       seenIds.add(prompt.id);
     }
   });
+  return seenIds;
 }
 
-function checkResultAsset(skill, file, exists, options, errors, warnings) {
+function checkResultAsset(skill, file, exists, options, promptIds, errors, warnings) {
   if (!exists) {
     const target = options.requireEvalAssets ? errors : warnings;
     target.push(issue(skill, "missing_results", "Missing local results.tsv"));
     return;
   }
 
-  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter((line) => line.trim() !== "");
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (error) {
+    errors.push(issue(skill, "results_read_failed", `Cannot read results.tsv (${readErrorCode(error)})`));
+    return;
+  }
+  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
   if (lines.length < 2) {
     errors.push(issue(skill, "empty_results", "results.tsv must contain a header and at least one data row"));
     return;
   }
 
   const headers = lines[0].split("\t");
+  if (new Set(headers).size !== headers.length) {
+    errors.push(issue(skill, "duplicate_results_header", "results.tsv contains duplicate column names"));
+    return;
+  }
   const resultMode = classifyResultHeader(headers);
   if (resultMode === "unknown") {
     errors.push(issue(skill, "unsupported_results_header", `Unsupported results.tsv header: ${lines[0]}`));
@@ -278,6 +306,10 @@ function checkResultAsset(skill, file, exists, options, errors, warnings) {
           errors.push(issue(skill, "empty_result_field", `Row ${index + 1} missing ${field}`));
         }
       }
+      const promptId = values[headers.indexOf("prompt_id")];
+      if (promptId.trim() && promptIds && !promptIds.has(promptId)) {
+        errors.push(issue(skill, "unknown_result_prompt", `Row ${index + 1} prompt_id is not declared in test-prompts.json`));
+      }
     }
 
     if (evalModeIndex >= 0 && !["dry_run", "full_test"].includes(values[evalModeIndex])) {
@@ -295,10 +327,21 @@ function classifyResultHeader(headers) {
   return "unknown";
 }
 
-function checkPortableText(sourceRoot, errors) {
+function checkPortableText(sourceRoot, includeIncoming, errors) {
   const forbidden = buildForbiddenPatterns();
-  for (const file of walkTextFiles(sourceRoot)) {
-    const text = fs.readFileSync(file, "utf8");
+  for (const file of walkTextFiles(sourceRoot, errors, includeIncoming)) {
+    let text;
+    try {
+      text = fs.readFileSync(file, "utf8");
+    } catch (error) {
+      errors.push({
+        skill: null,
+        path: file,
+        code: "text_read_failed",
+        message: `Cannot check portable text (${readErrorCode(error)})`,
+      });
+      continue;
+    }
     for (const pattern of forbidden) {
       const match = text.match(pattern.re);
       if (match) {
@@ -311,6 +354,11 @@ function checkPortableText(sourceRoot, errors) {
       }
     }
   }
+}
+
+function readErrorCode(error) {
+  // Code shape alone is insufficient: an arbitrary exception can embed source data.
+  return typeof error?.code === "string" && Object.hasOwn(os.constants.errno, error.code) ? error.code : "UNKNOWN";
 }
 
 function buildForbiddenPatterns() {
@@ -331,17 +379,33 @@ function buildForbiddenPatterns() {
   return patterns;
 }
 
-function* walkTextFiles(root) {
+function* walkTextFiles(root, errors, includeIncoming = true) {
   if (!fs.existsSync(root)) return;
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+  for (const entry of readDirectory(root, errors, { withFileTypes: true })) {
     if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+    // Only the source-root incoming tree is opt-in; nested resource names are ordinary paths.
+    if (!includeIncoming && entry.name === "incoming" && entry.isDirectory()) continue;
 
     const fullPath = path.join(root, entry.name);
     if (entry.isDirectory()) {
-      yield* walkTextFiles(fullPath);
+      yield* walkTextFiles(fullPath, errors);
     } else if (entry.isFile() && TEXT_EXTENSIONS.has(path.extname(entry.name))) {
       yield fullPath;
     }
+  }
+}
+
+function readDirectory(directory, errors, options) {
+  try {
+    return fs.readdirSync(directory, options);
+  } catch (error) {
+    errors.push({
+      skill: null,
+      path: directory,
+      code: "directory_read_failed",
+      message: `Cannot scan directory (${readErrorCode(error)})`,
+    });
+    return [];
   }
 }
 

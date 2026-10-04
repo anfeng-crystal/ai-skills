@@ -3,11 +3,13 @@ import { Type } from "typebox";
 
 const TITLE = /^\d{4} \| (功能|设计|修复|优化|发布|探索|文档|研究) \| ([^|\r\n]{2,80})$/u;
 
+// Keep this adapter standalone; mirror title-core's non-substantive input guards.
 function isSubstantive(prompt: string): boolean {
 	const text = prompt.normalize("NFKC").trim();
 	return text.length >= 4 &&
 		!/^(?:你好|您好|嗨|hi|hello|hey|谢谢|好的|收到|ok|okay)[!！,.，。\s]*$/iu.test(text) &&
-		!/^\/(?:help|resume|clear|config|status|model|permissions)\b/iu.test(text);
+		!/^\/(?:help|resume|clear|config|hooks|status|model|permissions)\b/iu.test(text) &&
+		!/^(?:\[(?:image|file|attachment)[^\]]*\]\s*)+$/iu.test(text);
 }
 
 export default function (pi: ExtensionAPI) {

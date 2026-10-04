@@ -50,7 +50,7 @@ export function parseArgs(argv, defaultConfig = loadConfig()) {
         parsed.json = true;
         break;
       case "--skill":
-        parsed.skills.push(...splitValues(requiredValue(argv, ++i, token)));
+        parsed.skills.push(...splitValues(requiredValue(argv, ++i, token), token));
         break;
       case "--category":
         parsed.category = requiredValue(argv, ++i, token);
@@ -63,7 +63,7 @@ export function parseArgs(argv, defaultConfig = loadConfig()) {
         break;
       case "--tool":
       case "--target":
-        parsed.tools.push(...splitValues(requiredValue(argv, ++i, token)));
+        parsed.tools.push(...splitValues(requiredValue(argv, ++i, token), token));
         break;
       case "--check-updates":
         parsed.checkUpdates = true;
@@ -91,16 +91,22 @@ export function parseArgs(argv, defaultConfig = loadConfig()) {
         parsed.help = true;
         break;
       default:
-        if (!token.startsWith("--")) {
-          if (parsed.command === "install" && !parsed.installSource) {
-            parsed.installSource = token;
-          } else {
-            parsed.skills.push(...splitValues(token));
-          }
+        if (token.startsWith("--")) {
+          // Never discard a mistyped scope or preview flag before executing work.
+          throw new Error(`错误：未知参数 ${token.split("=", 1)[0]}，请使用 --help 查看支持的参数。`);
+        }
+        if (parsed.command === "install" && !parsed.installSource) {
+          parsed.installSource = token;
+        } else {
+          parsed.skills.push(...splitValues(token, "Skill"));
         }
         break;
     }
     i++;
+  }
+
+  if (parsed.apply && parsed.dryRun) {
+    throw new Error("错误：--dry-run 与 --apply 不能同时使用，请选择预览或执行。");
   }
 
   if (!parsed.help && !parsed.sourceRoot) {
@@ -120,9 +126,14 @@ function requiredValue(argv, index, token) {
   return value;
 }
 
-function splitValues(value) {
-  return String(value)
+function splitValues(value, label) {
+  const values = String(value)
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+  // An explicit empty selection must not become the omitted-scope default.
+  if (values.length === 0) {
+    throw new Error(`错误：${label} 需要指定至少一个非空值`);
+  }
+  return values;
 }

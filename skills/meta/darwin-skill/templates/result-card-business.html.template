@@ -329,7 +329,7 @@
         </div>
         <div class="meta-item">
           <span class="meta-label">评估模型:</span>
-          <span>Claude Opus 4.7</span>
+          <span>$model_set</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">优化工具:</span>
@@ -352,7 +352,7 @@
         </div>
         <div class="score-box delta-box">
           <div class="score-label">提升</div>
-          <div class="score delta">+$score_delta</div>
+          <div class="score delta">$score_delta</div>
         </div>
       </div>
     </section>

@@ -5,10 +5,8 @@
  * 保留旧参数，并新增 `--only/--limit/--since/--sort`。
  */
 
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { resolveProfileDirs, resolveBookmarkPaths, resolveHistoryPaths, loadBookmarks, loadHistory } from "./find-url-sources.mjs";
+import { parseFindOptions, resolveHttpEndpoint, assertAllowedHost, reportCliError } from "./cdp-cli-options.mjs";
 
 function printHelp() {
   console.log(`Usage:
@@ -40,146 +38,6 @@ Options:
   --dry-run                       Print the planned request without fetching
   --help                          Show this help
 `);
-}
-
-function parseArgs(argv) {
-  const parsed = {
-    host: process.env.WEB_ACCESS_CDP_HOST || "127.0.0.1",
-    port: Number(process.env.WEB_ACCESS_CDP_PORT || "9222"),
-    endpoint: null,
-    json: false,
-    dryRun: false,
-    first: false,
-    listAll: false,
-    includeDevtools: false,
-    type: "page",
-    mode: "contains",
-    value: "summary",
-    needle: null,
-    only: "targets",
-    limit: 20,
-    since: null,
-    sort: "recent",
-    profileDir: process.env.WEB_ACCESS_CHROME_PROFILE_DIR || null,
-    bookmarksPath: process.env.WEB_ACCESS_CHROME_BOOKMARKS_PATH || null,
-    historyPath: process.env.WEB_ACCESS_CHROME_HISTORY_PATH || null,
-    help: false,
-  };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    switch (token) {
-      case "--endpoint":
-        parsed.endpoint = argv[++index];
-        break;
-      case "--host":
-        parsed.host = argv[++index];
-        break;
-      case "--port":
-        parsed.port = Number(argv[++index]);
-        break;
-      case "--json":
-        parsed.json = true;
-        break;
-      case "--dry-run":
-        parsed.dryRun = true;
-        break;
-      case "--first":
-        parsed.first = true;
-        break;
-      case "--list-all":
-        parsed.listAll = true;
-        break;
-      case "--include-devtools":
-        parsed.includeDevtools = true;
-        break;
-      case "--type":
-        parsed.type = argv[++index];
-        break;
-      case "--mode":
-        parsed.mode = argv[++index];
-        break;
-      case "--value":
-        parsed.value = argv[++index];
-        break;
-      case "--match":
-        parsed.needle = argv[++index];
-        break;
-      case "--url":
-        parsed.mode = "url";
-        parsed.needle = argv[++index];
-        break;
-      case "--title":
-        parsed.mode = "title";
-        if (argv[index + 1] && !argv[index + 1].startsWith("--")) {
-          parsed.needle = argv[++index];
-        }
-        break;
-      case "--contains":
-        parsed.mode = "contains";
-        parsed.needle = argv[++index];
-        break;
-      case "--only":
-        parsed.only = argv[++index];
-        break;
-      case "--limit":
-        parsed.limit = Number(argv[++index]);
-        break;
-      case "--since":
-        parsed.since = argv[++index];
-        break;
-      case "--sort":
-        parsed.sort = argv[++index];
-        break;
-      case "--profile-dir":
-        parsed.profileDir = argv[++index];
-        break;
-      case "--bookmarks-path":
-        parsed.bookmarksPath = argv[++index];
-        break;
-      case "--history-path":
-        parsed.historyPath = argv[++index];
-        break;
-      case "--help":
-      case "-h":
-        parsed.help = true;
-        break;
-      default:
-        if (!token.startsWith("--") && !parsed.needle) {
-          parsed.needle = token;
-        } else {
-          throw new Error(`Unknown argument: ${token}`);
-        }
-        break;
-    }
-  }
-
-  return parsed;
-}
-
-function resolveEndpoint(parsed) {
-  if (parsed.endpoint) {
-    const normalized = /^https?:\/\//i.test(parsed.endpoint) ? parsed.endpoint : `http://${parsed.endpoint}`;
-    const url = new URL(normalized);
-    return {
-      base: normalized.replace(/\/+$/, ""),
-      host: url.hostname,
-      port: Number(url.port || (url.protocol === "https:" ? "443" : "80")),
-    };
-  }
-
-  return {
-    base: `http://${parsed.host}:${parsed.port}`,
-    host: parsed.host,
-    port: parsed.port,
-  };
-}
-
-function assertAllowedHost(host) {
-  const localHosts = new Set(["127.0.0.1", "localhost", "::1"]);
-  if (!localHosts.has(host) && process.env.WEB_ACCESS_ALLOW_REMOTE !== "1") {
-    throw new Error(`Refusing remote host ${host}; set WEB_ACCESS_ALLOW_REMOTE=1 to override.`);
-  }
 }
 
 async function listTargets(baseUrl, host) {
@@ -272,205 +130,6 @@ function formatItem(item, value) {
   return item[value] ?? "";
 }
 
-function chromeUserDataCandidates() {
-  const home = os.homedir();
-  switch (process.platform) {
-    case "darwin":
-      return [
-        path.join(home, "Library/Application Support/Google/Chrome"),
-        path.join(home, "Library/Application Support/Chromium"),
-        path.join(home, "Library/Application Support/BraveSoftware/Brave-Browser"),
-      ];
-    case "win32": {
-      const local = process.env.LOCALAPPDATA || path.join(home, "AppData/Local");
-      return [
-        path.join(local, "Google/Chrome/User Data"),
-        path.join(local, "Chromium/User Data"),
-        path.join(local, "BraveSoftware/Brave-Browser/User Data"),
-      ];
-    }
-    default:
-      return [
-        path.join(home, ".config/google-chrome"),
-        path.join(home, ".config/chromium"),
-        path.join(home, ".config/BraveSoftware/Brave-Browser"),
-      ];
-  }
-}
-
-function resolveProfileDirs(parsed) {
-  if (parsed.profileDir) {
-    return [path.resolve(parsed.profileDir)];
-  }
-
-  const profileDirs = [];
-  for (const root of chromeUserDataCandidates()) {
-    if (!fs.existsSync(root)) continue;
-    let entries = [];
-    try {
-      entries = fs.readdirSync(root, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      if (entry.name === "Default" || /^Profile \d+$/.test(entry.name) || entry.name === "Guest Profile") {
-        profileDirs.push(path.join(root, entry.name));
-      }
-    }
-  }
-  return [...new Set(profileDirs)];
-}
-
-function resolveBookmarkPaths(parsed) {
-  if (parsed.bookmarksPath) {
-    return [path.resolve(parsed.bookmarksPath)];
-  }
-  return resolveProfileDirs(parsed)
-    .map((profileDir) => path.join(profileDir, "Bookmarks"))
-    .filter((file) => fs.existsSync(file));
-}
-
-function resolveHistoryPaths(parsed) {
-  if (parsed.historyPath) {
-    return [path.resolve(parsed.historyPath)];
-  }
-  return resolveProfileDirs(parsed)
-    .map((profileDir) => path.join(profileDir, "History"))
-    .filter((file) => fs.existsSync(file));
-}
-
-function collectBookmarkNodes(node, profileName, bucket = [], folder = null) {
-  if (!node || typeof node !== "object") {
-    return bucket;
-  }
-  if (node.type === "url") {
-    bucket.push({
-      source: "bookmark",
-      title: node.name || "",
-      url: node.url || "",
-      addedAt: node.date_added || null,
-      profile: profileName,
-      folder,
-    });
-    return bucket;
-  }
-  const children = Array.isArray(node.children) ? node.children : [];
-  for (const child of children) {
-    collectBookmarkNodes(child, profileName, bucket, node.name || folder);
-  }
-  return bucket;
-}
-
-function chromeMicrosToIso(value) {
-  const micros = Number(value || 0);
-  if (!Number.isFinite(micros) || micros <= 0) return null;
-  const unixMs = micros / 1000 - 11644473600000;
-  return new Date(unixMs).toISOString();
-}
-
-function loadBookmarks(parsed) {
-  const items = [];
-  for (const bookmarksPath of resolveBookmarkPaths(parsed)) {
-    try {
-      const profileName = path.basename(path.dirname(bookmarksPath));
-      const raw = JSON.parse(fs.readFileSync(bookmarksPath, "utf8"));
-      const roots = raw.roots || {};
-      for (const key of Object.keys(roots)) {
-        collectBookmarkNodes(roots[key], profileName, items);
-      }
-    } catch {
-      continue;
-    }
-  }
-  return items.map((item) => ({
-    source: "bookmark",
-    title: item.title,
-    url: item.url,
-    profile: item.profile,
-    folder: item.folder,
-    addedAt: chromeMicrosToIso(item.addedAt),
-  }));
-}
-
-function parseSince(spec) {
-  if (!spec) return null;
-  if (/^\d+[dhm]$/.test(spec)) {
-    const value = Number(spec.slice(0, -1));
-    const unit = spec.slice(-1);
-    const factors = { m: 60_000, h: 3_600_000, d: 86_400_000 };
-    return Date.now() - value * factors[unit];
-  }
-  const timestamp = Date.parse(spec);
-  if (Number.isNaN(timestamp)) {
-    throw new Error(`Invalid --since value: ${spec}`);
-  }
-  return timestamp;
-}
-
-function loadHistory(parsed) {
-  const historyPaths = resolveHistoryPaths(parsed);
-  if (historyPaths.length === 0) {
-    return [];
-  }
-  const sinceMs = parseSince(parsed.since);
-  const pythonProgram = String.raw`import json, os, shutil, sqlite3, sys, tempfile
-payload = json.loads(sys.argv[1])
-rows = []
-for history_path in payload['paths']:
-    if not os.path.exists(history_path):
-        continue
-    profile = os.path.basename(os.path.dirname(history_path))
-    fd, tmp = tempfile.mkstemp(prefix='web-access-history-', suffix='.sqlite3')
-    os.close(fd)
-    try:
-        shutil.copy2(history_path, tmp)
-        conn = sqlite3.connect(tmp)
-        conn.row_factory = sqlite3.Row
-        query = """
-            SELECT url, title, visit_count, last_visit_time
-            FROM urls
-            ORDER BY last_visit_time DESC
-            LIMIT 5000
-        """
-        for row in conn.execute(query):
-            last_visit_time = row['last_visit_time'] or 0
-            unix_ms = last_visit_time / 1000 - 11644473600000 if last_visit_time else None
-            if payload['sinceMs'] and unix_ms and unix_ms < payload['sinceMs']:
-                continue
-            rows.append({
-                'source': 'history',
-                'profile': profile,
-                'title': row['title'] or '',
-                'url': row['url'] or '',
-                'visitCount': row['visit_count'] or 0,
-                'lastVisitedAt': unix_ms,
-                'lastVisitedIso': None if unix_ms is None else __import__('datetime').datetime.utcfromtimestamp(unix_ms / 1000).isoformat() + 'Z',
-            })
-        conn.close()
-    except Exception:
-        pass
-    finally:
-        try:
-            os.remove(tmp)
-        except OSError:
-            pass
-print(json.dumps(rows, ensure_ascii=False))`;
-  const result = spawnSync("python3", ["-c", pythonProgram, JSON.stringify({ paths: historyPaths, sinceMs })], {
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || "Failed to query Chrome history with python3.");
-  }
-  const rows = JSON.parse(result.stdout || "[]");
-  if (parsed.sort === "visits") {
-    rows.sort((a, b) => (b.visitCount || 0) - (a.visitCount || 0) || (b.lastVisitedAt || 0) - (a.lastVisitedAt || 0));
-  } else {
-    rows.sort((a, b) => (b.lastVisitedAt || 0) - (a.lastVisitedAt || 0));
-  }
-  return rows;
-}
-
 function matchResource(item, parsed) {
   return genericMatch(String(item.title || ""), String(item.url || ""), parsed);
 }
@@ -492,58 +151,55 @@ function collectSources(parsed) {
   }
 }
 
-let options;
+const args = process.argv.slice(2);
 try {
-  options = parseArgs(process.argv.slice(2));
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  printHelp();
-  process.exit(1);
-}
+  const options = parseFindOptions(args);
 
-if (options.help) {
-  printHelp();
-  process.exit(0);
-}
+  if (options.help) {
+    printHelp();
+    process.exit(0);
+  }
 
-const sources = collectSources(options);
-const endpoint = resolveEndpoint(options);
-if (options.dryRun) {
-  const payload = {
-    ok: true,
-    dryRun: true,
-    sources,
-    endpoint: sources.includes("targets")
-      ? {
-          requestUrl: `${endpoint.base}/json/list`,
-          host: endpoint.host,
-          port: endpoint.port,
-        }
-      : null,
-    chrome: sources.some((source) => source !== "targets")
-      ? {
-          profileDirs: resolveProfileDirs(options),
-          bookmarksPaths: resolveBookmarkPaths(options),
-          historyPaths: resolveHistoryPaths(options),
-          since: options.since,
-          sort: options.sort,
-          limit: options.limit,
-        }
-      : null,
-    mode: options.mode,
-    type: options.type,
-    match: options.needle,
-    value: options.value,
-  };
-  console.log(JSON.stringify(payload, null, 2));
-  process.exit(0);
-}
+  const sources = collectSources(options);
+  const endpoint = sources.includes("targets") ? resolveHttpEndpoint(options) : null;
+  if (options.dryRun) {
+    const payload = {
+      ok: true,
+      dryRun: true,
+      sources,
+      endpoint: sources.includes("targets")
+        ? {
+            requestUrl: `${endpoint.base}/json/list`,
+            host: endpoint.host,
+            port: endpoint.port,
+          }
+        : null,
+      chrome: sources.some((source) => source !== "targets")
+        ? {
+            profileDirs: resolveProfileDirs(options),
+            bookmarksPaths: resolveBookmarkPaths(options),
+            historyPaths: resolveHistoryPaths(options),
+            since: options.since,
+            sort: options.sort,
+            limit: options.limit,
+          }
+        : null,
+      mode: options.mode,
+      type: options.type,
+      match: options.needle,
+      value: options.value,
+    };
+    console.log(JSON.stringify(payload, null, 2));
+    process.exit(0);
+  }
 
-try {
   const matches = [];
+  const errors = [];
+  let successfulSources = 0;
 
   if (sources.includes("targets")) {
     const targets = await listTargets(endpoint.base, endpoint.host);
+    successfulSources += 1;
     for (const target of targets) {
       if (!matchesTarget(target, options)) continue;
       matches.push({
@@ -558,20 +214,27 @@ try {
     }
   }
 
-  if (sources.includes("bookmarks")) {
-    for (const item of loadBookmarks(options).filter((item) => matchResource(item, options))) {
-      matches.push(item);
-    }
-  }
-
-  if (sources.includes("history")) {
-    for (const item of loadHistory(options).filter((item) => matchResource(item, options))) {
-      matches.push(item);
-    }
+  for (const [source, loader] of [["bookmarks", loadBookmarks], ["history", loadHistory]]) {
+    if (!sources.includes(source)) continue;
+    const result = loader(options);
+    errors.push(...result.errors);
+    successfulSources += result.successfulSources;
+    matches.push(...result.items.filter((item) => matchResource(item, options)));
   }
 
   const limited = options.first ? matches.slice(0, 1) : matches.slice(0, Math.max(1, options.limit));
-  if (options.json) {
+  if (errors.length > 0) {
+    process.exitCode = 1;
+    const error = "Failed to read one or more selected local sources.";
+    if (options.json) {
+      console.log(JSON.stringify({ ok: false, command: "find-url", error,
+        partial: successfulSources > 0, errors, results: limited }, null, 2));
+    } else {
+      console.error(error);
+      for (const failure of errors) console.error(`${failure.source}: ${failure.code}${failure.path ? ` (${failure.path})` : ""}`);
+      for (const item of limited) console.log(formatItem(item, options.value));
+    }
+  } else if (options.json) {
     console.log(JSON.stringify(limited, null, 2));
   } else if (limited.length === 0) {
     console.log("No matching results.");
@@ -581,6 +244,5 @@ try {
     }
   }
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
+  reportCliError(error, args.includes("--json"), "find-url");
 }

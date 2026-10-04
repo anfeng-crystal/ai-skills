@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SKILLS_ROOT = path.resolve(__dirname, '../../../..');
+import { readSourceCount } from './source-count.mjs';
+import { readHtmlDeclaredCount } from './html-count.mjs';
+import { runVisualChecks } from './visual-checks.mjs';
 
 function parseArgs(argv) {
-  const args = { html: null, source: null, out: null };
+  const args = { html: null, source: null, out: null, browserPath: null, browserChannel: null };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--html') args.html = argv[++i];
-    else if (arg === '--source') args.source = argv[++i];
-    else if (arg === '--out') args.out = argv[++i];
+    if (arg === '--html' || arg === '--source' || arg === '--out') {
+      const value = argv[++i];
+      if (!value || value.startsWith('--') || value === '-h') throw new Error(`${arg} 缺少参数值`);
+      args[arg.slice(2)] = value;
+    }
+    else if (arg === '--browser-path' || arg === '--browser-channel') {
+      const value = argv[++i];
+      if (!value || value.startsWith('--')) throw new Error(`${arg} 缺少参数值`);
+      args[arg === '--browser-path' ? 'browserPath' : 'browserChannel'] = value;
+    }
     else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -22,6 +27,7 @@ function parseArgs(argv) {
     }
   }
   if (!args.html) throw new Error('缺少必需参数 --html');
+  if (args.browserPath && args.browserChannel) throw new Error('--browser-path 与 --browser-channel 不能同时使用');
   args.html = path.resolve(args.html);
   if (args.source) args.source = path.resolve(args.source);
   args.out = path.resolve(args.out || path.dirname(args.html));
@@ -30,12 +36,15 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  node skills/meta/html-output-quality/scripts/check-html.mjs --html <file> [--source <json-or-tsv>] [--out <dir>]
+  node skills/meta/html-output-quality/scripts/check-html.mjs --html <file> [--source <json-or-tsv-or-csv>] [--out <dir>]
+    [--browser-path <executable> | --browser-channel <channel>]
 
 Outputs:
   quality-report.json
   quality-report.md
-  desktop.png / mobile.png when Playwright is available`);
+  desktop.png / mobile.png when Playwright is available
+
+Browser environment: HTML_QUALITY_BROWSER_PATH (or WEB_ACCESS_BROWSER_PATH), HTML_QUALITY_BROWSER_CHANNEL`);
 }
 
 function addFinding(findings, level, code, message, detail = null) {
@@ -55,61 +64,13 @@ function stripTags(html) {
     .trim();
 }
 
-function readSourceCount(sourcePath, findings) {
-  if (!sourcePath) {
-    addFinding(findings, 'Warning', 'source_missing', '未提供 source，无法校验 HTML 声明条数');
-    return null;
-  }
-  if (!fs.existsSync(sourcePath)) {
-    addFinding(findings, 'High', 'source_not_found', 'source 文件不存在', sourcePath);
-    return null;
-  }
-
-  const content = fs.readFileSync(sourcePath, 'utf8');
-  const ext = path.extname(sourcePath).toLowerCase();
-  if (ext === '.json') {
-    try {
-      const data = JSON.parse(content);
-      if (Array.isArray(data)) return data.length;
-      if (Number.isInteger(data?.recordCount)) return data.recordCount;
-      if (Number.isInteger(data?._recordCount)) return data._recordCount;
-      const largest = findLargestArray(data);
-      if (largest !== null) return largest;
-      addFinding(findings, 'Warning', 'source_json_no_array', 'JSON 中未找到可计数数组，跳过条数校验');
-      return null;
-    } catch (error) {
-      addFinding(findings, 'High', 'source_json_invalid', 'source JSON 无法解析', error.message);
-      return null;
-    }
-  }
-
-  if (ext === '.tsv' || ext === '.csv') {
-    const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0);
-    return Math.max(0, lines.length - 1);
-  }
-
-  addFinding(findings, 'Warning', 'source_type_unknown', 'source 类型不是 JSON/TSV/CSV，跳过条数校验', ext || '(no extension)');
-  return null;
-}
-
-function findLargestArray(value) {
-  if (Array.isArray(value)) return value.length;
-  if (!value || typeof value !== 'object') return null;
-  let best = null;
-  for (const child of Object.values(value)) {
-    const count = findLargestArray(child);
-    if (count !== null && (best === null || count > best)) best = count;
-  }
-  return best;
-}
-
 function getHtmlDeclaredCount(html, findings) {
-  const match = html.match(/data-(?:source|record)-count=["'](\d+)["']/i);
-  if (!match) {
+  const count = readHtmlDeclaredCount(html);
+  if (count === null) {
     addFinding(findings, 'Warning', 'html_count_missing', 'HTML 未声明 data-source-count 或 data-record-count，无法与 source 条数比对');
     return null;
   }
-  return Number.parseInt(match[1], 10);
+  return count;
 }
 
 function checkStaticHtml(html, args, findings) {
@@ -185,161 +146,6 @@ function checkStaticInteractivity(html, findings) {
   if (!hasScriptedInteraction && !hasNativeInteraction) {
     addFinding(findings, 'Warning', 'interaction_static_controls', '页面有控件但缺少可见状态变化或事件处理');
   }
-}
-
-async function runVisualChecks(args, findings) {
-  const playwrightEntry = path.join(SKILLS_ROOT, 'node_modules', 'playwright', 'index.js');
-  if (!fs.existsSync(playwrightEntry)) {
-    addFinding(findings, 'Warning', 'playwright_unavailable', '当前环境缺少 Playwright，已跳过截图和响应式检查');
-    return {};
-  }
-
-  const playwrightModule = await import(pathToFileURL(playwrightEntry).href);
-  const chromium = playwrightModule.chromium || playwrightModule.default?.chromium;
-  if (!chromium) {
-    addFinding(findings, 'Warning', 'playwright_browser_unavailable', 'Playwright 模块未暴露 chromium，已跳过截图和响应式检查');
-    return {};
-  }
-  const browser = await chromium.launch({ headless: true });
-  const htmlUrl = pathToFileURL(args.html).href;
-  const screenshots = {};
-  const viewports = [
-    { name: 'desktop', width: 1365, height: 900 },
-    { name: 'mobile', width: 390, height: 900 },
-  ];
-
-  try {
-    for (const viewport of viewports) {
-      const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
-      await page.goto(htmlUrl, { waitUntil: 'networkidle' });
-      const state = await page.evaluate(() => {
-        const main = document.querySelector('main,[role="main"]');
-        const rect = main ? main.getBoundingClientRect() : null;
-        const focusable = Array.from(document.querySelectorAll('button,input,select,textarea,summary,a[href]'))
-          .filter((item) => !item.disabled && item.offsetParent !== null);
-        return {
-          bodyTextLength: document.body ? document.body.innerText.trim().length : 0,
-          mainVisible: Boolean(rect && rect.width > 20 && rect.height > 20),
-          scrollWidth: document.documentElement.scrollWidth,
-          clientWidth: document.documentElement.clientWidth,
-          interactiveCount: focusable.length,
-        };
-      });
-
-      if (state.bodyTextLength < 80) {
-        addFinding(findings, 'High', `${viewport.name}_blank`, `${viewport.name} 视口文本过少，疑似空白页`, state);
-      }
-      if (!state.mainVisible) {
-        addFinding(findings, 'High', `${viewport.name}_main_invisible`, `${viewport.name} 视口主内容不可见`, state);
-      }
-      if (state.scrollWidth > state.clientWidth + 4) {
-        addFinding(findings, 'Warning', `${viewport.name}_horizontal_overflow`, `${viewport.name} 视口存在横向溢出`, state);
-      }
-      if (state.interactiveCount === 0) {
-        addFinding(findings, 'Warning', `${viewport.name}_interaction_missing`, `${viewport.name} 视口未发现可聚焦交互控件`, state);
-      } else {
-        const interaction = await smokeTestInteraction(page);
-        if (!interaction.ok) {
-          addFinding(findings, 'Warning', `${viewport.name}_interaction_smoke_failed`, `${viewport.name} 视口交互冒烟验证未通过`, interaction);
-        }
-      }
-
-      const screenshotPath = path.join(args.out, `${viewport.name}.png`);
-      await page.screenshot({ path: screenshotPath, fullPage: true });
-      const stat = fs.statSync(screenshotPath);
-      screenshots[viewport.name] = screenshotPath;
-      if (stat.size < 1024) {
-        addFinding(findings, 'High', `${viewport.name}_screenshot_empty`, `${viewport.name} 截图文件过小，疑似空截图`, { bytes: stat.size });
-      }
-      await page.close();
-    }
-  } finally {
-    await browser.close();
-  }
-
-  return screenshots;
-}
-
-async function smokeTestInteraction(page) {
-  const result = await page.evaluate(() => {
-    function visibleRows() {
-      return Array.from(document.querySelectorAll('tbody tr')).filter((row) => !row.hidden).length;
-    }
-    function visiblePanels() {
-      return Array.from(document.querySelectorAll('[data-panel]')).filter((panel) => getComputedStyle(panel).display !== 'none').map((panel) => panel.getAttribute('data-panel'));
-    }
-    const before = {
-      rows: visibleRows(),
-      panels: visiblePanels(),
-      text: document.body.innerText,
-    };
-    return before;
-  });
-
-  const search = page.locator('input[type="search"], input:not([type])').first();
-  if (await search.count()) {
-    await search.fill('__html_gate_no_match__');
-    await page.waitForTimeout(50);
-    const changed = await page.evaluate((beforeRows) => {
-      const rows = Array.from(document.querySelectorAll('tbody tr'));
-      const visible = rows.filter((row) => !row.hidden).length;
-      const input = document.querySelector('input[type="search"], input:not([type])');
-      return Boolean(input?.value === '__html_gate_no_match__' && (rows.length === 0 || visible !== beforeRows));
-    }, result.rows);
-    if (changed) return { ok: true, action: 'search' };
-    await search.fill('');
-  }
-
-  const levelButton = page.locator('button[data-filter-level]').filter({ hasText: /.+/ }).nth(1);
-  if (await levelButton.count()) {
-    await levelButton.click();
-    await page.waitForTimeout(50);
-    const changed = await page.evaluate((beforeRows) => {
-      const rows = Array.from(document.querySelectorAll('tbody tr'));
-      const visible = rows.filter((row) => !row.hidden).length;
-      const active = document.querySelector('button[data-filter-level].active');
-      return Boolean(active || (rows.length > 0 && visible !== beforeRows));
-    }, result.rows);
-    if (changed) return { ok: true, action: 'filter-card' };
-  }
-
-  const tab = page.locator('button[data-tab]').nth(1);
-  if (await tab.count()) {
-    await tab.click();
-    await page.waitForTimeout(50);
-    const changed = await page.evaluate((beforePanels) => {
-      const activePressed = document.querySelector('button[data-tab][aria-pressed="true"]');
-      const visible = Array.from(document.querySelectorAll('[data-panel]')).filter((panel) => getComputedStyle(panel).display !== 'none').map((panel) => panel.getAttribute('data-panel'));
-      return Boolean(activePressed && JSON.stringify(visible) !== JSON.stringify(beforePanels));
-    }, result.panels);
-    if (changed) return { ok: true, action: 'tab' };
-  }
-
-  const sortable = page.locator('th[data-sort]').first();
-  if (await sortable.count()) {
-    await sortable.click();
-    await page.waitForTimeout(50);
-    const changed = await sortable.evaluate((node) => Boolean(node.getAttribute('aria-sort')));
-    if (changed) return { ok: true, action: 'sort' };
-  }
-
-  const summary = page.locator('summary').first();
-  if (await summary.count()) {
-    const before = await summary.evaluate((node) => node.parentElement?.open);
-    await summary.click();
-    await page.waitForTimeout(50);
-    const after = await summary.evaluate((node) => node.parentElement?.open);
-    if (before !== after) return { ok: true, action: 'details' };
-  }
-
-  const button = page.locator('button').first();
-  if (await button.count()) {
-    await button.focus();
-    const focused = await button.evaluate((node) => document.activeElement === node);
-    if (focused) return { ok: true, action: 'focusable-button' };
-  }
-
-  return { ok: false, reason: 'no supported interaction changed visible state' };
 }
 
 function statusFromFindings(findings) {

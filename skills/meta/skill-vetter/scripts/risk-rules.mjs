@@ -1,0 +1,117 @@
+import { CURL_USER_AUTH } from "./redaction.mjs";
+
+export const HOST_TARGETS = [
+  { name: "codex", pattern: /(?:\/|~\/|\$HOME\/)\.codex\/skills|CODEX_HOME/i },
+  { name: "claude", pattern: /(?:\/|~\/|\$HOME\/)\.claude\/skills|CLAUDE\.md/i },
+  { name: "agents", pattern: /(?:\/|~\/|\$HOME\/)\.agents\/skills|AGENTS\.md/i },
+  { name: "junie", pattern: /(?:\/|~\/|\$HOME\/)\.junie\/skills/i },
+  { name: "hermes", pattern: /\.hermes[\\/]+skills(?![\w.-])/i },
+];
+export const RULES = [
+  {
+    id: "destructive_rm",
+    severity: "critical",
+    category: "destructive_command",
+    reason: "发现 rm -rf，存在强删除风险。",
+    regex: /\brm\s+-rf\b/,
+  },
+  {
+    id: "git_hard_reset",
+    severity: "critical",
+    category: "destructive_command",
+    reason: "发现 git 强制回滚命令，可能覆盖用户现有改动。",
+    // Retain existing option warnings while also recognizing standalone '--'.
+    regex: /\bgit\s+reset\s+--hard\b|\bgit\s+checkout\s+--(?=\b|\s|$|[;&|<>])/,
+  },
+  {
+    id: "remote_pipe_shell",
+    severity: "critical",
+    category: "remote_bootstrap",
+    reason: "发现远程脚本直接管道执行模式，需要强人工复核。",
+    regex: /\b(?:curl|wget)\b[^\n|]*\|\s*(?:sh|bash)\b|\bbash\s*<\(\s*(?:curl|wget)\b/,
+  },
+  {
+    id: "host_path_write",
+    severity: "high",
+    category: "host_integration",
+    reason: "发现宿主 skills 目录写入或覆盖痕迹。",
+    regex: /(?:\/|~\/|\$HOME\/)\.(?:codex|claude|agents|junie)\/skills|CODEX_HOME|\.claude\/skills|\.agents\/skills|\.junie\/skills|\.hermes[\\/]+skills(?![\w.-])/,
+  },
+  {
+    id: "symlink_ops",
+    severity: "high",
+    category: "symlink_or_copy",
+    reason: "发现软链接或链接重写操作，需要人工确认是否覆盖现有链接。",
+    regex: /\bln\s+-s(?:[A-Za-z]*)\b|\bmklink\b|symlink\(/,
+  },
+  {
+    id: "force_copy_move",
+    severity: "high",
+    category: "symlink_or_copy",
+    reason: "发现复制、移动或替换目录行为，需要确认是否影响宿主目录。",
+    regex: /\bcp\s+-R\b|\bcp\s+-r\b|\bmv\b|copy_dir_contents|copy_file_to_root/,
+  },
+  {
+    id: "install_commands",
+    severity: "medium",
+    category: "install_or_bootstrap",
+    reason: "发现安装或拉取依赖命令，需要确认运行前提和副作用。",
+    regex: /\b(?:npm|pnpm|yarn|pip|pip3|uv|brew|apt|apt-get|cargo|go)\s+install\b|\buv\s+tool\s+install\b|\bgit\s+clone\b/,
+  },
+  {
+    id: "network_fetch",
+    severity: "medium",
+    category: "network_access",
+    reason: "发现主动联网获取资源或远程接口调用。",
+    regex: /\b(?:curl|wget)\b|fetch\(|requests\.(?:request|get|post|put|patch|delete|head)|axios\.|httpx\.|aiohttp\.|urllib\.request|from\s+urllib\.request\s+import|http\.client|java\.net\.http|HttpClient\.newHttpClient|URLConnection/i,
+  },
+  {
+    id: "database_access",
+    severity: "medium",
+    category: "database_access",
+    reason: "发现数据库访问或连接痕迹，需要确认数据来源和权限边界。",
+    regex: /sqlite3\.connect|psycopg|postgres(?:ql)?|jdbc:|create_engine\(|mysql/i,
+  },
+  {
+    id: "exec_apis",
+    severity: "high",
+    category: "system_execution",
+    reason: "发现系统命令执行接口，需要人工复核真实执行面。",
+    regex: /child_process\.(?:exec|execSync|spawn|spawnSync)|subprocess\.(?:run|Popen)|os\.system\(|shell=True/,
+  },
+  {
+    id: "eval_like",
+    severity: "medium",
+    category: "dynamic_execution",
+    reason: "发现动态执行模式，需确认是否会放大脚本风险。",
+    regex: /\beval\s*\(|new Function\s*\(/,
+  },
+  {
+    id: "secrets_or_auth",
+    severity: "medium",
+    category: "secrets_or_auth",
+    reason: "发现 Token、API Key、密码或 Basic Auth 提示。",
+    regex: /\b(?:[\w-]*(?:token|secret|password|passwd|api[_-]?key)|authorization|cookie|set-cookie|session[_-]?id|Basic Auth|Bearer)\b/i,
+  },
+  {
+    id: "curl_user_auth",
+    severity: "medium",
+    category: "secrets_or_auth",
+    reason: "发现 curl 用户认证参数，需核对凭据来源和目标，报告已隐藏参数值。",
+    regex: CURL_USER_AUTH,
+  },
+  {
+    id: "absolute_user_path",
+    severity: "medium",
+    category: "hardcoded_path",
+    reason: "发现用户目录或绝对路径硬编码，兼容性和安全边界都需要确认。",
+    regex: /\/Users\/[^/\s]+|[A-Z]:\\Users\\|~\/\./,
+  },
+  {
+    id: "auto_action",
+    severity: "high",
+    category: "auto_action",
+    reason: "发现默认自动执行、自动修复或自动写回倾向，需要人工确认是否越权。",
+    regex: /ALWAYS TRIGGER|自动触发|自动修复|自动写回|第一个动作.*执行脚本|必须直接执行脚本/i,
+  },
+];

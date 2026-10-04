@@ -17,7 +17,7 @@ def resolve_query(query_positional: Optional[str], query_option: Optional[str]) 
 def resolve_limit(limit_opt: Optional[int], preset_opt: Optional[str]) -> Optional[int]:
     """Resolve result limit from --limit and --preset arguments."""
     if limit_opt is not None:
-        return limit_opt
+        return validate_search_limit(limit_opt)
 
     if not preset_opt:
         return None
@@ -33,6 +33,20 @@ def resolve_limit(limit_opt: Optional[int], preset_opt: Optional[str]) -> Option
         raise CliUsageError(f"Unknown preset '{preset_opt}'. Available: {', '.join(presets.keys())}")
 
     return presets[preset]
+
+
+def validate_search_limit(limit: Optional[int]) -> Optional[int]:
+    """Text search has no unlimited sentinel; None keeps platform defaults."""
+    if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0):
+        raise CliUsageError("Search --limit must be a positive integer; omit it for platform defaults.")
+    return limit
+
+
+def validate_search_workers(max_workers: int) -> int:
+    """Reject invalid search concurrency before loading the environment or backends."""
+    if isinstance(max_workers, bool) or not isinstance(max_workers, int) or max_workers <= 0:
+        raise CliUsageError("Search --max-workers must be a positive integer.")
+    return max_workers
 
 
 def validate_platforms(platforms: Iterable[str], known_platforms: Iterable[str]) -> List[str]:
@@ -51,6 +65,9 @@ def validate_platforms(platforms: Iterable[str], known_platforms: Iterable[str])
 
     if invalid:
         raise CliUsageError(f"Unknown platforms: {', '.join(invalid)}")
+    if not normalized:
+        # An explicit empty selection must not fall back to a broader group.
+        raise CliUsageError("Provide at least one non-blank platform name.")
     return normalized
 
 

@@ -9,7 +9,6 @@ Author: Claude
 License: MIT
 """
 
-import argparse
 import io
 import contextlib
 import json
@@ -31,15 +30,15 @@ __author__ = "Claude"
 # 添加父目录到路径以便导入其他模块
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# 导入搜索日志记录器
-from .search_logger import SearchLogger
-
-# URL转Markdown模块（可选导入）
-try:
-    from ..url_to_markdown import UrlToMarkdown
-    URL_TO_MARKDOWN_AVAILABLE = True
-except ImportError:
-    URL_TO_MARKDOWN_AVAILABLE = False
+# 同时支持包导入和文档中的直接脚本入口。
+if __package__:
+    from .search_logger import SearchLogger
+    from .legacy_args import parse_args as parse_legacy_args
+    from .legacy_runtime import load_cli_environment, record_cli_search, report_cli_error
+else:
+    from search_logger import SearchLogger
+    from legacy_args import parse_args as parse_legacy_args
+    from legacy_runtime import load_cli_environment, record_cli_search, report_cli_error
 
 # 配置日志 - 输出到 stderr，与 JSON 输出分离
 logging.basicConfig(
@@ -1496,123 +1495,8 @@ def write_text_atomic(path: str, content: str):
 # =============================================================================
 
 def parse_args():
-    """解析命令行参数"""
-    parser = argparse.ArgumentParser(
-        description="Union Search - 统一多平台搜索",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-示例:
-  # 搜索所有平台
-  python union_search.py "machine learning"
-
-  # 搜索指定平台
-  python union_search.py "Python" --platforms github reddit
-
-  # 搜索平台组
-  python union_search.py "AI" --group dev
-
-  # 自定义每个平台返回数量
-  python union_search.py "深度学习" --limit 5
-
-  # JSON 输出
-  python union_search.py "React" --json --pretty
-
-  # 保存结果
-  python union_search.py "Vue" -o results.json
-
-  # URL转Markdown
-  python union_search.py --read-url "https://example.com"
-  python union_search.py --read-url "https://github.com" --read-timeout 60 --json
-        """
-    )
-
-    parser.add_argument("keyword", nargs="?", help="搜索关键词")
-    parser.add_argument(
-        "--platforms", "-p",
-        nargs="+",
-        help="指定平台列表（空格分隔）"
-    )
-    parser.add_argument(
-        "--group", "-g",
-        choices=list(PLATFORM_GROUPS.keys()),
-        help="使用预定义平台组: dev, social, search, books, all"
-    )
-    parser.add_argument(
-        "--limit", "-l",
-        type=int,
-        default=None,
-        help="每个平台返回结果数量 (默认: 使用各平台自身默认值)"
-    )
-    parser.add_argument(
-        "--max-workers",
-        type=int,
-        default=5,
-        help="最大并发数（默认: 5）"
-    )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=60,
-        help="超时时间（秒，默认: 60）"
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="JSON 格式输出"
-    )
-    parser.add_argument(
-        "--pretty",
-        action="store_true",
-        help="格式化 JSON 输出"
-    )
-    parser.add_argument(
-        "--markdown",
-        action="store_true",
-        help="Markdown 格式输出（默认）"
-    )
-    parser.add_argument(
-        "-o", "--output",
-        help="保存输出到文件"
-    )
-    parser.add_argument(
-        "--env-file",
-        default=".env",
-        help="环境变量文件路径"
-    )
-    parser.add_argument(
-        "--list-platforms",
-        action="store_true",
-        help="列出所有可用平台"
-    )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="显示详细日志"
-    )
-    parser.add_argument(
-        "--deduplicate",
-        action="store_true",
-        help="启用跨平台结果去重（按标题或链接）"
-    )
-    parser.add_argument(
-        "--read-url",
-        metavar="URL",
-        help="将指定URL转换为Markdown内容（基于Jina AI Reader API）"
-    )
-    parser.add_argument(
-        "--read-timeout",
-        type=int,
-        default=30,
-        help="URL读取超时时间（秒，默认: 30）"
-    )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"Union Search v{__version__}",
-        help="显示版本信息"
-    )
-
-    return parser.parse_args()
+    """解析旧文本 CLI 参数，库函数不应用 CLI 数值约束。"""
+    return parse_legacy_args(PLATFORM_GROUPS, __version__)
 
 
 def list_platforms():
@@ -1647,9 +1531,6 @@ def main():
     else:
         logging.getLogger().setLevel(logging.ERROR)
 
-    # 初始化搜索日志记录器
-    search_logger = SearchLogger(verbose=args.verbose)
-
     # 列出平台
     if args.list_platforms:
         list_platforms()
@@ -1657,11 +1538,19 @@ def main():
 
     # URL转Markdown功能
     if args.read_url:
-        if not URL_TO_MARKDOWN_AVAILABLE:
+        try:
+            # 按需加载，兼容直接脚本与包入口，帮助/搜索不加载可选模块的环境。
+            from url_to_markdown import UrlToMarkdown
+        except ImportError:
             print("错误: url_to_markdown模块未安装", file=sys.stderr)
             return 1
+        except (OSError, UnicodeError, ValueError) as error:
+            # 可选模块在导入时加载自己的 dotenv，失败也不能回显配置内容。
+            report_cli_error("URL读取模块初始化失败", error)
+            return 1
 
-        load_env_file(args.env_file)
+        if not load_cli_environment(load_env_file, args.env_file):
+            return 1
 
         print(f"正在读取URL: {args.read_url}", file=sys.stderr)
 
@@ -1702,23 +1591,23 @@ def main():
         print("使用 --help 查看帮助", file=sys.stderr)
         return 1
 
-    # 加载环境变量
-    load_env_file(args.env_file)
-
     # 确定要搜索的平台
     if args.platforms:
         platforms = args.platforms
     elif args.group:
         platforms = PLATFORM_GROUPS[args.group]
     else:
-        # 默认搜索所有平台
-        platforms = PLATFORM_GROUPS["all"]
+        # 无显式来源时避免因本机已配置凭据而调用付费后端。
+        platforms = PLATFORM_GROUPS["no_api_key_fast"]
 
     # 验证平台
     invalid_platforms = [p for p in platforms if p not in PLATFORM_MODULES]
     if invalid_platforms:
         print(f"错误: 未知平台: {', '.join(invalid_platforms)}", file=sys.stderr)
         print(f"使用 --list-platforms 查看可用平台", file=sys.stderr)
+        return 1
+
+    if not load_cli_environment(load_env_file, args.env_file):
         return 1
 
     # 执行搜索
@@ -1738,33 +1627,7 @@ def main():
 
     logger.info(f"搜索完成: 总耗时 {elapsed:.2f}s, 成功 {results['summary']['successful']}/{len(platforms)}")
 
-    # 构建详细日志元数据
-    metadata = {
-        "response_time": elapsed,
-        "status": "success" if results["summary"]["successful"] > 0 else "failed",
-        "total_platforms": results["summary"]["total_platforms"],
-        "successful_platforms": results["summary"]["successful"],
-        "failed_platforms": results["summary"]["failed"],
-        "total_items": results["summary"]["total_items"],
-        "platform_details": [
-            {
-                "platform": platform,
-                "status": "success" if result.get("success") else "failed",
-                "items": result.get("total", 0),
-                "timing_ms": result.get("timing_ms", 0),
-                "error": result.get("error")
-            }
-            for platform, result in results["results"].items()
-        ],
-    }
-
-    # 记录搜索日志
-    log_filepath = search_logger.log_union_search(
-        query=args.keyword,
-        results=results["final_items"],
-        metadata=metadata
-    )
-    logger.info(f"搜索日志已保存到: {log_filepath}")
+    record_cli_search(SearchLogger, args, results, elapsed, logger)
 
     # 格式化输出
     if args.json or (args.output and args.output.endswith(".json")):

@@ -45,22 +45,22 @@ function parseArgs(argv) {
     const token = argv[index];
     switch (token) {
       case "--api-key":
-        parsed.apiKey = argv[++index];
+        parsed.apiKey = requireValue(argv, ++index, token);
         break;
       case "--endpoint":
-        parsed.endpoint = argv[++index];
+        parsed.endpoint = requireValue(argv, ++index, token);
         break;
       case "--count":
-        parsed.count = Number(argv[++index]);
+        parsed.count = Number(requireValue(argv, ++index, token));
         break;
       case "--country":
-        parsed.country = argv[++index];
+        parsed.country = requireValue(argv, ++index, token);
         break;
       case "--search-lang":
-        parsed.searchLang = argv[++index];
+        parsed.searchLang = requireValue(argv, ++index, token);
         break;
       case "--freshness":
-        parsed.freshness = argv[++index];
+        parsed.freshness = requireValue(argv, ++index, token);
         break;
       case "--json":
         parsed.json = true;
@@ -86,6 +86,15 @@ function parseArgs(argv) {
   }
 
   return parsed;
+}
+
+function requireValue(argv, index, flag) {
+  const value = argv[index];
+  // A following option must retain its control meaning, especially --dry-run.
+  if (!value || !value.trim() || value.startsWith("--") || value === "-h") {
+    throw new Error(`${flag} requires a value.`);
+  }
+  return value;
 }
 
 function buildRequestUrl(options) {

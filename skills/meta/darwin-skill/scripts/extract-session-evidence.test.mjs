@@ -209,3 +209,85 @@ test("reads a log larger than the Node heap without retaining every record", () 
   assert.equal(JSON.parse(run.stdout).stats.mainSessions, 1);
   fs.rmSync(temp, { recursive: true });
 });
+
+test("reports non-object JSON records and keeps later messages and assistant context", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-shapes-"));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const file = path.join(temp, "main.jsonl");
+  writeSession(file, { id: "modern", source: "cli" }, [
+    message("assistant", ["先前助手上下文"]),
+    message("user", ["错误：前一条消息"]),
+  ]);
+  fs.appendFileSync(file, [null, [], 3, "private-shape-secret", false].map(JSON.stringify).join("\n") + "\n");
+  fs.appendFileSync(file, '{"private-parser-secret"\n');
+  fs.appendFileSync(file, JSON.stringify({ type: "response_item", payload: message("user", ["错误：后一条消息"]) }) + "\n");
+
+  const run = spawnSync(process.execPath, [script.pathname, "--root", temp], { encoding: "utf8" });
+  assert.equal(run.status, 1, run.stderr);
+  const report = JSON.parse(run.stdout);
+  assert.deepEqual(report.candidates.map((candidate) => candidate.sourceLine), [3, 10]);
+  assert.equal(report.stats.userMessages, 2);
+  assert.equal(report.stats.candidateMessages, 2);
+  assert.ok(report.candidates.every((candidate) => candidate.previousAssistantText === "先前助手上下文"));
+  assert.deepEqual(report.errors.map(({ sourceLine, message }) => ({ sourceLine, message })), [
+    ...[4, 5, 6, 7, 8].map((sourceLine) => ({ sourceLine, message: "invalid JSONL record" })),
+    { sourceLine: 9, message: "invalid JSONL" },
+  ]);
+  for (const secret of ["private-shape-secret", "private-parser-secret"]) assert.ok(!run.stdout.includes(secret));
+
+  const jsonl = spawnSync(process.execPath, [script.pathname, "--root", temp, "--format", "jsonl"], { encoding: "utf8" });
+  assert.equal(jsonl.status, 1, jsonl.stderr);
+  assert.deepEqual(jsonl.stdout.trim().split("\n").map((line) => JSON.parse(line).sourceLine), [3, 10]);
+});
+
+test("skips non-object records before metadata without admitting other non-session files", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-leading-shapes-"));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  for (const [index, record] of [null, [], 3, "private-leading-secret", false].entries()) {
+    const file = path.join(temp, `${index}.jsonl`);
+    writeSession(file, { id: `session-${index}`, source: "cli" }, [message("user", ["错误：有效消息"])]);
+    fs.writeFileSync(file, JSON.stringify(record) + "\n" + fs.readFileSync(file, "utf8"));
+  }
+  const unknown = path.join(temp, "non-session.jsonl");
+  writeSession(unknown, { id: "must-not-enter" }, [message("user", ["错误：不纳入"])]);
+  fs.writeFileSync(unknown, '{"type":"event_msg","payload":{}}\n' + fs.readFileSync(unknown, "utf8"));
+
+  const run = spawnSync(process.execPath, [script.pathname, "--root", temp], { encoding: "utf8" });
+  assert.equal(run.status, 1, run.stderr);
+  const report = JSON.parse(run.stdout);
+  assert.equal(report.stats.files, 6);
+  assert.equal(report.stats.mainSessions, 5);
+  assert.equal(report.candidates.length, 5);
+  assert.ok(report.candidates.every((candidate) => candidate.sourceLine === 3));
+  assert.equal(report.errors.length, 5);
+  assert.ok(report.errors.every((error) => error.sourceLine === 1 && error.message === "invalid JSONL record"));
+  assert.ok(!run.stdout.includes("private-leading-secret"));
+  assert.ok(!run.stdout.includes("must-not-enter"));
+});
+
+test("retains tool-call linkage and coverage across a non-object JSON record", (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-tool-shapes-"));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const file = path.join(temp, "main.jsonl");
+  writeSession(file, { id: "modern", source: "cli" }, [
+    { type: "function_call", name: "exec_command", call_id: "one", arguments: '{"cmd":"node skills/demo/check.mjs"}' },
+  ]);
+  fs.appendFileSync(file, "null\n" + JSON.stringify({ type: "response_item", payload: {
+    type: "function_call_output", call_id: "one", output: '{"exit_code":2,"output":"private-output-secret"}',
+  } }) + "\n");
+
+  const run = spawnSync(process.execPath, [script.pathname, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
+  assert.equal(run.status, 1, run.stderr);
+  const report = JSON.parse(run.stdout);
+  assert.equal(report.stats.toolCalls, 1);
+  assert.equal(report.stats.toolResults, 1);
+  assert.equal(report.stats.unmatchedResults, 0);
+  assert.equal(report.stats.errorResults, 1);
+  assert.equal(report.candidates[0].callLine, 2);
+  assert.equal(report.candidates[0].sourceLine, 4);
+  assert.deepEqual(report.candidates[0].scripts, ["check.mjs"]);
+  assert.equal(report.errors[0].sourceLine, 3);
+  assert.equal(report.coverage[0].lines, 4);
+  assert.equal(report.coverage[0].bytesAtOpen, fs.statSync(file).size);
+  assert.ok(!run.stdout.includes("private-output-secret"));
+});

@@ -64,12 +64,12 @@ Keep the session and selected tab explicit, and snapshot after switching:
 
 ```bash
 pwcli --session research open https://example.com/app
-pwcli tab-new https://example.com/help
-pwcli tab-list
-pwcli tab-select 1
-pwcli snapshot
-pwcli tab-select 0
-pwcli snapshot
+pwcli --session research tab-new https://example.com/help
+pwcli --session research tab-list
+pwcli --session research tab-select 1
+pwcli --session research snapshot
+pwcli --session research tab-select 0
+pwcli --session research snapshot
 ```
 
 ## Wait for an element

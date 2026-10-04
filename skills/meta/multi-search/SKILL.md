@@ -25,7 +25,7 @@ metadata:
 | 社交来源 | `search --group social --limit 5` |
 | 免费/无 API | `search --group no_api_key_fast --preset medium`，不足再扩到 `no_api_key` |
 | 单平台 | `platform github "query" --limit 5`，其他平台见脚本索引 |
-| 图片 | `scripts/union_image_search/multi_platform_image_search.py` |
+| 图片 | `image "query" --platforms baidu bing --limit 20` |
 | URL 转 Markdown | `defuddle <URL> --json` |
 | 视频/音频下载 | 现有请求覆盖目标、范围和保存动作时使用 downloader |
 
@@ -44,10 +44,12 @@ python union_search_cli.py search "query" --group no_api_key_fast --preset mediu
 python union_search_cli.py search "query" --group dev --limit 10
 python union_search_cli.py platform github "query" --limit 5
 python union_search_cli.py defuddle "https://example.com" --json
-python scripts/union_image_search/multi_platform_image_search.py "query" --limit 20
+python union_search_cli.py image "query" --platforms baidu bing --limit 20
 ```
 
-参数：`--preset small|medium|large|extra`、`--limit`、`--platforms`、`--group`、`--save-raw`、`--json`、`--markdown`、`-o`。
+统一 CLI 参数按子命令使用：搜索支持 `--preset small|medium|large|extra`、`--limit`、`--platforms`、`--group`；输出使用 `--format json|markdown|text`、`--pretty`、`-o`。文本搜索的 `--limit` 须为正整数，省略时沿用平台默认值；图片 `--limit <=0` 保留不限量语义，执行前核对请求范围。独立图片脚本对应参数是 `--num`。
+
+统一 `search` 和旧版 `scripts/union_search/union_search.py` 未指定平台/分组时均选 `no_api_key_fast`；图片未指定平台时排除付费 `volcengine`。显式选择其他平台或 `--group all` 前仍须核对费用授权。
 
 ## 范围、恢复与证据
 

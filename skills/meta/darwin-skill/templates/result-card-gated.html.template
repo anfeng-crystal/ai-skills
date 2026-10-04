@@ -52,11 +52,11 @@
 <body>
   <main data-generated-at="$date" data-source="card-data.json" data-source-count="1">
     <div class="eyebrow">$date · Darwin Skill</div>
-    <h1>$skill_name 优化成果</h1>
+    <h1><span data-field="skill-name">$skill_name</span> 优化成果</h1>
     <section class="scores">
-      <div class="score"><strong>$score_before</strong><span>Before</span></div>
-      <div class="score"><strong>$score_after</strong><span>After</span></div>
-      <div class="score delta"><strong>+$score_delta</strong><span>Delta</span></div>
+      <div class="score"><strong data-field="score-before">$score_before</strong><span>Before</span></div>
+      <div class="score"><strong data-field="score-after">$score_after</strong><span>After</span></div>
+      <div class="score delta"><strong data-field="score-delta">$score_delta</strong><span>Delta</span></div>
     </section>
     <nav class="actions" aria-label="成果卡片视图">
       <button type="button" data-tab="dimensions" aria-pressed="true">维度变化</button>
@@ -99,7 +99,10 @@ $test_results_items
       });
     });
     document.getElementById('copyCard').addEventListener('click', async () => {
-      const text = `$skill_name 优化成果：$score_before -> $score_after，Delta +$score_delta`;
+      // Read rendered text so card values never become JavaScript source.
+      const field = (name) => document.querySelector('[data-field="' + name + '"]').textContent;
+      const text = field('skill-name') + ' 优化成果：' + field('score-before') +
+        ' -> ' + field('score-after') + '，Delta ' + field('score-delta');
       try {
         await navigator.clipboard.writeText(text);
         cardStatus.textContent = '摘要已复制';

@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from errors import CliRuntimeError
+from registry import DEFAULT_IMAGE_PLATFORMS
+from validators import validate_search_limit
 
 
 def _ensure_scripts_on_path() -> None:
@@ -51,7 +53,8 @@ def run_search(
     deduplicate: bool,
     env_file: str,
 ) -> Dict[str, Any]:
-    """Run aggregated multi-platform search."""
+    """Run aggregated multi-platform search; default to no-API-key sources."""
+    validate_search_limit(limit)
     _ensure_scripts_on_path()
     from downloader.yt_dlp_downloader import build_download_candidates
     from union_search.union_search import (
@@ -70,7 +73,7 @@ def run_search(
             raise CliRuntimeError(f"Unknown platform group: {group}")
         selected = list(PLATFORM_GROUPS[group])
     else:
-        selected = list(PLATFORM_GROUPS["all"])
+        selected = list(PLATFORM_GROUPS["no_api_key_fast"])
 
     invalid = [p for p in selected if p not in PLATFORM_MODULES]
     if invalid:
@@ -104,6 +107,7 @@ def run_platform(
     params: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Run a single platform search through union adapter."""
+    validate_search_limit(limit)
     _ensure_scripts_on_path()
     from union_search.union_search import PLATFORM_MODULES, load_env_file, search_platform
 
@@ -162,8 +166,8 @@ def run_image(
     ]
     if no_metadata:
         cmd.append("--no-metadata")
-    if platforms:
-        cmd.extend(["--platforms", *platforms])
+    selected = list(platforms) if platforms else list(DEFAULT_IMAGE_PLATFORMS)
+    cmd.extend(["--platforms", *selected])
 
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if proc.returncode != 0:

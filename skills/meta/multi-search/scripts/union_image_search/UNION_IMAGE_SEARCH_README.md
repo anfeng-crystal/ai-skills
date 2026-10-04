@@ -27,7 +27,9 @@ VOLCENGINE_API_KEY=your_api_key_here
 
 ## 使用示例
 
-### 搜索所有平台
+### 搜索默认免费平台
+
+`volcengine` 保留为显式选项，只有现有授权覆盖费用/配额时使用；配置 API key 本身不表示费用授权。统一 CLI 的图片入口为 `union_search_cli.py image "query" --limit 10`；本脚本使用 `--num`。
 ```bash
 python scripts/union_image_search/multi_platform_image_search.py "cute cats"
 ```
@@ -53,11 +55,11 @@ python scripts/union_image_search/multi_platform_image_search.py --list-platform
 ## 主要参数
 
 - `--keyword, -k`: 搜索关键词（必需）
-- `--platforms, -p`: 指定平台列表（默认所有平台）
+- `--platforms`: 指定平台列表（默认排除付费 `volcengine`；显式 `IMAGE_SEARCH_PLATFORMS` 配置仍生效）
   - 可选平台: baidu, bing, google, i360, pixabay, yandex, sogou, yahoo, unsplash, gelbooru, safebooru, danbooru, pexels, huaban, foodiesfeed, volcengine
-- `--num, -n`: 每个平台的图片数量（默认 10，火山引擎最多 5）
-- `--output, -o`: 输出目录（默认 `image_downloads`）
-- `--threads, -t`: 下载线程数（默认 5）
+- `--num`: 每个平台的图片数量（默认 10，`<=0` 为不限量；火山引擎最多 5）
+- `--output`: 输出目录（默认 `image_downloads`）
+- `--threads`: 下载线程数（默认 5）
 - `--no-metadata`: 不保存元数据
 - `--delay`: 平台间延迟秒数（默认 1.0）
 

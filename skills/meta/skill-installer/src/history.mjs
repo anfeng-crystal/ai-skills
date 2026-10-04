@@ -41,22 +41,39 @@ export async function appendHistory(record) {
  * 读取所有历史记录
  */
 export async function readHistory() {
+  let content;
   try {
-    const content = await fs.readFile(HISTORY_FILE, "utf8");
-    return content
-      .split("\n")
-      .filter(line => line.trim())
-      .map(line => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
-  } catch {
-    return [];
+    content = await fs.readFile(HISTORY_FILE, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
   }
+
+  const records = [];
+  for (const [index, line] of content.split("\n").entries()) {
+    if (!line.trim()) continue;
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      throw invalidHistory("INVALID_HISTORY_JSON", index + 1);
+    }
+    // Appended entries are objects. Do not silently discard corrupt lines or
+    // let non-record values appear in successful queries or cleanup rewrites.
+    if (record === null || typeof record !== "object" || Array.isArray(record)) {
+      throw invalidHistory("INVALID_HISTORY_RECORD", index + 1);
+    }
+    records.push(record);
+  }
+  return records;
+}
+
+function invalidHistory(code, lineNumber) {
+  // Only a fixed code and line number enter the error; never expose raw JSON.
+  const error = new Error(`${code}: 历史记录格式无效（第 ${lineNumber} 行）`);
+  error.code = code;
+  error.lineNumber = lineNumber;
+  return error;
 }
 
 /**

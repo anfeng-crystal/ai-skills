@@ -12,6 +12,7 @@ Darwin Skill 成果卡片渲染脚本
 import sys
 import json
 import html
+from decimal import Decimal, InvalidOperation
 from string import Template
 
 
@@ -20,11 +21,24 @@ def esc(value):
     return html.escape(str(value), quote=True)
 
 
+def format_delta(value):
+    """只给无符号正数添加 +，保留实际增量及未评分文字。"""
+    text = str(value)
+    try:
+        number = Decimal(text)
+    except InvalidOperation:
+        return text
+    if number.is_finite() and number > 0 and not text.lstrip().startswith(('+', '-')):
+        return '+' + text.strip()
+    return text
+
+
 def render_dimensions_table(dimensions):
     """渲染维度对比表格（Markdown 格式）"""
     rows = []
     for dim in dimensions:
-        rows.append(f"| {dim['name']} | {dim['before']}/10 | {dim['after']}/10 | +{dim['delta']} |")
+        # 维度上限因评分口径而异；输入未提供上限时不补造分母。
+        rows.append(f"| {dim['name']} | {dim['before']} | {dim['after']} | {format_delta(dim['delta'])} |")
     return '\n'.join(rows)
 
 
@@ -34,9 +48,9 @@ def render_dimensions_rows(dimensions):
     for dim in dimensions:
         rows.append(f"""          <tr>
             <td>{esc(dim['name'])}</td>
-            <td>{esc(dim['before'])}/10</td>
-            <td>{esc(dim['after'])}/10</td>
-            <td class="delta-cell">+{esc(dim['delta'])}</td>
+            <td>{esc(dim['before'])}</td>
+            <td>{esc(dim['after'])}</td>
+            <td class="delta-cell">{esc(format_delta(dim['delta']))}</td>
           </tr>""")
     return '\n'.join(rows)
 
@@ -85,12 +99,14 @@ def render_template(template_path, data):
         template_content = f.read()
 
     # 准备渲染数据
+    model_set = data.get('model_set')
     render_data = {
         'skill_name': str(data['skill_name']),
         'score_before': str(data['score_before']),
         'score_after': str(data['score_after']),
-        'score_delta': str(data['score_delta']),
+        'score_delta': format_delta(data['score_delta']),
         'date': str(data['date']),
+        'model_set': str(model_set) if model_set is not None and str(model_set).strip() else '-',
     }
 
     # 根据模板类型选择渲染函数
@@ -101,7 +117,7 @@ def render_template(template_path, data):
         render_data['test_results_list'] = render_test_results_list(data['test_results'])
     else:
         # HTML 模板
-        for key in ['skill_name', 'score_before', 'score_after', 'score_delta', 'date']:
+        for key in ['skill_name', 'score_before', 'score_after', 'score_delta', 'date', 'model_set']:
             render_data[key] = esc(render_data[key])
         render_data['dimensions_rows'] = render_dimensions_rows(data['dimensions'])
         render_data['improvements_items'] = render_improvements_items(data['improvements'])

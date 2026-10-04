@@ -6,12 +6,14 @@
  */
 
 import { parseArgs } from '../src/cli.mjs';
+import { printOutput } from '../src/output.mjs';
 import { buildPlan, applyPlan, buildRemovePlan, applyRemovePlan } from '../src/sync-links.mjs';
 import { checkAllUpdates } from '../src/update-checker.mjs';
 import { diffSkill, updateSkill, updateAll } from '../src/updater.mjs';
-import { buildInstallPlan, applyInstallPlan, resolveCategory } from '../src/install.mjs';
+import { buildInstallPlan, applyInstallPlan } from '../src/install.mjs';
 import { queryHistory, appendHistory } from '../src/history.mjs';
 import { deleteMeta } from '../src/meta.mjs';
+import { migrateSkills } from '../src/migrate.mjs';
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -38,38 +40,38 @@ try {
   // 处理子命令
   if (options.command === 'history') {
     await handleHistory(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   if (options.command === 'diff') {
     await handleDiff(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   if (options.command === 'update') {
     await handleUpdate(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   if (options.command === 'remove') {
     await handleRemove(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   if (options.command === 'install') {
     await handleInstall(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   if (options.command === 'migrate') {
     await handleMigrate(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   // 处理主命令
   if (options.checkUpdates) {
     await handleCheckUpdates(options);
-    process.exit(0);
+    process.exit(process.exitCode || 0);
   }
 
   // 默认：软链接分发
@@ -118,8 +120,20 @@ async function handleSync(options) {
 }
 
 async function handleCheckUpdates(options) {
-  const result = await checkAllUpdates(options.sourceRoot, options.skills);
-  printOutput(result, options);
+  const result = await checkAllUpdates(options.sourceRoot, options.skills, { dryRun: options.dryRun });
+  if (options.onlyUpdatable) {
+    const successful = new Set(["updatable", "up_to_date", "no_source", "local"]);
+    const entries = Object.entries(result.skills);
+    // Keep full-check summary/exit semantics; a display filter must not hide failures.
+    printOutput({
+      ...result,
+      skills: Object.fromEntries(entries.filter(([, item]) => item.status === "updatable")),
+      checkErrors: Object.fromEntries(entries.filter(([, item]) => !successful.has(item.status))),
+    }, options);
+  } else {
+    printOutput(result, options);
+  }
+  if (!result.ok) process.exitCode = 2;
 }
 
 async function handleDiff(options) {
@@ -130,6 +144,7 @@ async function handleDiff(options) {
 
   for (const skill of options.skills) {
     const result = await diffSkill(options.sourceRoot, skill);
+    if (result.ok === false || ["fetch_failed", "local_missing"].includes(result.status)) process.exitCode = 2;
     if (options.json) {
       console.log(JSON.stringify(result, null, 2));
     } else {
@@ -143,15 +158,23 @@ async function handleUpdate(options) {
     const result = await updateAll(options.sourceRoot, {
       dryRun: options.dryRun,
       sync: options.sync,
+      home: options.home,
+      tools: options.tools,
+      config: options.config,
     });
     printOutput(result, options);
+    if (!result.ok) process.exitCode = 2;
   } else if (options.skills.length > 0) {
     for (const skill of options.skills) {
       const result = await updateSkill(options.sourceRoot, skill, {
         dryRun: options.dryRun,
         sync: options.sync,
+        home: options.home,
+        tools: options.tools,
+        config: options.config,
       });
       printOutput(result, options);
+      if (result.status === "failed" || result.ok === false) process.exitCode = 2;
     }
   } else {
     console.error("错误：update 子命令需要指定 --skill 或 --all");
@@ -174,9 +197,7 @@ async function handleRemove(options) {
   }
 
   const plan = await buildRemovePlan(options);
-  const hardConflicts = plan.records.filter((record) =>
-    record.status === "external_symlink_conflict" || record.status === "real_path_conflict"
-  );
+  const hardConflicts = plan.records.filter((record) => HARD_CONFLICT_STATUSES.has(record.status));
 
   if (options.apply && hardConflicts.length > 0) {
     printOutput(
@@ -240,114 +261,9 @@ async function handleRemove(options) {
 }
 
 async function handleMigrate(options) {
-  const sourceRoot = options.sourceRoot;
-  const migrations = [];
-
-  // 扫描 sourceRoot 一级子目录，找出未分类的根级 skill。
-  const entries = await fs.readdir(sourceRoot, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name === "skills" || entry.name.startsWith(".")) continue;
-    const skillMdPath = path.join(sourceRoot, entry.name, "SKILL.md");
-    try {
-      await fs.access(skillMdPath);
-    } catch {
-      continue;
-    }
-
-    // 读取 frontmatter
-    const content = await fs.readFile(skillMdPath, "utf8");
-    const frontmatter = parseFrontmatter(content);
-    const category = await resolveCategory("auto", frontmatter, sourceRoot);
-    const skillName = entry.name;
-    const targetRelativePath = path.posix.join(category, skillName);
-    const targetPath = path.join(sourceRoot, ...targetRelativePath.split("/"));
-
-    let targetExists = false;
-    try {
-      await fs.access(targetPath);
-      targetExists = true;
-    } catch {}
-
-    migrations.push({
-      skillName,
-      category,
-      sourcePath: path.join(sourceRoot, entry.name),
-      targetRelativePath,
-      targetPath,
-      targetExists,
-      status: targetExists ? "target_exists" : "planned",
-      reason: targetExists ? "target_directory_exists" : "ready_to_migrate",
-    });
-  }
-
-  const result = {
-    sourceRoot,
-    home: options.home,
-    command: "migrate",
-    applied: false,
-    ok: migrations.every((m) => !m.targetExists),
-    count: migrations.length,
-    planned: migrations.filter((m) => m.status === "planned").length,
-    blocked: migrations.filter((m) => m.status === "target_exists").length,
-    migrations,
-  };
-
-  if (options.apply) {
-    if (!result.ok) {
-      printOutput(result, options);
-      process.exit(2);
-    }
-    for (const migration of migrations) {
-      if (migration.status !== "planned") continue;
-      await fs.mkdir(path.dirname(migration.targetPath), { recursive: true });
-      await fs.rename(migration.sourcePath, migration.targetPath);
-      migration.status = "migrated";
-      migration.reason = "moved_to_category";
-    }
-    result.applied = true;
-
-    // 迁移后自动 sync
-    const syncPlan = await buildPlan({
-      ...options,
-      skills: migrations.filter((m) => m.status === "migrated").map((m) => m.targetRelativePath),
-    });
-    await applyPlan(syncPlan.records);
-    result.syncPlan = syncPlan;
-  }
-
+  const result = await migrateSkills(options);
   printOutput(result, options);
-
-  if (!result.ok && !options.apply) {
-    process.exitCode = 2;
-  }
-}
-
-function parseFrontmatter(content) {
-  if (!content.startsWith("---")) return {};
-  const end = content.indexOf("\n---", 3);
-  if (end === -1) return {};
-  const values = {};
-  for (const rawLine of content.slice(3, end).split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const match = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (!match) continue;
-    const [, key, rawValue] = match;
-    values[key] = parseScalar(rawValue);
-  }
-  return values;
-}
-
-function parseScalar(value) {
-  const trimmed = value.trim();
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    return trimmed.slice(1, -1).split(",").map((item) => normalizeScalar(item)).filter(Boolean);
-  }
-  return normalizeScalar(trimmed);
-}
-
-function normalizeScalar(value) {
-  return String(value).trim().replace(/^['"]|['"]$/g, "");
+  if (!result.ok) process.exitCode = 2;
 }
 
 async function handleInstall(options) {
@@ -373,6 +289,11 @@ async function handleInstall(options) {
 }
 
 function printDiff(result) {
+  if (result.ok === false || ["fetch_failed", "local_missing"].includes(result.status)) {
+    console.log(`\n${result.skill}: ${result.status}${result.code ? ` (${result.code})` : ""} — ${result.reason}`);
+    return;
+  }
+
   if (!result.found) {
     console.log(`\n${result.skill}: 未找到 .skill-meta.json`);
     return;
@@ -398,124 +319,6 @@ function printDiff(result) {
   }
 }
 
-function printOutput(payload, options) {
-  const outputPayload = prepareOutputPayload(payload, options);
-  if (options.json) {
-    console.log(JSON.stringify(outputPayload, null, 2));
-    return;
-  }
-
-  if (outputPayload.sourceRoot) {
-    console.log(`Source root: ${outputPayload.sourceRoot}`);
-  }
-  if (outputPayload.home) {
-    console.log(`Host home: ${outputPayload.home}`);
-  }
-  if (outputPayload.applied !== undefined) {
-    console.log(`Apply mode: ${outputPayload.applied ? "yes" : "no"}`);
-  }
-  if (outputPayload.purge !== undefined) {
-    console.log(`Purge mode: ${outputPayload.purge ? "yes" : "no"}`);
-  }
-  if (outputPayload.ok !== undefined) {
-    console.log(`OK: ${outputPayload.ok ? "yes" : "no"}`);
-  }
-
-  if (outputPayload.summary) {
-    console.log("Summary:");
-    console.log(JSON.stringify(outputPayload.summary, null, 2));
-  }
-
-  if (outputPayload.records) {
-    console.log("Records:");
-    for (const record of outputPayload.records) {
-      console.log(
-        [
-          record.tool,
-          record.skill ?? "-",
-          record.action,
-          record.status,
-          record.reason,
-          record.targetPath || "-",
-        ].join("\t"),
-      );
-    }
-  }
-
-  if (outputPayload.command === "install") {
-    console.log("Install:");
-    console.log(
-      [
-        outputPayload.inputType,
-        outputPayload.input,
-        outputPayload.category || "-",
-        outputPayload.skillName || "-",
-        outputPayload.status,
-        outputPayload.reason,
-        outputPayload.targetPath || "-",
-      ].join("\t"),
-    );
-  }
-
-  if (outputPayload.command === "migrate" && outputPayload.migrations) {
-    console.log(`Migrate: ${outputPayload.count} found, ${outputPayload.planned} planned, ${outputPayload.blocked} blocked`);
-    for (const m of outputPayload.migrations) {
-      console.log(
-        [m.skillName, m.category, m.status, m.reason, m.targetRelativePath || "-"].join("\t"),
-      );
-    }
-  }
-
-  if (outputPayload.history) {
-    console.log("History:");
-    for (const record of outputPayload.history) {
-      console.log(
-        [
-          record.timestamp,
-          record.action,
-          record.skill || "-",
-          record.fromHash ? `${record.fromHash} → ${record.toHash}` : "-",
-          record.syncedTools ? `synced to ${record.syncedTools.length} tools` : "-",
-        ].join("\t"),
-      );
-    }
-  }
-}
-
-function prepareOutputPayload(payload, options) {
-  if (!payload.records || shouldShowOptionalHosts(options)) {
-    return payload;
-  }
-
-  const records = payload.records.filter((record) =>
-    !(record.status === "optional_host_unavailable" && !record.wouldChange)
-  );
-  return {
-    ...payload,
-    records,
-    summary: payload.summary ? summarizeRecords(records) : payload.summary,
-  };
-}
-
-function shouldShowOptionalHosts(options) {
-  return options.tools.length > 0;
-}
-
-function summarizeRecords(records) {
-  return records.reduce(
-    (summary, record) => {
-      summary.total += 1;
-      summary.byAction[record.action] = (summary.byAction[record.action] || 0) + 1;
-      summary.byStatus[record.status] = (summary.byStatus[record.status] || 0) + 1;
-      if (record.wouldChange) {
-        summary.wouldChange += 1;
-      }
-      return summary;
-    },
-    { total: 0, wouldChange: 0, byAction: {}, byStatus: {} },
-  );
-}
-
 function printHelp() {
   console.log(`Skill Linker
 
@@ -539,7 +342,7 @@ Options:
   --apply                Apply planned link changes.
   --json                 Print JSON output.
   --check-updates        Check upstream updates.
-  --only-updatable       Only show updatable skills.
+  --only-updatable       Show updatable skills and check failures; summary covers all checks.
   --dry-run              Preview update/remove operations.
   --sync                 Sync after update.
   --purge                Remove source directory after unlinking.

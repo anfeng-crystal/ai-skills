@@ -5,9 +5,9 @@
  * 默认只读取本地环境；`--dry-run` 只输出计划，不访问浏览器或端点。
  */
 
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { allowRemoteHost, localHost, versionUrl, validateEndpoint, optionValue, browserCandidates, detectBrowserPath } from "./cdp-environment.mjs";
+import { readCdpVersion } from "./cdp-response.mjs";
 
 const MIN_NODE_MAJOR = 22;
 
@@ -43,13 +43,13 @@ function parseArgs(argv) {
     const token = argv[index];
     switch (token) {
       case "--host":
-        parsed.host = argv[++index];
+        parsed.host = optionValue(argv, ++index, token);
         break;
       case "--port":
-        parsed.port = Number(argv[++index]);
+        parsed.port = Number(optionValue(argv, ++index, token));
         break;
       case "--browser-path":
-        parsed.browserPath = argv[++index];
+        parsed.browserPath = optionValue(argv, ++index, token);
         break;
       case "--json":
         parsed.json = true;
@@ -72,66 +72,8 @@ function parseArgs(argv) {
     }
   }
 
+  if (!parsed.help) validateEndpoint(parsed.host, parsed.port);
   return parsed;
-}
-
-function browserCandidates(explicitPath) {
-  const home = os.homedir();
-  const localAppData = process.env.LOCALAPPDATA || path.join(home, "AppData", "Local");
-  const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
-  const programFilesX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
-  const byPlatform = {
-    darwin: [
-      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      "/Applications/Chromium.app/Contents/MacOS/Chromium",
-      "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-      path.join(home, "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-    ],
-    win32: [
-      path.join(programFiles, "Google/Chrome/Application/chrome.exe"),
-      path.join(programFilesX86, "Google/Chrome/Application/chrome.exe"),
-      path.join(localAppData, "Google/Chrome/Application/chrome.exe"),
-      path.join(programFiles, "Microsoft/Edge/Application/msedge.exe"),
-      path.join(programFilesX86, "Microsoft/Edge/Application/msedge.exe"),
-      path.join(localAppData, "Microsoft/Edge/Application/msedge.exe"),
-      path.join(programFiles, "BraveSoftware/Brave-Browser/Application/brave.exe"),
-      path.join(programFilesX86, "BraveSoftware/Brave-Browser/Application/brave.exe"),
-      path.join(localAppData, "BraveSoftware/Brave-Browser/Application/brave.exe"),
-    ],
-    linux: [
-      "/usr/bin/google-chrome",
-      "/usr/bin/google-chrome-stable",
-      "/usr/bin/chromium",
-      "/usr/bin/chromium-browser",
-      "/snap/bin/chromium",
-      "/usr/bin/microsoft-edge",
-      "/usr/bin/brave-browser",
-    ],
-  };
-  return [
-    explicitPath,
-    ...(byPlatform[process.platform] || byPlatform.linux),
-  ].filter(Boolean);
-}
-
-function detectBrowserPath(explicitPath) {
-  for (const candidate of browserCandidates(explicitPath)) {
-    try {
-      fs.accessSync(candidate, process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK);
-      return candidate;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-function allowRemoteHost(host) {
-  if (host === "127.0.0.1" || host === "localhost" || host === "::1") {
-    return true;
-  }
-  return process.env.WEB_ACCESS_ALLOW_REMOTE === "1";
 }
 
 async function detectCdp(host, port) {
@@ -146,7 +88,7 @@ async function detectCdp(host, port) {
   }
 
   try {
-    const response = await fetch(`http://${host}:${port}/json/version`, {
+    const response = await fetch(versionUrl(host, port), {
       signal: AbortSignal.timeout(1500),
     });
     if (!response.ok) {
@@ -159,12 +101,13 @@ async function detectCdp(host, port) {
       };
     }
 
-    const payload = await response.json();
+    const status = await readCdpVersion(response);
+    if (!status.ok) return { reachable: false, reason: status.reason, webSocketUrl: null, host, port };
     return {
       reachable: true,
       reason: "ok",
-      webSocketUrl: payload.webSocketDebuggerUrl || null,
-      browser: payload.Browser || null,
+      webSocketUrl: status.ws,
+      browser: status.browser,
       host,
       port,
     };
@@ -266,36 +209,46 @@ const result = {
   recommendations: [
     ...(nodeMajor >= MIN_NODE_MAJOR ? [] : [`升级 Node 到 ${MIN_NODE_MAJOR}+`]),
     ...(browserPath ? [] : ["安装或显式指定可执行浏览器路径"]),
-    ...(cdp.reachable ? [] : options.autoLaunch ? ["CDP 不可达，尝试自动启动..."] : ["CDP 未开启；加 --auto-launch 可自动临时启动"]),
+    ...(cdp.reachable ? [] : cdp.reason === "invalid_cdp_response"
+      ? ["CDP 端点响应无效；核对所选主机、端口及占用该端口的服务"]
+      : options.autoLaunch ? ["CDP 不可达，尝试自动启动..."] : ["CDP 未开启；加 --auto-launch 可自动临时启动"]),
   ],
 };
 
-// Auto-launch CDP if requested and unreachable
-if (options.autoLaunch && !result.readyForCdp && browserPath) {
-  const launchScript = new URL("./cdp-launch.mjs", import.meta.url).pathname;
+// Only an unreachable local endpoint can be repaired by starting a local child.
+if (options.autoLaunch && !cdp.reachable && cdp.reason !== "invalid_cdp_response" && browserPath && result.node.ok && localHost(options.host)) {
+  const launchScript = fileURLToPath(new URL("./cdp-launch.mjs", import.meta.url));
   try {
     const { execFileSync } = await import("node:child_process");
-    const out = execFileSync(process.execPath, [launchScript], { encoding: "utf-8", timeout: 15000 });
+    const out = execFileSync(process.execPath, [launchScript], {
+      encoding: "utf-8", timeout: 18000, stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, WEB_ACCESS_CDP_HOST: options.host,
+        WEB_ACCESS_CDP_PORT: String(options.port), WEB_ACCESS_BROWSER_PATH: browserPath },
+    });
     const launchResult = JSON.parse(out);
-    if (launchResult.ok) {
-      result.cdp = {
-        reachable: true,
-        reason: launchResult.launched ? "auto_launched" : "already_running",
-        webSocketUrl: launchResult.webSocketDebuggerUrl,
-        browser: launchResult.browser,
-        host: launchResult.host,
-        port: launchResult.port,
-        pid: launchResult.pid,
-        tmpDir: launchResult.tmpDir,
-      };
-      result.readyForCdp = true;
-      if (options.json) {
-        result.recommendations = result.recommendations.filter(r => !r.includes("CDP"));
-      }
-    }
-  } catch {
-    // launch failed, keep original result
+    if (!launchResult.ok) throw new Error(launchResult.reason || "launch_failed");
+    result.cdp = {
+      reachable: true,
+      reason: launchResult.launched ? "auto_launched" : "already_running",
+      webSocketUrl: launchResult.webSocketDebuggerUrl,
+      browser: launchResult.browser,
+      host: launchResult.host,
+      port: launchResult.port,
+      pid: launchResult.pid,
+      tmpDir: launchResult.tmpDir,
+    };
+    result.readyForCdp = true;
+    result.recommendations = result.recommendations.filter(line => !line.includes("CDP"));
+  } catch (error) {
+    let failure;
+    try { failure = JSON.parse(error.stdout?.toString() || "null"); } catch { /* Preserve a bounded generic reason. */ }
+    result.cdp.launchFailure = failure || { reason: error.code || "launch_failed" };
+    result.recommendations = result.recommendations.filter(line => !line.includes("CDP"));
+    result.recommendations.push(`CDP 自动启动失败：${result.cdp.launchFailure.reason}`);
   }
+} else if (options.autoLaunch && !cdp.reachable && cdp.reason !== "invalid_cdp_response" && !localHost(options.host)) {
+  result.recommendations = result.recommendations.filter(line => !line.includes("CDP"));
+  result.recommendations.push("远程 CDP 不可达；本地自动启动无法修复该端点");
 }
 
 if (options.json) {

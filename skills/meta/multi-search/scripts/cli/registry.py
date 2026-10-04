@@ -37,6 +37,8 @@ _REQUIRED_ENV: Dict[str, Tuple[str, ...]] = {
     "zhihu": ("TIKHUB_TOKEN",),
     "google": ("GOOGLE_API_KEY", "GOOGLE_SEARCH_ENGINE_ID"),
     "tavily": ("TAVILY_API_KEY",),
+    "exa": ("EXA_API_KEY",),
+    "serper": ("SERPER_API_KEY",),
     "jina": ("JINA_API_KEY",),
     "yandex": ("SERPAPI_API_KEY",),
     "bing": ("SERPAPI_API_KEY",),
@@ -89,6 +91,9 @@ IMAGE_PLATFORMS: Tuple[str, ...] = (
     "volcengine",
 )
 
+
+# Paid API routes remain available through explicit platform selection.
+DEFAULT_IMAGE_PLATFORMS = tuple(name for name in IMAGE_PLATFORMS if name != "volcengine")
 
 def load_capabilities() -> List[PlatformCapability]:
     """Build capabilities from union search metadata."""
