@@ -48,8 +48,8 @@ Read `references/execution-contract.md` before any runtime request or approved w
 ## Load only required detail
 
 - Unit tests and platform traps: `references/unit-test-generation.md`
-- Testcase inventory and completeness gate: `references/testcase-completeness.md`
-- Strategy and testability refactors: `references/test-strategy.md`
+- Testcase inventory, completeness and coverage evidence: `references/testcase-completeness.md`
+- Strategy, diff-scoped batch tests and testability refactors: `references/test-strategy.md`
 - Runtime execution contract: `references/execution-contract.md`
 - Local harness: `references/cosmic-runtime-harness.md`
 - Runtime evidence: `references/dev-runtime-verification.md`

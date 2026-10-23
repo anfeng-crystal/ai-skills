@@ -8,6 +8,8 @@ The analyzer recognizes common variants of timestamp, trace/span IDs, parent spa
 
 Duration values must be finite and non-negative after conversion to milliseconds: numeric fields use milliseconds, and a complete decimal string may have an `ms` or `s` suffix; invalid values (including booleans) remain unknown unless an explicit `duration`/`elapsed`/`cost`/`took` message marker supplies a valid duration. The slow-SQL threshold must also be finite and non-negative.
 
+这是本地 analyzer 的输入合同，不证明目标原始日志的单位。先核实原字段含义和单位，再映射到受支持字段；保留原始记录及转换依据。BuildTree、RPC、缓存汇总与 span 的比较按 [组件耗时与证据回指](component-timing-evidence.md) 处理，未支持的原生字段不能声称已被脚本解析。
+
 ## Categories
 
 | Category | Evidence rule | Interpretation limit |

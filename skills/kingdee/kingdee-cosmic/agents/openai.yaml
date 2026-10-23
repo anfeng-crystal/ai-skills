@@ -1,8 +1,8 @@
 interface:
   display_name: "Kingdee Cosmic"
-  short_description: "苍穹 Java 二开、插件、Cache/MQ、OpenAPI 与故障诊断"
+  short_description: "苍穹 Java 插件与扩展点、Cache/MQ、OpenAPI、诊断及需求方案评审"
   default_prompt: |
-    使用 $kingdee-cosmic 按 author、diagnose-readonly 或 execute-approved 模式处理苍穹 Java、Cache/MQ、插件或诊断任务；先确认元数据和 SDK 证据，再复用项目封装并执行 Gradle 或 post-check 验证。
+    使用 $kingdee-cosmic 按 author、diagnose-readonly 或 execute-approved 模式处理苍穹 Java、Cache/MQ、插件、诊断或相关需求方案评审；评审按文档条目关联证据与修订建议，实施按已确认的元数据和 SDK 证据复用项目封装，并按改动执行 Gradle 或 post-check 验证。
 
 policy:
   allow_implicit_invocation: true

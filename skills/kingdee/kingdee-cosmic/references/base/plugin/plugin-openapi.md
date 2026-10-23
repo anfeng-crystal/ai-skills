@@ -6,6 +6,8 @@
 
 本页用于服务端自定义 OpenAPI 控制器，采用 `kd.bos.openapi.common.custom.annotation` 声明 HTTP 接口；普通后台服务、表单插件和外部调用客户端分别走对应入口。控制器不继承表单插件基类，也没有自动获得的 view/model/pageCache。
 
+从实体元数据生成 DTO/Controller 时，先读 [元数据到 API 合同](../../openapi-metadata-contract.md)，确认对外字段、操作范围和类型转换，再应用本页注解。
+
 - [官方《自定义API开发》](https://dev.kingdee.com/open/detail/sdk/2000919573355839488) 标注 Cosmic V6.0.15，更新于 2024-11-05；下表按该正文及实际 7.0 构件核对。不能将其标成 V8.0.1 或 V9 合同。
 - 本地 7.0 `bos-open-api` 构件分支为 `hotfix_7.0.16_20250901`。不同补丁、V8/V9 的行为仍须核对目标依赖和对应文档；编译通过不证明发布、参数绑定或鉴权运行通过。
 - Bean Validation 按真实类包选择：本地依赖虽名为 `jakarta.validation-api-2.0.2.jar`，类包仍是 `javax.validation`。不要仅凭 JAR 名改为 `jakarta.validation.Valid`；其他版本重新核验。

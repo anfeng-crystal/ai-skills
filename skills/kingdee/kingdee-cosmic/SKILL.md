@@ -1,6 +1,6 @@
 ---
 name: kingdee-cosmic
-description: "开发、修复或审查金蝶云苍穹 Java 插件、服务端 OpenAPI 与工作流配置；报表、脚本和外部 OpenAPI 调用使用各自专用 skill。"
+description: "开发、修复或审查金蝶云苍穹 Java 插件、扩展点、服务端 OpenAPI 与工作流配置，评审相关需求与技术方案；报表、脚本和外部 OpenAPI 调用使用各自专用 skill。"
 license: MIT
 metadata:
   author: "anfeng"
@@ -29,7 +29,7 @@ metadata:
 这些模式表示助手的工作边界，不是插件入参或待新增的运行开关。目标、范围、授权或动作性质不明时停止在本地证据层，并列出缺失项；任何模式都不回显凭据。
 
 ## 触发与路由
-1. 只处理金蝶云苍穹 Java 二开、插件、配置、诊断、代码核查或改造任务，以及服务端 OpenAPI 开发。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；外部 OpenAPI 调用用 `kingdee-openapi-client`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
+1. 处理金蝶云苍穹 Java 二开、插件、配置、诊断、代码核查或改造任务、服务端 OpenAPI 开发，以及这些范围内的需求与技术方案评审。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；外部 OpenAPI 调用用 `kingdee-openapi-client`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
 2. 纯 Java 语法、类型、泛型、集合或编译错误可直接分析，不要无意义触发元数据查询。
 3. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先复用当前任务已确认且仍匹配目标环境的 analyzer inventory/quick cache；缺失、过期或范围不足时再交 `kingdee-metadata-analyzer` 做取证。
 4. 移动端或派生表单的页面行为问题，以及页面元素或生产行为链路问题，不能只看实体 quick-query；要求 analyzer 全景分析并核对 `pageElement`、`formPage`、派生表单和插件挂载链。仅确认工作流功能是否支持某客户端时，先读对应功能说明；进入页面行为或挂载诊断后再按上述要求取证。
@@ -42,16 +42,20 @@ metadata:
 - 环境配置文件按目标环境选择，但 `graph.dbPath` 表示本地离线知识库，同一项目的 DEV/PROD 可以按项目约定共享同一路径；路径相同不是跨环境混用。共享文件不存在时应报告知识库缺失，不能误判为环境配置选择错误。
 - 执行时必须显式传绝对配置路径：`python3 <SKILL_ROOT>/scripts/cosmic-config-check.py --config <PROJECT_ROOT>/ok-cosmic.<env>.json`。未确定环境或未找到对应配置时只停用相关在线能力，不得声称“仓库未提供配置”，也不得阻断不依赖在线能力的本地编译、测试或部署。
 - 业务话术无法确定实现入口时读 `rules/intent-routing.md`；需要插件、配置或脚本选型时读 `rules/decision-matrix.md`。
+- 盘点模块扩展点、核对插件绑定或评估治理优先级时，读 [扩展点盘点与治理](references/extension-inventory.md)，关联源码与目标环境证据；普通插件修改不默认扫描整个模块。
 - 命名、数据模型、日志或平台设计约束需要补证时读 `rules/platform-baseline.md`；查 API 读 `rules/cheat-sheet.md`；新建插件或缺少同类结构时选最接近的 `assets/*.java` 模板；事件顺序不确定时读 `references/event-lifecycle.md`。局部修改不固定加载整套资料。
 - 在线元数据不可用时，可复用 analyzer 产物、quick-query 缓存、项目源码、JAR 和本 skill references，但输出必须区分“源码推断”和“目标环境元数据已确认/未确认”。
 
 ## 工作流
+仅评审需求或技术方案时，按 [需求与技术方案评审](references/requirements-review.md) 组织文档条目、证据和修订建议，以评审意见为交付；以下步骤用于开发、修复与诊断任务。
+
 1. 明确任务类型、目标对象、插件类型、事件点、事务边界、环境口径和验证方式。
 2. 依赖目标环境元数据的问题，把元数据取证交给 `kingdee-metadata-analyzer`；本 skill 并行查源码、同类实现、模板、snippet 和运行时堆栈。
 3. 按需读取最小资料集：插件/配置选型 `rules/decision-matrix.md`；API 速查 `rules/cheat-sheet.md`；插件类型 `references/plugin-types-cheatsheet.md`；BOTP `references/botp-convert.md`；DynamicObject `references/dynamic-object.md`；生命周期 `references/event-lifecycle.md`；工作流/布局元数据包 `references/workflow-metadata-change.md`；DataSet 概览 `references/query-dataset.md`；Cache/MQ `references/cache-mq-runtime.md`；异常诊断与复核 `references/error-review-patterns.md`。
    标准单据列表/模板导出的 CSV/XLSX、容量或数值格式问题，先读 [导出格式合同](references/list-export-format.md)。
    流程任务主题引用长日期缺少时分秒、下拉字段只显示编码、移动待办列表与审批页主题不一致，或钉钉撤销重提后仍显示旧主题时，读 [任务主题显示与配置来源](references/workflow-task-subject.md)，核对配置来源、版本与第三方限制；文档绕行方案不替代业务授权。
 4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。单个插件能清楚完成的逻辑留在本类；模板中的业务参数、预演开关及示例阈值只有在当前需求或已有调用合同需要时才采用，框架入口签名本身不要求新增业务参数。
+   从实体元数据生成服务端 DTO/Controller 时，读 [元数据到 API 合同](references/openapi-metadata-contract.md)，先确定对外字段和操作范围，再沿用已核验的注解与项目封装。
    提交后自动审核、紧接提交调用审核或提示“单据已在流程中流转，不能审核”时，按需读 [提交与寻址合同](references/workflow-submit-audit.md)，区分版本和异步寻址状态。
    指定参与人未生效、驳回目标参与人待定、会审加签、会签保留人工审批、驳回后重复审批人、参与人解析/显示顺序、发起人与审批人相同处理或跳过条件冲突的只读诊断/改造，按需读 [参与人与节点行为](references/workflow-participant-behavior.md)。
 5. 页面事件已覆盖验收路径时，不默认追加保存、操作、接口或批量链路兜底；只有需求明确覆盖绕过页面事件的入口时才扩展链路。

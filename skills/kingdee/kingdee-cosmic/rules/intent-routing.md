@@ -1,5 +1,7 @@
 # 自然语言意图到场景路由
 
+用户要求评审本 Skill 范围内的苍穹需求文档或技术方案时，先按 [需求与技术方案评审](../references/requirements-review.md) 组织意见；文档中出现“审核、下推、接口”等词只用于识别待审场景，不自动转为实施请求。
+
 当用户不是直接说“操作插件 / 表单插件 / 基础资料能力”，而是用业务话术描述需求时，先把需求翻译为：
 
 1. **时机**：事情发生在什么时候
@@ -85,7 +87,7 @@
 - “反写”相关（见上方路由三问）：口头“反写”/“下推后更新来源”默认理解为业务语义的“更新关联实体”；只有用户明确说“反写插件”“WriteBackPlugIn”“BOTP 回写阶段”时才命中 [`#writeback-plugin`](decision-matrix.md#writeback-plugin)。
 - 用户说“后台自动跑”“定时同步”，优先按 [`#task-plugin`](decision-matrix.md#task-plugin)，不要误判成列表按钮或操作插件。
 - 用户只说“查一批数据统计结果”，如果没有插件时机词，优先从 [`#query`](decision-matrix.md#query) 开始，而不是先猜某种插件。
-- 用户说“业务拓展点 / 业务扩展点 / SDK 扩展接口 / 扩展场景编码”时，优先按 [`#business-extpoints`](decision-matrix.md#business-extpoints) 查询候选；不要误判成“OpenAPI 控制器”或直接套用 BOS 表单/操作插件模板。
+- 用户说“业务拓展点 / 业务扩展点 / SDK 扩展接口 / 扩展场景编码”时，按 [`#business-extpoints`](decision-matrix.md#business-extpoints) 定位候选；若是模块盘点、绑定审计或治理排序，先走 [扩展点盘点与治理](../references/extension-inventory.md)，可用离线材料继续。不要误判成“OpenAPI 控制器”或直接套用 BOS 表单/操作插件模板，也不由关键词自动发起在线查询。
 
 ## 仍然模糊时
 

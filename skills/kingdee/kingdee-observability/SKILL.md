@@ -39,6 +39,7 @@ An approved query plan authorizes every read inside its exact bounds; do not ask
 - Detect possible N+1 only when the same normalized SQL signature repeats within one trace above the configured threshold.
 - Report thread blocking/rejection and GC pause/allocation evidence separately.
 - Correlate timestamps and services, then state the narrowest supported hypothesis and missing evidence.
+- 日志实际出现 BuildTree、RPC 或缓存指标时，读 [组件耗时与证据回指](references/component-timing-evidence.md)，核对原始字段、单位、采集范围和父子包含关系；不以汇总值或 span 之和替代请求耗时。
 
 Read `references/evidence-model.md` when interpreting fields, thresholds, trace topology, or confidence.
 

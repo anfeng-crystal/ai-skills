@@ -206,8 +206,9 @@
 
 ### 业务拓展点查询 {#business-extpoints}
 - **关键词**: 业务拓展点 / 业务扩展点 / SDK 扩展接口 / 扩展场景 / 扩展插件 / 二开接口 / Java 示例 / route extpoint
+- **模块盘点**: 源码清单、绑定审计或治理排序先读 [扩展点盘点与治理](../references/extension-inventory.md)；已有离线材料可直接分析，不因命中本卡片自动查询环境
 - **入口脚本**: `scripts/cosmic-extpoints-query.py`
-- **先查**: `python3 <SKILL_ROOT>/scripts/cosmic-extpoints-query.py --config ok-cosmic.json get --keyword <业务关键词>`
+- **在线查询**: 仅在任务需要且目标/范围已授权时，按入口配置规则选择环境并显式传入绝对路径：`python3 <SKILL_ROOT>/scripts/cosmic-extpoints-query.py --config <PROJECT_ROOT>/ok-cosmic.<env>.json get --keyword <业务关键词>`
 - **示例查询**: 默认不用 `--full`；只有当需要生成实现代码或查看返回中的 Java/代码示例时，才追加 `--full`
 - **生成前核对**: `--full` 返回清晰 Java 示例只能提供接口、`@Override`、参数和返回值候选；先用目标项目依赖或匹配目标版本的 SDK/Javadoc 确认本次签名，再生成实现。已有有效证据足够时不强制调用 `cosmic-api-knowledge.py detail`；仍不足且该查询适用时，可用 `detail <full.class.Name>` 补证，但其返回也须核对产品与版本
 - **约束**: 仅用于定位标准产品预留的业务拓展点候选；不要误判为 OpenAPI 控制器、表单插件或操作插件。清晰示例、新版资料或同一大版本的另一补丁均不自动证明目标 API 可用；未知签名只暂停依赖实现，继续独立本地工作

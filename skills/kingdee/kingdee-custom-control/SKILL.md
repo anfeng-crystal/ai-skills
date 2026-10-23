@@ -48,6 +48,7 @@ description: "开发、修复和交付金蝶云苍穹独立 KDApi 自定义控�
    python3 scripts/custom_control.py verify-package --project <project> --archive <zip>
    ```
    `--fix` 只修复可证明的方案 ID/注册 ID 偏差；生命周期、消息语义和业务逻辑不做猜测式重写。
+   用户需要本地预览或控件含多语言需求时，按 `references/testing-contract.md` 验证对应场景，明确本地模拟与目标平台运行的证据边界。
 5. 需要服务端时，先固定事件名、请求/响应 schema、错误语义和幂等边界，再交对应服务端 skill 实现；前端测试保留同一合同样例。
 6. 需要真实交付时，读取 `references/delivery-contract.md`。批准后上传 ZIP、绑定同名控件方案，按 `references/testing-contract.md` 验证加载、更新、三条通信链、销毁清理和回滚。
 

@@ -33,6 +33,8 @@ metadata:
 4. 生成调用代码:按 `references/call-templates.md` 出 Java 或 Python(默认仅这两种)，复用项目已有 HTTP、JSON 与鉴权实现，只包含所选接口需要的调用和字段映射；不为套模板新增依赖、通用封装或配置，业务参数来自目标接口合同。
 5. 凭据与地址用占位符，不写死真实值；写入调用按已核实的目标防重合同处理，不给普通查询或不支持该机制的接口附加幂等参数。
 
+列表调用涉及分页时，按 [调用模板的分页合同](references/call-templates.md#有界分页与结果状态) 核实目标接口协议、请求上限、下一页授权目标与结束条件；真实执行报告 `complete` / `partial` / `failed`，仅生成模板则注明未执行。
+
 ## References
 - 鉴权(getToken/缓存/刷新):`references/auth.md`
 - 接口清单查询与参数探测:`references/query-and-probe.md`
