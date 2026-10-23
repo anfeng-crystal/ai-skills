@@ -2,7 +2,7 @@
 
 ## TL;DR
 - 适用：后台调度任务、批处理、定时同步和夜间修复作业。
-- 先抓：`AbstractTask` 的执行入口、任务参数和日志/异常边界。
+- 先抓：`AbstractTask` 的执行入口和日志/异常边界；只核对任务实际消费的业务参数。
 - 跳转：在线请求里的异步处理优先看线程池和请求上下文，不一定需要任务插件。
 - 继续读全文：当你要确认调度模板、上下文对象或失败处理方式时。
 
@@ -43,10 +43,10 @@ this.feedbackCustomdata(java.util.Collections.singletonMap("phase", "load-data")
 
 ## 示例代码
 
-示例代码统一维护在模板文件中，直接参考：
+按当前需求选用示例：
 
-- [TaskTemplate.java](../../../assets/TaskTemplate.java)
-- [ScheduleTaskSample.java](../../../assets/snippets/task/ScheduleTaskSample.java)：含参数解析、停止检查和进度反馈。
+- [TaskTemplate.java](../../../assets/TaskTemplate.java)：默认使用的最小骨架，保留框架签名、停止检查和进度反馈，不定义业务参数。
+- [ScheduleTaskSample.java](../../../assets/snippets/task/ScheduleTaskSample.java)：仅在任务确实需要可配置预警阈值、预演或参数解析时选读对应片段；示例的 `failRateLimit`、`dryRun` 不是新任务的默认要求。
 
 ## 7.0 任务入口与停止合同
 
@@ -61,7 +61,7 @@ this.feedbackCustomdata(java.util.Collections.singletonMap("phase", "load-data")
 
 1. 长任务应分阶段调用 `feedbackProgress(...)`。
 2. 每个大步骤后主动调用 `checkIsStop()`，避免无法及时响应停止。
-3. `params` 先做容错校验，避免任务启动即异常。
+3. 消费业务参数时，按已确认的键、类型与缺省语义校验；不为闲置的 `params` 增加解析分支。执行周期沿用平台调度计划，不在插件里另设同一时间开关。
 4. 任务逻辑尽量保证幂等，防止重跑产生重复副作用。
 
 ## 常见坑位

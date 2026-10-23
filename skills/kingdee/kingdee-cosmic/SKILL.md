@@ -26,7 +26,7 @@ metadata:
 | `diagnose-readonly` | 对已知目标、范围和授权做日志、元数据、配置、状态或只读接口取证；生产只读任务满足契约后可直接执行 |
 | `execute-approved` | 仅执行用户已批准的环境、目标、动作、数据范围和回滚/恢复契约；契约完整后不重复确认，不扩到部署、发布或数据写入之外的动作 |
 
-目标、范围、授权或动作性质不明时停止在本地证据层，并列出缺失项；任何模式都不回显凭据。
+这些模式表示助手的工作边界，不是插件入参或待新增的运行开关。目标、范围、授权或动作性质不明时停止在本地证据层，并列出缺失项；任何模式都不回显凭据。
 
 ## 触发与路由
 1. 只处理金蝶云苍穹 Java 二开、插件、配置、诊断、代码核查或改造任务，以及服务端 OpenAPI 开发。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；外部 OpenAPI 调用用 `kingdee-openapi-client`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
@@ -51,7 +51,7 @@ metadata:
 3. 按需读取最小资料集：插件/配置选型 `rules/decision-matrix.md`；API 速查 `rules/cheat-sheet.md`；插件类型 `references/plugin-types-cheatsheet.md`；BOTP `references/botp-convert.md`；DynamicObject `references/dynamic-object.md`；生命周期 `references/event-lifecycle.md`；工作流/布局元数据包 `references/workflow-metadata-change.md`；DataSet 概览 `references/query-dataset.md`；Cache/MQ `references/cache-mq-runtime.md`；异常诊断与复核 `references/error-review-patterns.md`。
    标准单据列表/模板导出的 CSV/XLSX、容量或数值格式问题，先读 [导出格式合同](references/list-export-format.md)。
    流程任务主题引用长日期缺少时分秒、下拉字段只显示编码、移动待办列表与审批页主题不一致，或钉钉撤销重提后仍显示旧主题时，读 [任务主题显示与配置来源](references/workflow-task-subject.md)，核对配置来源、版本与第三方限制；文档绕行方案不替代业务授权。
-4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。
+4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。单个插件能清楚完成的逻辑留在本类；模板中的业务参数、预演开关及示例阈值只有在当前需求或已有调用合同需要时才采用，框架入口签名本身不要求新增业务参数。
    提交后自动审核、紧接提交调用审核或提示“单据已在流程中流转，不能审核”时，按需读 [提交与寻址合同](references/workflow-submit-audit.md)，区分版本和异步寻址状态。
    指定参与人未生效、驳回目标参与人待定、会审加签、会签保留人工审批、驳回后重复审批人、参与人解析/显示顺序、发起人与审批人相同处理或跳过条件冲突的只读诊断/改造，按需读 [参与人与节点行为](references/workflow-participant-behavior.md)。
 5. 页面事件已覆盖验收路径时，不默认追加保存、操作、接口或批量链路兜底；只有需求明确覆盖绕过页面事件的入口时才扩展链路。
@@ -71,7 +71,7 @@ metadata:
 - 历史质量扫描：`scripts/scan/`
 
 ## 门禁
-- 最小必要修改；不改公共接口、依赖或文件结构，除非用户明确要求或方案已确认。
+- 最小必要修改；局部替换只改目标及必要连带查询、取值和调用，保留原方法、控制流程、查询策略、空值/异常语义与返回契约，不顺带拆分、抽 Helper 或整段格式整理。明确重构按用户范围执行；公共接口、依赖或文件结构仅按用户要求或已确认方案调整。
 - 已有挂载或继承链路能覆盖当前页面/操作时，不重复注册插件或追加同类打开参数。
 - 未获得元数据挂载授权时只交插件类引用、建议挂载点和验证步骤，不代改/代挂元数据。页面配置已经承担范围过滤、可见性或编辑边界时，Java 不重复编码同一限制，除非存在已确认的绕过入口。
 - 第一次出现字段/过滤类型错误后，必须读取完整异常链和目标元数据，按 `references/error-review-patterns.md` 闭合四方类型合同；禁止继续在 `Long`、`String`、`entityField` 或相似字段名之间试错。

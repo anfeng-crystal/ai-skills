@@ -352,6 +352,112 @@ class MetadataAuthorTests(unittest.TestCase):
             with self.assertRaisesRegex(author.ContractError, "基线血缘"):
                 author.verify_candidate(self.knowledge, baseline, candidate, contract)
 
+    def test_added_keys_stay_on_their_page_and_ids_stay_unit_wide(self):
+        # Isolate identity scope from the production node/profile inventory.
+        knowledge = mock.Mock(environment="prod")
+        knowledge.identity_contracts = {"contracts": {"form:Control": {"profiles": [{
+            "model_type": "BaseFormModel", "parent_type": "Items",
+            "observed_common_identity_properties": ["Id", "Key"],
+        }]}}}
+        knowledge.generic_profile.return_value = {
+            "full_definition_nodes": 1, "observed_properties": ["Id", "PkId", "Key"],
+            "observed_common_properties": ["Id", "Key"], "observed_attributes": [],
+        }
+        knowledge.is_control_type.return_value = False
+        knowledge.property_contract.return_value = None
+        knowledge.entity_record_for_form.return_value = None
+        page_xml = b"""<FormMetadata><Id>page-id</Id><Key>outer_page</Key>
+<ModelType>BaseFormModel</ModelType><Items/></FormMetadata>"""
+        added_props = {"Id": "new-id", "PkId": "new-pkid", "Key": "shared-key"}
+        for inherited in (False, True):
+            for nested in (False, True):
+                for collision in (None, "Key", "Id", "PkId"):
+                    with self.subTest(inherited=inherited, nested=nested, collision=collision):
+                        root = ET.fromstring(page_xml)
+                        ancestor = ET.fromstring(page_xml) if inherited else None
+                        peer_root = ancestor if inherited else root
+                        holder = peer_root.find("Items")
+                        if nested:
+                            host = ET.SubElement(holder, "BasedataFormAp")
+                            container = ET.SubElement(host, "MobMeta")
+                            page = ET.SubElement(container, "FormMetadata")
+                            # Standard main/mobile pages can share Id. It alone
+                            # must not select the mobile page as a main ancestor.
+                            ET.SubElement(page, "Id").text = "page-id"
+                            ET.SubElement(page, "Key").text = "mobile_page"
+                            ET.SubElement(page, "ModelType").text = "MobileBaseFormModel"
+                            holder = ET.SubElement(page, "Items")
+                        peer = ET.SubElement(holder, "OtherControl")
+                        for name, value in added_props.items():
+                            ET.SubElement(peer, name).text = value if name == collision else "peer-" + name
+                        before = ET.tostring(root)
+                        baseline = author.Artifact(Path("baseline.xml"), before, False, {"baseline.xml": before})
+                        added = ET.SubElement(root.find("Items"), "Control")
+                        for name, value in added_props.items():
+                            ET.SubElement(added, name).text = value
+                        raw = ET.tostring(root)
+                        candidate = author.Artifact(Path("candidate.xml"), raw, False, {"candidate.xml": raw})
+                        contract = self.contract(baseline, [{"action": "add", "target": {
+                            "kind": "form", "number": "outer_page", "page_key": "outer_page",
+                            "node_type": "Control", "locator": {"id": "new-id"},
+                        }}])
+                        contract["candidate_sha256"] = author.sha256_bytes(raw)
+                        contract["candidate_provenance"] = {
+                            "classification": "local-authored", "evidence": "in-memory identity scope fixture",
+                        }
+                        knowledge.resolve_standard_chain.return_value = (
+                            [(ancestor, {"number": "synthetic_template"})] if inherited else []
+                        )
+                        resolved, issues = author.verify_candidate(knowledge, baseline, candidate, contract)
+                        self.assertEqual("ready", resolved[0]["status"], resolved[0]["issues"])
+                        expected = collision is not None and (collision != "Key" or not nested)
+                        self.assertEqual(expected, bool(issues), issues)
+                        if expected:
+                            self.assertTrue(all(f"{collision}=" in issue and "冲突" in issue for issue in issues), issues)
+
+        for page_count, shared_page_id in ((0, True), (1, True), (2, False), (2, True)):
+            with self.subTest(ancestor_pages=page_count, shared_page_id=shared_page_id):
+                root = ET.fromstring(page_xml)
+                ancestor = ET.fromstring(page_xml)
+                for owner, count in ((root, 1), (ancestor, page_count)):
+                    for index in range(count):
+                        host = ET.SubElement(owner.find("Items"), "BasedataFormAp")
+                        container = ET.SubElement(host, "MobMeta")
+                        page = ET.SubElement(container, "FormMetadata")
+                        ET.SubElement(page, "Id").text = "mobile-id" if shared_page_id or index == 0 else "other-id"
+                        ET.SubElement(page, "Key").text = "mobile_a" if index == 0 else "mobile_b"
+                        ET.SubElement(page, "ModelType").text = "MobileBaseFormModel"
+                        items = ET.SubElement(page, "Items")
+                        if owner is ancestor and index == 0:
+                            peer = ET.SubElement(items, "OtherControl")
+                            ET.SubElement(peer, "Id").text = "peer-id"
+                            ET.SubElement(peer, "Key").text = "shared-key"
+                before = ET.tostring(root)
+                baseline = author.Artifact(Path("baseline.xml"), before, False, {"baseline.xml": before})
+                added = ET.SubElement(root.find(".//MobMeta/FormMetadata/Items"), "Control")
+                for name, value in added_props.items():
+                    ET.SubElement(added, name).text = value
+                raw = ET.tostring(root)
+                candidate = author.Artifact(Path("candidate.xml"), raw, False, {"candidate.xml": raw})
+                contract = self.contract(baseline, [{"action": "add", "target": {
+                    "kind": "form", "number": "outer_page", "page_key": "mobile_a",
+                    "node_type": "Control", "locator": {"id": "new-id"},
+                }}])
+                contract["candidate_sha256"] = author.sha256_bytes(raw)
+                contract["candidate_provenance"] = {
+                    "classification": "local-authored", "evidence": "in-memory ancestor ambiguity fixture",
+                }
+                knowledge.resolve_standard_chain.return_value = [(ancestor, {"number": "synthetic_template"})]
+                if page_count == 2 and shared_page_id:
+                    with self.assertRaisesRegex(author.ContractError, "祖先页面无法唯一定位"):
+                        author.verify_candidate(knowledge, baseline, candidate, contract)
+                else:
+                    resolved, issues = author.verify_candidate(knowledge, baseline, candidate, contract)
+                    self.assertEqual("ready", resolved[0]["status"], resolved[0]["issues"])
+                    self.assertEqual(page_count != 0, bool(issues), issues)
+                    if issues:
+                        self.assertTrue(all("Key=shared-key" in issue and "冲突" in issue for issue in issues), issues)
+
     def test_local_text_field_cli_and_parent_reference_validation(self):
         root = ET.fromstring(self.bill_entity_xml)
         profile = self.knowledge.generic_profile("entity", "TextField", "BillFormModel", "Items")

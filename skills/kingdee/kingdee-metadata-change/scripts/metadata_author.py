@@ -621,6 +621,8 @@ def page_ancestor_context(
                 {direct_properties(node).get(name) for name in ("Id", "PkId", "Key")}
                 | {element_oid(node)}
             )]
+        if len(candidates) > 1:
+            raise ContractError(f"祖先页面无法唯一定位，实际匹配 {len(candidates)} 个")
         if len(candidates) != 1:
             continue
         latest = candidates[0]
@@ -1589,16 +1591,12 @@ def verify_candidate(
                     page = nearest_ancestor(item["node"], parents, "FormMetadata")
                     if page is not None:
                         if scope is unit_root:
-                            nodes = page.iter()
+                            nodes = page_nodes(page)
                         else:
-                            page_props = direct_properties(page)
-                            page_ids = {page_props.get("Id"), page_props.get("PkId"), page_props.get("Key"), element_oid(page)} - {None, ""}
-                            nodes = (
-                                child for ancestor_page in scope.iter()
-                                if local_tag(ancestor_page.tag) == "FormMetadata"
-                                and page_ids & (set(direct_properties(ancestor_page).get(k) for k in ("Id", "PkId", "Key")) | {element_oid(ancestor_page)})
-                                for child in ancestor_page.iter()
-                            )
+                            # Main/mobile pages can share Id; restore the matching
+                            # page by its location/model before checking its Keys.
+                            ancestor_page, _ = page_ancestor_context(page, unit_root, [scope])
+                            nodes = page_nodes(ancestor_page) if ancestor_page is not None else ()
                 if any(
                     other is not item["node"]
                     and not element_action(other)

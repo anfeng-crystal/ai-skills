@@ -63,8 +63,10 @@ active checkout 下有四个相关入口。`sync-and-install.mjs` 是同步安�
 
 ### 3. 仅医生诊断
 
+doctor 的 `--source-root` 接收包含 `install.mjs` 和 `scripts/` 的 `<active-root>`；与安装入口接收的 `<skills-root>` 区分，按下例显式传入。
+
 ```text
-<node> <active-root>/scripts/doctor.mjs --source-root <skills-root> --home <host-home>
+<node> <active-root>/scripts/doctor.mjs --source-root <active-root> --home <host-home>
 ```
 
 安装/同步入口用于审计时必须带 `--dry-run`；doctor 本身是只读诊断，无须不存在的参数。真实安装、同步或 pull 只有用户明确要求或已批准方案点名时才执行；执行前确认范围，执行后再次 dry-run 或检查链接。

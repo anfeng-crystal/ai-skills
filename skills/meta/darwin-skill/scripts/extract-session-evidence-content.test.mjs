@@ -4,8 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const script = new URL("./extract-session-evidence.mjs", import.meta.url);
+const script = fileURLToPath(new URL("./extract-session-evidence.mjs", import.meta.url));
 const secret = "private-nested-content-secret";
 const text = (value, type = "input_text") => ({ type, text: value });
 const message = (role, content) => ({ type: "message", role, content });
@@ -25,7 +26,7 @@ function writeSession(root, name, meta, records) {
 }
 
 function run(root, ...args) {
-  const result = spawnSync(process.execPath, [script.pathname, "--root", root, ...args], {
+  const result = spawnSync(process.execPath, [script, "--root", root, ...args], {
     encoding: "utf8", timeout: 10000,
   });
   assert.ok(!(result.stdout + result.stderr).includes(secret), "invalid content leaked");

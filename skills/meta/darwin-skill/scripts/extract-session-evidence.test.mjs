@@ -4,8 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const script = new URL("./extract-session-evidence.mjs", import.meta.url);
+const script = fileURLToPath(new URL("./extract-session-evidence.mjs", import.meta.url));
 
 test("scans active and archived main sessions while excluding subagents and injected blocks", () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), "session-evidence-"));
@@ -47,7 +48,7 @@ test("scans active and archived main sessions while excluding subagents and inje
   }, [message("user", ["这种 source object 也不能进入结果"])]);
 
   const result = spawnSync(process.execPath, [
-    script.pathname,
+    script,
     "--root", active,
     "--root", archived,
   ], { encoding: "utf8" });
@@ -92,7 +93,7 @@ test("redacts common secret and identity values", () => {
       + "attachment=/var/folders/private/a.png host=pm.example.cn/ierp id=0-001-016-092",
   ])]);
 
-  const result = spawnSync(process.execPath, [script.pathname, "--root", temp], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [script, "--root", temp], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   assert.ok(result.stdout.includes("token=<redacted>"));
   assert.ok(result.stdout.includes("cookie=<redacted>"));
@@ -119,7 +120,7 @@ test("truncates on Unicode code-point boundaries and keeps JSON parseable", () =
   }, [message("user", [`错误：${"a".repeat(76)}😀尾部`])]);
 
   const result = spawnSync(process.execPath, [
-    script.pathname,
+    script,
     "--root", temp,
     "--max-chars", "80",
   ], { encoding: "utf8" });
@@ -160,7 +161,7 @@ test("streams malformed lines, accepts modern metadata and links repeated child 
   ]);
   fs.appendFileSync(file, '{"private-parser-secret"\n');
   writeSession(path.join(temp, "main.jsonl"), { id: "modern", source: "cli" }, [message("user", ["错误"])]);
-  const run = spawnSync(process.execPath, [script.pathname, "--root", temp, "--include-subagents", "--tool-errors-only"], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, [script, "--root", temp, "--include-subagents", "--tool-errors-only"], { encoding: "utf8" });
   assert.equal(run.status, 1);
   const report = JSON.parse(run.stdout);
   assert.equal(report.stats.mainSessions, 1);
@@ -187,7 +188,7 @@ test("unwraps nested tool content and detects nonzero structured exits without e
       { type: "text", text: JSON.stringify({ exit_code: -9, output: "nested-secret" }) },
     ]) },
   ]);
-  const run = spawnSync(process.execPath, [script.pathname, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, [script, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr);
   const report = JSON.parse(run.stdout);
   assert.deepEqual(report.candidates[0].categories, ["nonzero_exit"]);
@@ -204,7 +205,7 @@ test("reads a log larger than the Node heap without retaining every record", () 
   const line = JSON.stringify({ type: "response_item", payload: { type: "reasoning", text: "x".repeat(65536) } }) + "\n";
   for (let i = 0; i < 1024; i += 1) fs.writeSync(fd, line);
   fs.closeSync(fd);
-  const run = spawnSync(process.execPath, ["--max-old-space-size=48", script.pathname, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, ["--max-old-space-size=48", script, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr);
   assert.equal(JSON.parse(run.stdout).stats.mainSessions, 1);
   fs.rmSync(temp, { recursive: true });
@@ -222,7 +223,7 @@ test("reports non-object JSON records and keeps later messages and assistant con
   fs.appendFileSync(file, '{"private-parser-secret"\n');
   fs.appendFileSync(file, JSON.stringify({ type: "response_item", payload: message("user", ["错误：后一条消息"]) }) + "\n");
 
-  const run = spawnSync(process.execPath, [script.pathname, "--root", temp], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, [script, "--root", temp], { encoding: "utf8" });
   assert.equal(run.status, 1, run.stderr);
   const report = JSON.parse(run.stdout);
   assert.deepEqual(report.candidates.map((candidate) => candidate.sourceLine), [3, 10]);
@@ -235,7 +236,7 @@ test("reports non-object JSON records and keeps later messages and assistant con
   ]);
   for (const secret of ["private-shape-secret", "private-parser-secret"]) assert.ok(!run.stdout.includes(secret));
 
-  const jsonl = spawnSync(process.execPath, [script.pathname, "--root", temp, "--format", "jsonl"], { encoding: "utf8" });
+  const jsonl = spawnSync(process.execPath, [script, "--root", temp, "--format", "jsonl"], { encoding: "utf8" });
   assert.equal(jsonl.status, 1, jsonl.stderr);
   assert.deepEqual(jsonl.stdout.trim().split("\n").map((line) => JSON.parse(line).sourceLine), [3, 10]);
 });
@@ -252,7 +253,7 @@ test("skips non-object records before metadata without admitting other non-sessi
   writeSession(unknown, { id: "must-not-enter" }, [message("user", ["错误：不纳入"])]);
   fs.writeFileSync(unknown, '{"type":"event_msg","payload":{}}\n' + fs.readFileSync(unknown, "utf8"));
 
-  const run = spawnSync(process.execPath, [script.pathname, "--root", temp], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, [script, "--root", temp], { encoding: "utf8" });
   assert.equal(run.status, 1, run.stderr);
   const report = JSON.parse(run.stdout);
   assert.equal(report.stats.files, 6);
@@ -276,7 +277,7 @@ test("retains tool-call linkage and coverage across a non-object JSON record", (
     type: "function_call_output", call_id: "one", output: '{"exit_code":2,"output":"private-output-secret"}',
   } }) + "\n");
 
-  const run = spawnSync(process.execPath, [script.pathname, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
+  const run = spawnSync(process.execPath, [script, "--root", temp, "--tool-errors-only"], { encoding: "utf8" });
   assert.equal(run.status, 1, run.stderr);
   const report = JSON.parse(run.stdout);
   assert.equal(report.stats.toolCalls, 1);

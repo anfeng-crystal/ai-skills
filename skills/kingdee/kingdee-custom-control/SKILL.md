@@ -30,14 +30,16 @@ description: "开发、修复和交付金蝶云苍穹独立 KDApi 自定义控�
 
 ## 工作流
 
-1. 按当前模式和改动依赖核对：目标苍穹版本、PC/移动端、`controlId == schemeId`、领域、模块、目标表单、前后端事件、输入输出 JSON、第三方依赖许可证和验收场景。先复用已有工程与已授权证据；标识和版本不能猜。
-2. 仅新建工程时从 skill 根运行脚手架；输出目录必须为空或不存在。已有工程修复直接使用现有目录，跳过初始化：
+1. 按当前模式和改动依赖核对：目标苍穹版本、`controlId == schemeId`、领域、模块、目标表单、前后端事件、输入输出 JSON、第三方依赖许可证和验收场景。自定义控件默认交付 PC＋移动端；仅用户明确限定单端时缩小目标。先复用已有工程与已授权证据；标识和版本不能猜。
+2. 先沿用已有工程和用户明确选择的技术栈。新建且未指定框架、需求可由原生模板满足时，使用内置经典候选工程；不用先追问 React/Vue、UI 库或增加配置项。明确使用或已有 React/Vue 工程时，按 [框架工程接入](references/framework-projects.md) 处理；不因用户自称新手覆盖其选择。
+   仅新建内置经典工程时从 skill 根运行脚手架；输出目录必须为空或不存在。已有工程修复直接使用现有目录，跳过初始化：
    ```bash
    python3 scripts/custom_control.py init --project <project> --control-id <id> --display-name <name> --domain <domain> --module <module> --platform-version <version> --targets pc,mobile
    ```
-   Windows 可用 `py -3 scripts\custom_control.py ...`。
-3. 默认修改目标工程的 `src/` 和 `tests/`。读取 `references/runtime-contract.md`；默认新建仍使用经典候选 profile，不自动升级生命周期。修复已有 V7.0.4+ 新生命周期工程时，按目标版本证据显式使用 `runtimeContract: "modern-kdapi-v7.0.4"`；拿到目标环境官方模板后以其为准，并更新 `cosmic-control.json` 的证据字段。
-4. 按当前模式执行适用的本地检查与交付步骤：
+   显式传入双端目标，避免 helper 省略 `--targets` 时的 PC 默认值缩小交付范围；用户明确限定单端时才调整。Windows 可用 `py -3 scripts\custom_control.py ...`。
+3. 内置工程修改 `src/` 和 `tests/`；已有工程沿用实际源码、测试和构建入口。读取 `references/runtime-contract.md`；默认新建内置工程仍使用经典候选 profile，不自动升级生命周期。修复已有 V7.0.4+ 新生命周期工程时，按目标版本证据显式使用 `runtimeContract: "modern-kdapi-v7.0.4"`；拿到目标环境官方模板后以其为准，并更新 `cosmic-control.json` 的证据字段。
+   内置模板的 `primaryAction` / `action` 事件及 payload 字段用于演示通信链；实现业务时只保留当前合同需要的事件和字段，移除未使用的演示调用，并同步既有 `features` 声明和测试，不把演示内容转成新增业务参数。
+4. 按当前模式执行适用的本地检查与交付步骤。下列命令用于满足 helper 工程合同的项目；框架工程的接入条件和既有构建路径见 [框架工程接入](references/framework-projects.md)：
    ```bash
    python3 scripts/custom_control.py validate --project <project> --fix
    python3 scripts/custom_control.py test --project <project>

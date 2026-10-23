@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Synchronize Kingdee skills into supported agent hosts.
+"""Check Kingdee skill host compatibility without writing host directories.
 
-The default mode is a read-only dry run. Non-dry-run execution only creates
-missing symlinks for non-Hermes hosts; it does not replace existing files,
-directories, or links owned by a host.
+This entry point requires --dry-run and refuses non-dry-run execution.
+Use skills/meta/skill-installer for installation and distribution.
 """
 
 from __future__ import annotations
@@ -78,10 +77,13 @@ def main() -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Sync Kingdee skills into agent host skill directories.")
+    parser = argparse.ArgumentParser(
+        description="Check Kingdee skill host compatibility (read-only; requires --dry-run).",
+        epilog="For installation and distribution, use skills/meta/skill-installer.",
+    )
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="Skills workspace root.")
-    parser.add_argument("--host", action="append", default=[], help="Host id or alias to check/sync.")
-    parser.add_argument("--dry-run", action="store_true", help="Only report planned changes.")
+    parser.add_argument("--host", action="append", default=[], help="Host id or alias to check.")
+    parser.add_argument("--dry-run", action="store_true", help="Run read-only compatibility checks (required).")
     parser.add_argument("--json", action="store_true", help="Emit JSON.")
     return parser.parse_args()
 

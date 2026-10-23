@@ -49,7 +49,8 @@
 | 树形控件/TreeView/树节点 | [TreeControlSample.java](form/TreeControlSample.java) |
 | 列表预打开过滤/setFilter/preOpenForm | [ListPreOpenFilterSample.java](list/ListPreOpenFilterSample.java) |
 | 消息通知/邮件/MessageService | [MessageNotifySample.java](message/MessageNotifySample.java) |
-| 后台调度任务/定时任务 | [ScheduleTaskSample.java](task/ScheduleTaskSample.java) |
+| 后台调度任务/定时任务 | [TaskTemplate.java](../TaskTemplate.java) |
+| 已确认需要可配置预警阈值或预演参数的任务 | [ScheduleTaskSample.java](task/ScheduleTaskSample.java) |
 | MQ消费者/分布式锁防重/MessageAcker | [SampleMQConsumer.java](mq/SampleMQConsumer.java) |
 | 工作流插件/审批参与人/流程通知/条件分支 | [SampleWorkflowPlugin.java](workflow/SampleWorkflowPlugin.java) |
 

@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const script = new URL("./extract-session-evidence.mjs", import.meta.url);
+const script = fileURLToPath(new URL("./extract-session-evidence.mjs", import.meta.url));
 const privateError = "private-io-exception-secret";
 
 function fixture(t) {
@@ -29,7 +29,7 @@ function writeSession(file, id = "valid") {
 function run(temp, args, injection = "") {
   const preload = path.join(temp, "inject.mjs");
   fs.writeFileSync(preload, `import fs from "node:fs";\n${injection}`);
-  return spawnSync(process.execPath, ["--import", pathToFileURL(preload).href, script.pathname, ...args], {
+  return spawnSync(process.execPath, ["--import", pathToFileURL(preload).href, script, ...args], {
     encoding: "utf8", timeout: 10000,
   });
 }

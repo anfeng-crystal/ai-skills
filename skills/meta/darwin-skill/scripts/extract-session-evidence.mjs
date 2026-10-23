@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
+import childProcess from "node:child_process";
 import { createHash } from "node:crypto";
 
 const DEFAULT_PATTERN = /不对|错了|错误|应该|不是|不要|别再|怎么又|为什么|并不是|并非|不该|遗漏|漏了|漏掉|没有按|没按|我说|我让|我要求|还没|还是不|不能|必须|只要|你这|又.{0,20}了/;
@@ -116,10 +117,26 @@ async function extract(options) {
       const failures = new Map();
       let bytesAtOpen = null;
       let input;
+      let decoder;
+      let decoderDone;
+      let skipped = false;
       let lines;
       try {
         bytesAtOpen = fs.statSync(file).size;
-        input = fs.createReadStream(file, { encoding: "utf8", ...(bytesAtOpen ? { end: bytesAtOpen - 1 } : {}) });
+        if (file.endsWith(".jsonl.zst")) {
+          // Node 24.14 accepts truncated Zstd frames (nodejs/node#64592).
+          // Use the existing CLI, without a shell, and require its successful exit.
+          decoder = childProcess.spawn("zstd", ["--decompress", "--stdout", "--quiet", "--", file],
+            { stdio: ["ignore", "pipe", "ignore"] });
+          decoderDone = new Promise((resolve) => {
+            decoder.once("error", (error) => resolve(error.code === "ENOENT"
+              ? "zstd executable not found" : "cannot decompress JSONL"));
+            decoder.once("close", (code) => resolve(code === 0 ? null : "cannot decompress JSONL"));
+          });
+          input = decoder.stdout;
+        } else {
+          input = fs.createReadStream(file, { encoding: "utf8", ...(bytesAtOpen ? { end: bytesAtOpen - 1 } : {}) });
+        }
         lines = readline.createInterface({ input, crlfDelay: Infinity });
         for await (const line of lines) {
           sourceLine += 1;
@@ -137,11 +154,11 @@ async function extract(options) {
             continue;
           }
           if (!meta) {
-            if (record.type !== "session_meta") break;
+            if (record.type !== "session_meta") { skipped = true; break; }
             meta = record.payload || {};
             sessionKind = getSessionKind(meta);
-            if (sessionKind === "subagent" && !options.includeSubagents) break;
-            if (sessionKind === "realtime_voice" && !options.includeRealtime) break;
+            if (sessionKind === "subagent" && !options.includeSubagents) { skipped = true; break; }
+            if (sessionKind === "realtime_voice" && !options.includeRealtime) { skipped = true; break; }
             if (sessionKind === "subagent") stats.subagentSessions += 1;
             else stats.mainSessions += 1;
             if (rootKind === "archived") stats.archivedSessions += 1;
@@ -152,6 +169,7 @@ async function extract(options) {
           const evidence = {
             evidenceStatus: "candidate_requires_context_review",
             root: rootKind,
+            sessionKind,
             sessionId: meta.session_id || meta.id || null,
             rolloutId: meta.id || null,
             sessionTimestamp: meta.timestamp || null,
@@ -178,7 +196,7 @@ async function extract(options) {
                 stats.errorResults += 1;
                 const prior = call && failures.get(call.signature);
                 if (prior) stats.repeatedIdenticalFailures += 1;
-                candidates.push({ ...evidence, sessionKind, kind: "tool_error", callId: payload.call_id || null,
+                candidates.push({ ...evidence, kind: "tool_error", callId: payload.call_id || null,
                   callLine: call?.sourceLine || null, toolName: call?.toolName || null,
                   scripts: call?.scripts || [], skillReference: call?.skillReference || false,
                   categories, exitCodes: [...new Set([...outputText.matchAll(/(?:exit_code["']?\s*:\s*|Process exited with code |exit code[=: ]+)(-?\d+)/gi)].map((match) => Number(match[1])))],
@@ -205,11 +223,17 @@ async function extract(options) {
           candidates.push({ ...evidence, userMessageIndex,
             userText: sanitize(text, options.maxChars), previousAssistantText: previousAssistant });
         }
+        if (decoderDone && !skipped) {
+          const message = await decoderDone;
+          if (message) errors.push({ file, sourceLine, message });
+        }
       } catch {
         errors.push({ file, sourceLine, message: "cannot read JSONL" });
       } finally {
         lines?.close();
         input?.destroy();
+        decoder?.kill();
+        if (decoderDone) await decoderDone;
         if (options.toolErrorsOnly) coverage.push({ root: rootKind, sourceFile: path.relative(root, file),
           sessionKind: sessionKind || null, rolloutId: meta?.id || null, bytesAtOpen, lines: sourceLine });
       }
@@ -322,7 +346,7 @@ function* walkJsonl(root, errors) {
   for (const entry of entries) {
     const target = path.join(root, entry.name);
     if (entry.isDirectory()) yield* walkJsonl(target, errors);
-    else if (entry.isFile() && entry.name.endsWith(".jsonl")) yield target;
+    else if (entry.isFile() && /\.jsonl(?:\.zst)?$/.test(entry.name)) yield target;
   }
 }
 
@@ -343,5 +367,8 @@ Options:
 The output is evidence discovery only. A matched message is not a confirmed skill defect
 until its preceding action, task scope, and actual runtime evidence are reviewed.
 Read or parse errors preserve other candidates and exit 1; JSONL errors have type extraction_error.
+Scans .jsonl and .jsonl.zst; compressed files need the zstd executable on PATH.
+Missing decoders and corrupt archives are reported as errors, not silently skipped.
+sourceLine counts decoded lines; coverage.bytesAtOpen is the on-disk file size.
 `);
 }

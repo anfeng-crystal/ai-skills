@@ -24,7 +24,7 @@
 3. 从错误信息反推必填字段与数据格式,逐步补全请求体。
 
 ## 业务调用约定
-- 请求头：按 `auth.md` 选定 `Content-Type: application/json` 与 `access_token: {token}` 或目标已验证兼容头；提交类的 `Idempotency-Key` 按 `call-templates.md` 在同一逻辑操作重试间复用。
+- 请求头：按 `auth.md` 选定 `Content-Type: application/json` 与 `access_token: {token}` 或目标已验证兼容头；写入调用需要且目标支持 `Idempotency-Key` 时，按 `call-templates.md` 在同一逻辑操作重试间复用，查询不默认添加。
 - 请求方法、字段和报文结构以该接口文档为准；操作 API 的 POST 常见 `{ "data": { ...业务数据 } }`，自定义 API 可完全自定义，不能强制统一包装。
 - 按 HTTP 状态及响应中该端点定义的 `status`、`errorCode`、`message` 判断；`603` 可能是请求参数或操作权限等错误，不统一解释为“用户无效”。
 
