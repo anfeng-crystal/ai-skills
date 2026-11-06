@@ -1,6 +1,6 @@
 # 报表代码生成规范与验证清单
 
-## Java 生成顺序
+## Java 表格取数生成顺序
 
 以下包声明、注解和 Gradle 项适用于 Java。KingScript 报表使用 `kingdee-kingscript` 的报表查询模板与目标版本 `.d.ts`；共用后续字段、只读、精度和数据集检查，不照搬 Java 语法。
 生成前先复用已确认产品/目标版本，按 `SKILL.md` 核对本次使用的基类、import、事件和 Algo API；`algo-api.md` 与架构示例仅作候选。补丁未知但目标依赖/声明已能确认本次 API 时不机械阻断；未知签名只暂停依赖代码，继续独立工作。
@@ -14,6 +14,8 @@
 8. 公式/逐行计算方法(如需)。
 9. 辅助方法(getBigDecimalValue、emptyDs、addNullSafeFields)。
 
+以上适用于表格取数，仅保留本次实际需要的步骤和方法。树节点查询按目标 `AbstractReportTreeDataPlugin` 声明核对入口与节点返回值，不继承表格基类或生成未使用的 DataSet 方法；职责划分见 `mental-model.md`。
+
 ## 强制规范自检
 | 规范 | 检查 | 修复 |
 |---|---|---|
@@ -26,17 +28,22 @@
 | 只读 | 搜 `SaveServiceHelper`/`OperationServiceHelper` | 报表禁写库,移除 |
 
 ## 生成前完整性清单
+
+以下为表格取数合同：
 - 报表标识(编码)、至少一个数据源实体编码 —— 必须。
 - 过滤项字段 key + 编码值(非中文名)—— 必须。
 - 所有输出列字段 key 映射 —— 必须。
 - 计算列 BigDecimal 表达式 —— 必须(如有计算)。
 - 关联路径(JOIN 字段映射)—— 有关联则必须。
 
+树节点查询分别确认节点标识、显示文本、层级来源和查询范围；实际从实体取数时再确认对应实体/字段。固定节点树不要求虚构数据源实体、表格列或金额表达式。
+
 ## 生成后验证清单(交 kingdee-testing / kingdee-metadata-analyzer)
 - 字段 key 与报表元数据一致(metadata-analyzer 复核)。
 - 实体编码在目标环境可用。
 - 过滤编码值在基础资料中存在。
 - Java 编译无语法错误、适用的模块级 Gradle 测试通过；KingScript 按目标声明和脚本验证路径检查，不要求 TS 通过 Java 编译。
-- BigDecimal 精度正确;大数据量(10 万+ 行)性能可接受。
+- 涉及金额时验证 BigDecimal 精度；性能按本次实际数据规模验证。
 - 无实例字段导致的并发串数据。
+- 树节点查询验证本次涉及的节点结果、层级与范围；涉及树表联动时，再核对选中对象与右表过滤的对应关系，不用表格 DataSet 验证代替节点结果验证。
 - 使用 AlgoX 时，分别检查 `JobSession` 输入构造、输出与提交、结果读取；仅生成 `DataSetX` 不等于已有可返回的报表 `DataSet`，按 `architecture-patterns.md` 核对各阶段。

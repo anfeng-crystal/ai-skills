@@ -86,6 +86,7 @@
 
 ### 打印插件 {#print-plugin}
 - **关键词**: 打印 / 套打
+- **先判断**: 字段拼接、条件显示或模板空白先核对当前模板公式、绑定及数据源；仅模板能力不足或已确认插件取数异常时进入插件实现。见 [模板与插件分工](../references/base/plugin/plugin-print.md#模板与插件分工)。
 - **入口类**: `AbstractPrintPlugin`
 - **兜底**: [plugin-print.md](../references/base/plugin/plugin-print.md)
 - **模板**: [PrintPluginTemplate.java](../assets/PrintPluginTemplate.java)

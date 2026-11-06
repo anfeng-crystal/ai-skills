@@ -72,7 +72,10 @@ def format_class(cls_data):
     lines.append("\n## Methods")
     methods = cls_data.get('methods', [])
     if not methods:
-        lines.append("*No public methods found.*")
+        lines.append(
+            "*No methods are listed in this class's index record. "
+            "Inherited method availability is unverified; check the target class hierarchy, visibility and signatures.*"
+        )
     else:
         for m in methods:
             params = []

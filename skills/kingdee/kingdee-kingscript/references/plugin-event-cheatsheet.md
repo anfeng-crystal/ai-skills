@@ -25,7 +25,7 @@
 | `@cosmic/bos-util` | 公共工具(http/缓存/编码) | `import { HttpClient } from '@cosmic/bos-util/http'` |
 | `@cosmic/bos-core` | 苍穹核心功能 | `import { BusinessDataServiceHelper } from '@cosmic/bos-core/kd/bos/servicehelper'` |
 
-映射规则:Java 包名 `.` 换 `/`,前缀加模块名。例:`kd.bos.servicehelper` → `@cosmic/bos-core/kd/bos/servicehelper`;`java.util` → `@cosmic/bos-script/java/util`。
+Java 包名只用于定位候选；实际 import 的模块、导出路径和类型别名以目标声明的 `export` 与模块解析入口为准，不能仅将 Java 命名空间中的 `.` 换成 `/`。已有经过目标类型检查的 import 可直接复用，不为机械套用本表而改写。
 
 常用:`DynamicObject`(`bos-core/kd/bos/dataentity/entity`)、`EntityMetadataCache`(`bos-core/kd/bos/entity`)、`RequestContext`(`bos-core/kd/bos/context`)、`LogFactory`(`bos-core/kd/bos/logging`)。
 

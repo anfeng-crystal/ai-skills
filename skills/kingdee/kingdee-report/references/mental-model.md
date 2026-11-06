@@ -2,9 +2,19 @@
 
 以下平台类与调用链用于解释报表结构；生成或修改代码前按 `../SKILL.md` 核对目标版本与本次具体 API，不用未标版本的概览替代目标依赖证据。
 
-## 1. 单一入口生命周期
-报表取数插件只有一个核心方法 `query(ReportQueryParam, Object) → DataSet`,所有逻辑挂在此。执行链:
-解析 `FilterInfo` → 构建 `QFilter[]` → 查询多个 DataSet → JOIN/UNION → `groupBy().sum().finish()` → `addField()` 计算列 → 返回最终 DataSet。
+## 1. 表格、树节点与界面交互
+
+| 职责 | 插件候选 | 查询结果合同 |
+|---|---|---|
+| 表格取数 | `AbstractReportListDataPlugin` | `query(ReportQueryParam, Object) → DataSet` |
+| 树节点查询 | `AbstractReportTreeDataPlugin` | `query(ReportQueryParam, String) → List<TreeNode>` |
+| 报表界面交互 | `AbstractReportFormPlugin` | 核对对应界面事件，不替代前两类取数入口 |
+
+树查询签名来自随包 Cosmic V8.0.1 SDK 索引候选；通过 `kingdee-sdk-helper` 查询可定位声明，仍须用目标依赖确认基类、签名与挂载。树查询节点参数、表格查询选中对象及其过滤映射分别核对，不凭概览假设首次参数、展开顺序或旧版本兼容性。
+
+只要求构建左树时，不改已存在的右表查询；只排查点树后右表过滤时，检查选中对象到过滤条件的传递，不默认重建树。普通单据树形列表仍走 `kingdee-cosmic` 的列表路线。
+
+表格取数再按实际需要组织：解析 `FilterInfo` → 构建 `QFilter[]` → 查询 DataSet → JOIN/UNION → `groupBy().sum().finish()` → `addField()` 计算列 → 返回最终 DataSet。只构造节点集合时，不新增未使用的 DataSet、金额计算或聚合辅助逻辑；以下数据访问、金额与 DataSet 规则按实际涉及的代码适用。
 
 ## 2. 三层数据访问(报表只读)
 | 层级 | Helper | 用途 |

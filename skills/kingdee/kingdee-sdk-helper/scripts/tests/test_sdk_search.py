@@ -183,6 +183,32 @@ class SdkSearchTests(unittest.TestCase):
         sdk_search.search(sdk, "AlphaWidget", target_version="7.0")
         self.assertEqual(sdk, original)
 
+    def test_empty_class_record_does_not_deny_inherited_methods(self):
+        for methods_present in (True, False):
+            sdk = sdk_fixture()
+            child = {
+                "name": "ChildWidget",
+                "full_name": "kd.fixture.ChildWidget",
+                "type": "class",
+                "declare": "public class ChildWidget extends kd.fixture.AlphaWidget",
+            }
+            if methods_present:
+                child["methods"] = []
+            sdk["classes"].append(child)
+            original = copy.deepcopy(sdk)
+            for query in (child["name"], child["full_name"]):
+                with self.subTest(methods_present=methods_present, query=query):
+                    output = sdk_search.search(sdk, query, target_version="7.0")
+                    self.assert_evidence(output)
+                    self.assertIn("# Class: kd.fixture.ChildWidget", output)
+                    self.assertIn("No methods are listed in this class's index record", output)
+                    self.assertIn("Inherited method availability is unverified", output)
+                    self.assertNotIn("No public methods found", output)
+                    self.assertNotIn("**Signature:**", output)
+            parent_output = sdk_search.search(sdk, "AlphaWidget", target_version="7.0")
+            self.assertIn("public String read(String key)", parent_output)
+            self.assertEqual(sdk, original)
+
 
 class SdkSearchCliTests(unittest.TestCase):
     def setUp(self):

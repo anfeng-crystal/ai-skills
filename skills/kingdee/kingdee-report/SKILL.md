@@ -16,7 +16,7 @@ metadata:
 只确认到 `7.0` 时保留该粒度，不补成 `7.0.13`，不因 `8.0` 资料较新而提升目标；用户指定其他版本时按该目标处理。同大版本不同补丁也需核对具体 API，补丁未知但目标 JAR/声明足以确认本次 API 时可继续。目标与实际依赖冲突时如实报告，不以另一版本的编译结果冒充目标兼容。
 
 ## 触发边界
-- **适用**:苍穹报表插件(`AbstractReportListDataPlugin` / `AbstractReportFormPlugin`)开发、报表取数、DataSet/Algo 流水线、JOIN/分组聚合、FilterInfo 解析、报表架构选型、Algo API 精确签名查询。
+- **适用**:苍穹报表插件(`AbstractReportListDataPlugin` / `AbstractReportTreeDataPlugin` / `AbstractReportFormPlugin`)开发、表格取数与树节点查询、DataSet/Algo 流水线、JOIN/分组聚合、FilterInfo 解析、报表架构选型、Algo API 精确签名查询。
 - 按用户指定语言、已有工程和目标版本证据选择实现形态。官方支持 KingScript 报表查询/表单插件；用户选择 KingScript 时与 `kingdee-kingscript` 协作核对声明、导入及注册，不强制改为 Java，也不要求先有同类实现。未指定语言时沿用项目惯例；官方指南未声明最低版本，不能据此推断所有旧环境支持。见 `../kingdee-kingscript/references/official-report-support.md`。
 - **不适用(转交)**:
   - 普通表单/单据/列表/操作插件、BOTP、工作流 → `kingdee-cosmic`。
@@ -26,12 +26,12 @@ metadata:
   - 报表单测与 Gradle 运行 → `kingdee-testing`。
 
 ## 核心心智模型
-报表 = 单一 `query()` 入口 + 只读查询 + 无状态设计 + BigDecimal 财务计算 + DataSet 单次消费。详见 `references/mental-model.md`。
+先区分表格取数、树节点查询与界面交互，分别核对入口和返回合同；共用只读、无状态要求。表格取数使用 DataSet 流水线，实际涉及金额时使用 BigDecimal，使用 DataSet 时遵守单次消费合同。详见 `references/mental-model.md`。
 
 ## 快速工作流
-1. 先区分 API 查询、架构分析和取数实现。API 查询与不依赖具体字段的分析无需完整报表合同。具体取数实现须确认报表标识、数据源实体、过滤项、输出列、计算口径、关联与分组；实体或 query/group/sum 关键字段未确认时，先复用项目、缓存和已授权的 `kingdee-metadata-analyzer` 证据，只暂停依赖缺失事实的代码生成，继续独立取证与检查。取证后仍无法确认时，报告 `contract_incomplete` 和最小缺失项；需要用户提供业务信息时再询问。只有用户明确要求架构伪代码时才提供伪代码，且不得写未核实 SDK 签名。
-2. 需要架构选型时，按数据形态选架构(`references/architecture-patterns.md`)：查询、关联与聚合能表达时用 Algo Pipeline；复杂逐行转换用 Map-Based Assembly；明确需要 AlgoX 的成本卷算才用 AlgoX。
-3. 实现取数时:解析 `FilterInfo` → 构建 `QFilter[]` → 各数据源 `queryDataSet` → JOIN/UNION → `groupBy().sum().finish()` → `addField()` 计算列 → 返回 DataSet。`references/algo-api.md` 用于定位候选；使用各 API 前先核对目标版本签名，不凭记忆或未标版本的表格生成。
+1. 先区分 API 查询、架构分析和取数实现，再区分树节点与表格数据。API 查询与不依赖具体字段的分析无需完整报表合同。表格取数须确认报表标识、数据源实体、过滤项、输出列、计算口径、关联与分组；树节点查询确认节点标识、文本、层级来源及查询范围，仅在实际从实体取数时要求对应实体/字段。关键事实未确认时，先复用项目、缓存和已授权的 `kingdee-metadata-analyzer` 证据，只暂停依赖缺失事实的代码生成，继续独立取证与检查。取证后仍无法确认时，报告 `contract_incomplete` 和最小缺失项；需要用户提供业务信息时再询问。只有用户明确要求架构伪代码时才提供伪代码，且不得写未核实 SDK 签名。
+2. 表格取数需要架构选型时，按数据形态选架构(`references/architecture-patterns.md`)：查询、关联与聚合能表达时用 Algo Pipeline；复杂逐行转换用 Map-Based Assembly；明确需要 AlgoX 的成本卷算才用 AlgoX。
+3. 表格取数按所需阶段组织：解析 `FilterInfo` → 构建 `QFilter[]` → 各数据源 `queryDataSet` → JOIN/UNION → `groupBy().sum().finish()` → `addField()` 计算列 → 返回 DataSet。树节点查询按其返回合同构造节点，不套用表格流水线或替换无关的右侧查询；树选中对象与右表过滤的衔接需单独核对。`references/algo-api.md` 用于定位候选；使用各 API 前先核对目标版本签名，不凭记忆或未标版本的表格生成。
 4. 生成或修改取数代码后，按 `references/codegen-checklist.md` 自检:无实例字段、BigDecimal 计算、AlgoKey 唯一、空值安全、NULL 用 `IS NULL`。
 5. 按任务范围完成适用验证：Java 编译/运行验证交 `kingdee-testing`；KingScript 按目标声明及 `kingdee-kingscript` 的授权边界验证，不把 Java Gradle 编译套到 TS 文件。字段口径回 `kingdee-metadata-analyzer` 复核。
 
