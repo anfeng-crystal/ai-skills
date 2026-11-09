@@ -4,7 +4,7 @@ description: "校验金蝶 KSQL、生成预置数据/DDL、填充平台数据导
 license: MIT
 metadata:
   author: "anfeng"
-  version: "1.2.0"
+  version: "1.2.1"
   tags: "kingdee, cosmic, ksql, data, database"
 ---
 
@@ -22,12 +22,12 @@ metadata:
 | 修改计划/批准执行 `execute-approved` | [数据变更契约](references/approved-data-change.md) | 计划只读；批准后按精确范围执行并复核 |
 | 平台导入模板 | [模板回填](references/import-workbook.md) | 保留系统模板结构，按授权分别完成填充、检查和导入 |
 
-字段、表/列、分录和路由事实由 `kingdee-metadata-analyzer` 提供；查数据只读取必要映射，不做全量元数据分析。ISCB SQL/DML 服务交 `iscb-script`，Java、KingScript 和安全 POC 返回对应领域 skill。
+复用已确认映射，仅补齐本次查询所需的实体、表列、分录和路由信息；需补查时使用 `kingdee-metadata-analyzer` 的对应入口。编写 ISCB SQL/DML 服务流程时使用 `iscb-script`。
 
 ## 执行规则
 
 1. 明确环境、对象和用户要求的完成点。说“先出计划/我来审核”时保持计划态，后续精确批准才进入执行。
-2. 按任务加载上表的一份流程。缺项先用现有配置、元数据和工具补齐；仍影响结论时报告 `contract_incomplete`，不把初始未知当最终阻塞。
+2. 按请求选择必要流程，复合请求分别完成各项交付并复用证据。缺项先用现有配置、元数据和工具补齐；仍影响结论时报告 `contract_incomplete`，不把初始未知当最终阻塞。
 3. KSQL 特有函数/语法按项目的苍穹版本和目标数据库类型/版本核实；二者不能混同。本地检查通过只证明对应检查范围。
 4. 字典赋值先闭合“业务字段 → 实际引用实体 → 编码 → 转换 → 外部接口值”；相似名称不能证明等价。目标对象纠正后重算范围。
 5. 批准写入前读取数据变更契约并运行 `scripts/validate_change_contract.py --contract <文件>`；它只校验合同，不执行 SQL。失败先确认回滚，再重算当前范围和并发条件。
