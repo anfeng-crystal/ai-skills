@@ -4,88 +4,83 @@ description: "开发、修复或审查金蝶云苍穹 Java 插件、扩展点、
 license: MIT
 metadata:
   author: "anfeng"
-  version: "1.4.0"
+  version: "1.5.0"
   tags: "kingdee, cosmic, java, plugin, BOS, SDK"
 ---
 
 # Kingdee Cosmic
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
-## 契约
-- 默认“封装优先，原生兜底”：项目已有 `kd.cd.common.plugin` 扩展基类、`OpUtils`、`BotpUtils`、`QueryUtils`、`DynamicObjectUtils` 或同类 helper 能覆盖时，不再另写第二套平台封装。
-- 字段、`entityId`、枚举值、`refType`、SDK 方法签名和 `@Override` 事件签名不能凭记忆猜；用元数据、项目依赖、`kingdee-sdk-helper` 或本 skill 脚本确认。
-- 改插件注册、页面打开参数或挂载链路前，先确认实体、表单、布局、派生页面和操作的真实挂载/继承关系。
-- 生成或修改平台相关代码前，复用用户已确认的产品与目标版本；只确认到 `7.0` 就保留该粒度，不补成 `7.0.13`，也不因 `8.0` 示例或本地索引较新而提升目标。用户指定其他版本时按该目标处理；目标与实际依赖不一致时报告冲突，不用另一版本编译通过冒充目标兼容。
-- 本次所用 API、重载和事件签名须先由目标项目依赖或匹配目标实际版本的 SDK/Javadoc 确认；新版本或版本不明的 references、模板和示例只作候选，不等到发生冲突才核对。同一大版本不同补丁也需核对具体 API；补丁号未知但目标 JAR 已能确认本次 API 时可继续。复用已有有效证据，不固定追加下载、登录、查询脚本或编译步骤；未知签名只暂停依赖它的代码，继续独立本地工作。
+## 职责与路由
 
-## 模式
+负责苍穹 Java 二开的方案、实现、诊断和交付。需求/技术方案评审按[评审合同](references/requirements-review.md)交付意见；实现任务按下述流程完成。纯 Java 类型、泛型或语法问题直接分析，不启动无关元数据查询。
 
-| 模式 | 动作边界 |
-|---|---|
-| `author` | 本地生成、修改、编译和测试；不触碰外部环境 |
-| `diagnose-readonly` | 对已知目标、范围和授权做日志、元数据、配置、状态或只读接口取证；生产只读任务满足契约后可直接执行 |
-| `execute-approved` | 仅执行用户已批准的环境、目标、动作、数据范围和回滚/恢复契约；契约完整后不重复确认，不扩到部署、发布或数据写入之外的动作 |
+| 需要的能力 | 路由 |
+| --- | --- |
+| 字段、实体、页面、派生布局、挂载和上下游证据 | `kingdee-metadata-analyzer`；复用仍适用的 inventory/quick cache，缺失、过期或范围不足才补查 |
+| SDK 类、重载、事件、参数及返回语义 | `kingdee-sdk-helper` |
+| 元数据修改；页面 JS/CSS；独立控件 | `kingdee-metadata-change`；`kingdee-frontend-script`；`kingdee-custom-control` |
+| KingScript；ISCB；外部 OpenAPI 客户端 | `kingdee-kingscript`；`iscb-script`；`kingdee-openapi-client` |
+| 报表、DataSet/Algo、GroupbyDataSet、FilterInfo 与报表 API | `kingdee-report` |
+| 工程骨架/COSMIC_HOME；鉴权；KSQL/数据；Trace/性能；测试 | `kingdee-cosmic-devtools`；`kingdee-cosmic-login`；`kingdee-sql-and-data`；`kingdee-observability`；`kingdee-testing` |
 
-这些模式表示助手的工作边界，不是插件入参或待新增的运行开关。目标、范围、授权或动作性质不明时停止在本地证据层，并列出缺失项；任何模式都不回显凭据。
+本地启动、模块构建和部署沿用当前仓库流程，不因涉及 Gradle 就转工程骨架 Skill。
 
-## 触发与路由
-1. 处理金蝶云苍穹 Java 二开、插件、配置、诊断、代码核查或改造任务、服务端 OpenAPI 开发，以及这些范围内的需求与技术方案评审。KingScript 用 `kingdee-kingscript`；ISCB 用 `iscb-script`；外部 OpenAPI 调用用 `kingdee-openapi-client`；SDK/Javadoc/方法签名查询用 `kingdee-sdk-helper`。
-2. 纯 Java 语法、类型、泛型、集合或编译错误可直接分析，不要无意义触发元数据查询。
-3. 涉及实体、字段、表单、页面/操作挂载点、插件绑定或上下游关系时，先复用当前任务已确认且仍匹配目标环境的 analyzer inventory/quick cache；缺失、过期或范围不足时再交 `kingdee-metadata-analyzer` 做取证。
-4. 移动端或派生表单的页面行为问题，以及页面元素或生产行为链路问题，不能只看实体 quick-query；要求 analyzer 全景分析并核对 `pageElement`、`formPage`、派生表单和插件挂载链。仅确认工作流功能是否支持某客户端时，先读对应功能说明；进入页面行为或挂载诊断后再按上述要求取证。
-5. 工程骨架或 `COSMIC_HOME` 资源包交 `kingdee-cosmic-devtools`；本地启动、模块构建和部署沿用当前仓库流程。登录态交 `kingdee-cosmic-login`，KSQL/数据脚本交 `kingdee-sql-and-data`。运行日志/Trace 分析交 `kingdee-observability`，专项测试执行交 `kingdee-testing`。
-6. 纯报表插件取数、DataSet/Algo 流水线、GroupbyDataSet 聚合、FilterInfo 解析和 Algo API 精确签名，转 `kingdee-report`；本 skill 只保留轻量路由和概览。
+## 工作边界
 
-## 取证
-- 只有任务实际需要本 skill 的在线 API、知识库或扩展点查询时才做配置预检；纯源码分析、Java 修改、模块级 Gradle 编译/测试、`jarZip`、`uploadZipRestartAndWait`、服务重启或部署验收不得仅为例行检查运行它。
-- 配置预检先从当前目录向上定位聚合项目根，再按“用户明确目标环境 → 当前任务已确定环境 → 同项目通用配置仅作明确后备”选择配置。环境已确定时优先使用 `ok-cosmic.<env>.json`，不得用其它环境或泛化 `ok-cosmic.json` 静默替代。
-- 环境配置文件按目标环境选择，但 `graph.dbPath` 表示本地离线知识库，同一项目的 DEV/PROD 可以按项目约定共享同一路径；路径相同不是跨环境混用。共享文件不存在时应报告知识库缺失，不能误判为环境配置选择错误。
-- 执行时必须显式传绝对配置路径：`python3 <SKILL_ROOT>/scripts/cosmic-config-check.py --config <PROJECT_ROOT>/ok-cosmic.<env>.json`。未确定环境或未找到对应配置时只停用相关在线能力，不得声称“仓库未提供配置”，也不得阻断不依赖在线能力的本地编译、测试或部署。
-- 业务话术无法确定实现入口时读 `rules/intent-routing.md`；需要插件、配置或脚本选型时读 `rules/decision-matrix.md`。
-- 盘点模块扩展点、核对插件绑定或评估治理优先级时，读 [扩展点盘点与治理](references/extension-inventory.md)，关联源码与目标环境证据；普通插件修改不默认扫描整个模块。
-- 命名、数据模型、日志或平台设计约束需要补证时读 `rules/platform-baseline.md`；查 API 读 `rules/cheat-sheet.md`；新建插件或缺少同类结构时选最接近的 `assets/*.java` 模板；事件顺序不确定时读 `references/event-lifecycle.md`。局部修改不固定加载整套资料。
-- 在线元数据不可用时，可复用 analyzer 产物、quick-query 缓存、项目源码、JAR 和本 skill references，但输出必须区分“源码推断”和“目标环境元数据已确认/未确认”。
+| 模式 | 完成范围 |
+| --- | --- |
+| `author` | 本地分析、修改、编译及适用测试，不操作外部环境 |
+| `diagnose-readonly` | 对已确认目标、范围和授权做日志、元数据、配置、状态或只读接口取证 |
+| `execute-approved` | 执行已授权的环境、对象、动作和数据范围，沿用其恢复/回滚合同 |
 
-## 工作流
-仅评审需求或技术方案时，按 [需求与技术方案评审](references/requirements-review.md) 组织文档条目、证据和修订建议，以评审意见为交付；以下步骤用于开发、修复与诊断任务。
+这些是助手工作边界，不是待新增的业务开关。复用已有授权和配置，不逐步重问；缺口只暂停依赖它的动作，其他工作继续。凭据不回显。用户指定先预览、自己导入或自己测试时，以该交接点为界；本地检查和环境准备不等于代做业务验收。
 
-1. 明确任务类型、目标对象、插件类型、事件点、事务边界、环境口径和验证方式。
-2. 依赖目标环境元数据的问题，把元数据取证交给 `kingdee-metadata-analyzer`；本 skill 并行查源码、同类实现、模板、snippet 和运行时堆栈。
-3. 按需读取最小资料集：插件/配置选型 `rules/decision-matrix.md`；API 速查 `rules/cheat-sheet.md`；插件类型 `references/plugin-types-cheatsheet.md`；BOTP `references/botp-convert.md`；DynamicObject `references/dynamic-object.md`；生命周期 `references/event-lifecycle.md`；工作流/布局元数据包 `references/workflow-metadata-change.md`；DataSet 概览 `references/query-dataset.md`；Cache/MQ `references/cache-mq-runtime.md`；异常诊断与复核 `references/error-review-patterns.md`。
-   标准单据列表/模板导出的 CSV/XLSX、容量或数值格式问题，先读 [导出格式合同](references/list-export-format.md)。
-   流程任务主题引用长日期缺少时分秒、下拉字段只显示编码、移动待办列表与审批页主题不一致，或钉钉撤销重提后仍显示旧主题时，读 [任务主题显示与配置来源](references/workflow-task-subject.md)，核对配置来源、版本与第三方限制；文档绕行方案不替代业务授权。
-4. 先查当前项目已有基类、helper、wrapper 和同类实现；能复用现有 helper 时不新增公共能力。单个插件能清楚完成的逻辑留在本类；模板中的业务参数、预演开关及示例阈值只有在当前需求或已有调用合同需要时才采用，框架入口签名本身不要求新增业务参数。
-   从实体元数据生成服务端 DTO/Controller 时，读 [元数据到 API 合同](references/openapi-metadata-contract.md)，先确定对外字段和操作范围，再沿用已核验的注解与项目封装。
-   提交后自动审核、紧接提交调用审核或提示“单据已在流程中流转，不能审核”时，按需读 [提交与寻址合同](references/workflow-submit-audit.md)，区分版本和异步寻址状态。
-   指定参与人未生效、驳回目标参与人待定、会审加签、会签保留人工审批、驳回后重复审批人、参与人解析/显示顺序、发起人与审批人相同处理或跳过条件冲突的只读诊断/改造，按需读 [参与人与节点行为](references/workflow-participant-behavior.md)。
-5. 页面事件已覆盖验收路径时，不默认追加保存、操作、接口或批量链路兜底；只有需求明确覆盖绕过页面事件的入口时才扩展链路。
-   动态表单回填分录时，读 [弹窗与分录合同](references/dialog-entry-contract.md)；字段配置、回调及配套部署必须使用同一份已确认映射。
-   按单据内容定制水印时，读 [表单水印合同](references/base/plugin/plugin-form.md#按单据内容生成水印)，核对事件回填、单据标识和输出入口。
-6. 按改动验证：平台调用或 Java 逻辑变更完成受影响模块的编译、场景/资源静态检查及适用测试；已有检查覆盖当前差异时不重复运行。仅注释/格式修改检查差异即可。检查入口与降级方式见 `rules/post-check.md`，不能以静态结果冒充编译或运行通过。
-7. 收口按 `rules/post-check.md` 给出依据、改动、验证和风险。
+## 实施流程
 
-## Scripts
-- 配置预检：`scripts/cosmic-config-check.py`
-- API/知识库查询：`scripts/cosmic-api-knowledge.py`
-- 表单/字段元数据：`scripts/cosmic-form-metadata.py`
-- 基础资料查询：`scripts/cosmic-basedata-query.py`
-- 业务拓展点查询：`scripts/cosmic-extpoints-query.py`
-- 代码后检：`scripts/cosmic-post-check.py`
-- lint 规则：`scripts/lint/`
-- 历史质量扫描：`scripts/scan/`
+1. **固定业务结果**：明确对象与真实入口、哪些记录/字段可改、允许状态、权限由哪层承担、保存或内存回填、取消/失败行为，以及验收负责人。合并最新用户口径，不把旧方案、模板限制或排障假设变成业务规则。
+2. **核对事实**：先查实际挂载、继承链、字段类型和目标依赖，再选事件与 API。区分元数据身份、实体编码、记录主键和业务编码；字符串传输不改变数据库字段类型。涉及移动/派生页面或页面行为时分析 `pageElement`、`formPage` 和插件链，实体 quick-query 不足以证明入口。仅问工作流客户端支持时先查功能说明。
+3. **设计完整调用链**：把输入、初始化、交互、确认、保存、回调及失败出口串起来，标明各阶段可用对象和数据类型。列表批改、动态控件、F7、父子页回填或保存关闭问题读[弹窗与分录合同](references/dialog-entry-contract.md)。按同一字段映射修改元数据与代码，不把选值过滤和保存目标匹配混在一起。
+4. **实现最小闭合改动**：复用项目允许的基类/helper；只有合同允许时使用 `kd.cd.common.plugin`、`OpUtils`、`BotpUtils`、`QueryUtils`、`DynamicObjectUtils` 等封装，原生 API 作合适的替代。单类能清楚表达的逻辑不抽公共层；示例阈值、开关和参数仅在当前需求需要时采用。已配置的权限/可见性/编辑限制不重复编码，存在已确认绕过入口时才补充。
+5. **定位并修复失败**：沿调用链找第一个不符阶段，核对完整异常和目标事实。字段/过滤类型错误按[错误复核](references/error-review-patterns.md)闭合元数据、过滤列、默认值和操作数类型，不靠 Long/String、相似字段名试错。撤掉本轮已否决的实现，保留无关成果。
+6. **验证并交付**：按[rules/post-check.md](rules/post-check.md)完成受影响编译、场景/资源检查及适用测试；已有等价证据不重跑，纯注释/格式只查差异。元数据导入、插件部署、服务就绪和业务验收分别取证；完成获授权的交付点后收口，不用编译通过代替运行结论。
 
-## 门禁
-- 最小必要修改；局部替换只改目标及必要连带查询、取值和调用，保留原方法、控制流程、查询策略、空值/异常语义与返回契约，不顺带拆分、抽 Helper 或整段格式整理。明确重构按用户范围执行；公共接口、依赖或文件结构仅按用户要求或已确认方案调整。
-- 已有挂载或继承链路能覆盖当前页面/操作时，不重复注册插件或追加同类打开参数。
-- 未获得元数据挂载授权时只交插件类引用、建议挂载点和验证步骤，不代改/代挂元数据。页面配置已经承担范围过滤、可见性或编辑边界时，Java 不重复编码同一限制，除非存在已确认的绕过入口。
-- 第一次出现字段/过滤类型错误后，必须读取完整异常链和目标元数据，按 `references/error-review-patterns.md` 闭合四方类型合同；禁止继续在 `Long`、`String`、`entityField` 或相似字段名之间试错。
-- 不把实施过程、排查路径或交付口径写入代码注释、README、skills 或长期操作说明。
-- 新增类、公共方法、复杂私有方法、关键平台调用、事务/跨库/回写/DataSet/工作流边界只写长期有效的功能性注释。
-- 不直接 SQL，不拼接 SQL/KSQL 条件字符串；验证性数据核对可用独立只读脚本完成，不作为业务交付实现。
-- `DataSet` 必须关闭；禁止循环内访问数据库、Redis 或反复 `view.updateView()`；禁止 `printStackTrace()`。
-- Cache 必须有隔离 key、容量/条数边界和失效契约；高并发回源需防穿透/击穿，精确 API 按目标 SDK 确认。
-- MQ 必须用业务幂等键；`messageId` 非全局唯一，`resend` 不能判幂等；未知异常不得直接 `discard`，publisher 必须关闭。
-- 修改工作流、审批布局、业务布局或列表布局时，必须先读 `references/workflow-metadata-change.md`。不得因共用物理表合并实体/入口，不得把普通 `.process` 当作当前生效 Scheme，也不得静默删除原节点单字段可编辑/必录配置。
+## 目标版本与取证
 
-## 输出
-使用简体中文，先给结论，再给依据、边界和风险。实现类任务按“依据 -> 改动 -> 验证 -> 风险/待确认项”收口；区分源码推断、SDK 已确认、目标环境只读确认和实际执行结果。
+- 沿用已确认的产品/版本与实际项目依赖；`7.0` 不自动补成某个补丁，也不能由较新索引提升到 8.0。具体 API、重载、事件、参数语义和返回行为在写代码前核对；补丁未知但目标 JAR 已足够时继续。版本不明/异版模板只作候选，目标与依赖冲突须报告，不能用另一版本编译证明兼容。
+- 本地源码、JAR、现有 analyzer 结果或缓存足够时不启动在线预检；离线证据与目标环境确认分别标记。只有实际使用本 Skill 在线 API、知识库或扩展点查询时才检查配置。
+- 从当前目录向上定位聚合根，按“用户指定环境 → 本任务已定环境 → 同项目明确后备”选择配置，优先 `ok-cosmic.<env>.json`，显式传绝对路径：`python3 <SKILL_ROOT>/scripts/cosmic-config-check.py --config <PROJECT_ROOT>/ok-cosmic.<env>.json`。不静默替换环境。
+- `graph.dbPath` 是本地离线知识库，可按项目约定跨 DEV/PROD 共用；缺文件是知识库缺失，不是环境冲突。环境/配置不足只停用相关在线能力，不阻断本地编译、测试或已授权部署，也不要求例行登录、下载或预检。
+
+## 按需资料
+
+只加载本次会改变设计或判断的条目；无需读完整资料库。
+
+| 场景 | 资料 |
+| --- | --- |
+| 需求入口、插件/配置选型、插件类型、命名/日志/模型约束 | `rules/intent-routing.md`、`rules/decision-matrix.md`、`references/plugin-types-cheatsheet.md`、`rules/platform-baseline.md` |
+| API 候选、同类模板、事件顺序 | `rules/cheat-sheet.md`、`assets/*.java`、`references/event-lifecycle.md` |
+| 扩展点盘点、绑定与治理 | `references/extension-inventory.md`；普通局部修改不扫描全模块 |
+| BOTP、DynamicObject、查询、Cache/MQ | `references/botp-convert.md`、`references/dynamic-object.md`、`references/query-dataset.md`、`references/cache-mq-runtime.md` |
+| 工作流/审批/业务/列表布局元数据修改 | `references/workflow-metadata-change.md`，修改前读取 |
+| CSV/XLSX 导出、容量、数值格式 | `references/list-export-format.md` |
+| 任务主题日期/编码显示、移动待办差异、撤销重提旧主题 | `references/workflow-task-subject.md` |
+| 元数据生成 DTO/Controller | `references/openapi-metadata-contract.md`，先定对外字段与操作 |
+| 提交后自动审核、异步寻址或流转中不能审核 | `references/workflow-submit-audit.md` |
+| 参与人、驳回、会审/会签、顺序、同人处理和跳过条件 | `references/workflow-participant-behavior.md` |
+| 单据水印 | `references/base/plugin/plugin-form.md` 的“按单据内容生成水印” |
+
+## 实现约束
+
+- 局部修改保留原接口、查询策略、空值/异常和返回语义；只做必要连带调整，不顺带拆类、改依赖或格式化。显式重构按授权范围执行。
+- 已有挂载/继承或页面事件覆盖验收路径时不重复注册、追加打开参数或另设保存/接口兜底。没有挂载授权时交类引用、挂载建议和验证步骤，不代改元数据。
+- 只写长期有效的功能性注释：类、公共/复杂方法和平台调用、事务、跨库、回写、DataSet、工作流边界；实施流水账不进入源码或长期说明。
+- 不直接 SQL，不拼 SQL/KSQL 条件；验证性核对可用独立只读脚本，不混入业务交付。关闭 DataSet/流等资源，避免循环内数据库/Redis/远程调用和反复 `updateView()`，不用 `printStackTrace()`。
+- Cache 明确隔离、容量/条数和失效，按并发需求防穿透/击穿；MQ 使用业务幂等键，不能以 `messageId`/`resend` 代替幂等，未知异常不直接 discard，关闭 publisher。具体 API 查目标 SDK。
+- 共用物理表不等于同一实体/入口；普通 `.process` 不等于生效 Scheme；保留原节点字段可编辑/必录配置。
+
+## 工具与输出
+
+按需使用 `scripts/cosmic-config-check.py`、`cosmic-api-knowledge.py`、`cosmic-form-metadata.py`、`cosmic-basedata-query.py`、`cosmic-extpoints-query.py`、`cosmic-post-check.py`；lint 和历史扫描在 `scripts/lint/`、`scripts/scan/`。执行前核对该脚本实际参数。
+
+用简体中文报告业务结果、必要改动及证据，区分源码推断、SDK 已确认、目标只读取证和实际运行；明确未完成的交接或验证，不重复罗列无关检查。
