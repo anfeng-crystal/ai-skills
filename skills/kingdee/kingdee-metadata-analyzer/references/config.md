@@ -1,43 +1,48 @@
-# 配置说明
+# 配置与环境
 
-## 项目入口
-- 项目配置表：`${AI_KNOWLEDGE_ROOT}/kingdee/cosmic/projects/config-table.md`
-- 项目配置文件：表中 `ok-cosmic 配置` 列指向的 `ok-cosmic.json`
+## 定位输入
 
-## metadataAnalyzer
+从当前目录向上定位项目根。优先目标环境显式配置，其次同项目通用配置；项目索引为 `${AI_KNOWLEDGE_ROOT}/kingdee/cosmic/projects/config-table.md` 的 `ok-cosmic 配置` 列。其它环境配置仅作对照。
+
+| 输入 | 来源与用途 |
+|---|---|
+| 元数据库 | `metadataAnalyzer.database`，用于实体和页面设计；不是业务库或管理中心库 |
+| 数据中心 | 当前任务明确 ID 优先，其次同环境项目/登录配置的 `accountId`，缺失才按元数据库映射反查 |
+| 管理中心、业务库 | 按 [业务库定位](database-routing.md) 从现有入口和路由配置确定 |
+| 凭据 | 复用当前环境配置，按下文顺序解析；不为查询迁移或另建凭据 |
+
+数据中心仅在业务路由查询中需要。路由入口自动查找项目及子模块的 `login-<env>.properties`，可用 `--login-config` 指定其它已知路径，或用 `--datacenter-id` 传入任务明确值；已有值无需复制到元数据配置。候选不唯一时补配置来源，不能任取第一条。
+
+## metadataAnalyzer 字段
+
 | 字段 | 说明 |
 |---|---|
-| `enabled` | 是否允许连接元数据数据库并采集插件清单 |
-| `envFiles` | 可选，项目级 `.env` 文件列表；相对路径按项目根目录解析 |
-| `database.host` | PostgreSQL 主机 |
-| `database.port` | PostgreSQL 端口 |
-| `database.dbname` | 元数据库名 |
-| `database.user` | 只读数据库用户 |
-| `database.passwordEnv` | 可选，数据库密码变量名；可来自当前进程环境变量或 `.env` 文件 |
-| `database.envFiles` | 可选，数据库凭据专用 `.env` 文件列表；优先级低于项目级 `envFiles` 的同名变量 |
-| `database.password` | 兼容既有项目配置的明文密码字段；不要在新模板或报告中新增、复制或展示 |
+| `enabled` | 是否允许连接与在线采集 |
+| `envFiles` | 项目级 `.env` 文件列表，相对项目根目录 |
+| `database.host/port/dbname/user` | PostgreSQL 元数据库连接 |
 | `database.schema` | 元数据表所在 schema |
+| `database.connectTimeoutSeconds` | 连接超时秒数 |
+| `database.passwordEnv` | 密码环境变量名 |
+| `database.envFiles` | 凭据专用 `.env` 列表，同名变量优先级低于项目级 `envFiles` |
+| `database.password` | 仅兼容既有明文配置；不复制到新模板、报告或日志 |
 | `workspace.projectRoot` | 二开源码根目录 |
-| `jarLibPaths` | 苍穹服务端 JAR 搜索目录 |
-| `decompiler.enabled` | 是否允许 CFR 反编译 |
-| `decompiler.cfrJarPath` | CFR JAR 路径 |
-| `output.reportDir` | 可选分析产物输出目录；为空或相对路径时，新产物默认写入本机缓存目录 |
+| `jarLibPaths` | 服务端 JAR 搜索目录 |
+| `decompiler.enabled/cfrJarPath` | CFR 开关及路径 |
+| `output.reportDir` | 分析产物目录；默认使用系统缓存 |
 
-## 凭据解析顺序
-脚本按以下顺序解析数据库密码，命中后停止，并且任何输出都只能写来源类型，不能写密码值：
+业务库定位只需连接和凭据，不依赖源码、JAR 或反编译配置。全量分析再校验相应资源。
 
-1. 当前进程环境变量：`database.passwordEnv` 指定的变量名。
-2. `.env` 文件中的同名变量：先读 `metadataAnalyzer.envFiles`，再读 `database.envFiles`。
-3. 约定 `.env`：`ok-cosmic.dev.json` 会尝试 `ok-cosmic.dev.env`，然后尝试配置目录 `.env` 和项目根目录 `.env`。
-4. 既有 JSON 兼容字段：`metadataAnalyzer.database.password`。
+## 密码解析
 
-推荐新项目使用项目级 `.env` 或同名 `.env`，避免把多个项目密码都放到全局 shell 环境变量里。已经存在的本地 `ok-cosmic.json` 可以继续被读取，但不要把密码写进 skill、报告、模板或聊天输出。
+1. `passwordEnv` 指向的当前进程变量。
+2. `metadataAnalyzer.envFiles`、`database.envFiles` 中同名变量。
+3. 同名环境文件、配置目录 `.env`、项目根目录 `.env`。
+4. 既有 `database.password`。
 
-## 安全规则
-- 不在 skill、报告、模板或聊天输出中写数据库密码值。
-- 新建配置优先用 `.env`；既有配置含 `password` 字段时只兼容读取，不主动扩散。
-- `enabled=false` 时只能做配置检查，不连接数据库。
-- 分析产物默认写入 `KINGDEE_METADATA_ANALYZER_OUTPUT_DIR` 或系统临时目录下的本机缓存，不写入业务 Git 仓库。
-- 旧配置中的相对 `output.reportDir` 仅用于历史产物定位参考，新运行会重定向到本机缓存目录。
-- 如果 `--output`、绝对 `output.reportDir` 或环境变量指向 Git 工作树，脚本会重定向到缓存目录；只有显式传入 `--allow-git-output` 或设置 `KINGDEE_METADATA_ANALYZER_ALLOW_GIT_OUTPUT=1` 才允许写入仓库。
-- 读取分析结果时以脚本打印的 `__INVENTORY_PATH__` 和 `__OUTPUT_DIR__` 为准，不假设路径在项目 `build/` 下。
+只输出来源类型。新配置优先用项目 `.env`；明文迁移属于配置写入，须有任务授权并保留备份与回滚。
+
+## 运行与产物
+
+- bootstrap 支持 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` / `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URL`；失败区分依赖、配置、凭据和网络。
+- 产物默认使用 `KINGDEE_METADATA_ANALYZER_OUTPUT_DIR` 或系统缓存。相对 `reportDir` 仅作历史产物线索，不用于新输出。
+- 输出指向 Git 工作树时会重定向缓存，除非显式使用 `--allow-git-output` 或 `KINGDEE_METADATA_ANALYZER_ALLOW_GIT_OUTPUT=1`。读取路径以脚本输出为准。

@@ -16,11 +16,15 @@
 
 ## 证据要求
 
-- 插件挂载结论至少包含 `className`、`pageElement`、`formPage`、`source` 四项。
+- 插件挂载核对 `className/oid`、`operation`、`pageElement`、`formPage` 和 `source`，保留实际启用状态。
 - 同一个插件类可同时挂在 PC、移动表单、移动列表或操作上；类名相同不代表执行入口相同。
 - 移动端问题必须明确用户说的是移动编辑页、移动查看页、移动列表页还是移动按钮操作。
 - 生产和 dev 对比时必须分别列出环境、配置文件和采集时间；不能用 dev 挂载替代生产事实。
 - 如果只拿到实体级插件，不能断言移动页面挂载；需要继续查 `t_meta_formdesign.fdata` 或 analyzer `inventory.json`。
+
+- 列表列、按钮、过滤、列表插件和 `ListOpenLayoutBill` 独立核对；表单字段清单不能代替列表配置。界面规则与实体业务规则分别检查条件、动作和所属入口。
+- 无 `Key/Name/OperationKey` 的 `action=edit` 保留无语义标签，不能按顺序猜暂存、提交或审核。
+- 流程当前定义以目标环境发布后的 `.scheme` 及发布状态为准，普通 `.process` 文件不证明已生效。
 
 ## 输出格式
 

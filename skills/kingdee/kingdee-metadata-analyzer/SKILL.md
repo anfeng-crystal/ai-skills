@@ -1,85 +1,51 @@
 ---
 name: kingdee-metadata-analyzer
-description: "需要金蝶云苍穹真实字段、页面、插件挂载或跨环境差异证据时，进行只读元数据分析。"
+description: "只读分析金蝶云苍穹实体字段、表单与列表配置、插件和规则，或定位实体的业务数据库。"
 license: MIT
 metadata:
   author: "anfeng"
-  version: "1.0.0"
+  version: "1.1.0"
   tags: "kingdee, cosmic, metadata, analysis, plugin-binding"
 ---
 
 # Kingdee Metadata Analyzer
 > Cross-platform Agent Skill: use host-neutral paths and current project commands.
 
-## 触发与路由
-- 实体字段、表单/操作、插件挂载、页面链路、上下游关系、跨环境差异或元数据导出需要真实证据时使用。
-- 元数据修改、评审包、导入发布和回滚交 `kingdee-metadata-change`；本 skill 只提供只读基线和挂载证据。
-- 基对象模板无法导出、需要刷新同环境实际模型知识时交 `kingdee-metadata-change` 的只读知识刷新；本 skill继续负责目标业务对象本身的实体、页面与挂载取证。
-- SDK 签名交 `kingdee-sdk-helper`；Java 实现和运行诊断交 `kingdee-cosmic`；报表交 `kingdee-report`；KingScript 交 `kingdee-kingscript`。
-- 本地源码或编译证据足以回答且元数据不影响结论时不触发；混合任务先产出证据，再返回原实现或修复任务。
+## 选择任务
 
-## 模式
-| 模式 | 适用条件 | 主要产物 |
-| --- | --- | --- |
-| `quick` | 单个字段、操作、枚举或插件清单，且结果完整无警告 | 终端结果或 quick cache |
-| `full` | 字段层级、PC/移动页面链、挂载点或上下游关系 | `inventory.json`、`sources/*` |
-| `cross-env` | dev/test/prod 差异或引用完整性 | 环境分层证据 |
-| `export` | 用户明确要求 Excel/HTML | 脱敏导出文件 |
+| 需求 | 执行范围 | 入口 |
+|---|---|---|
+| 查单个字段、操作、枚举或插件 | 所需元数据；有警告、截断或继承缺口再扩大 | `quick-query.py` 的 `--fields`、`--ops`、`--plugins`、`--enums`、`--all`、`--search` |
+| 全量元数据分析 | 字段、表单插件、界面规则、业务规则、列表配置、列表插件；含有效继承/扩展层及目标 PC/移动入口 | `cosmic-metadata-analyzer.py`，随后核对原始 entity/form/list source |
+| 定位业务库、查数据库值 | 主表、所需字段/分录/关联实体与路由；不做全量配置分析 | [业务库定位](references/database-routing.md)；取值交 `kingdee-sql-and-data` |
+| 跨环境比较、引用检查、Excel/HTML 导出 | 各环境独立取证后加工 | [对比与导出](references/cross-env-diff.md) |
 
-## 契约
-- 环境口径来自当前任务；未指定时用 dev。用户指定 prod/test/dev 后，不用其它环境冒充目标事实。
-- 在线查询只读。生产模式限定实体、配置、必要表、分页/超时和证据用途；不扫全库、全租户或无关实体。
-- 查实际数据库路由，先用目标环境已有数据库连接核对数据中心配置和物理库；直连不可用或证据不足才换路径，并说明原因。逻辑 dbRoute 不等于物理库。
-- 凭据解析顺序以脚本为准：当前进程 `passwordEnv` → 配置声明的 env 文件 → 同名/项目 `.env` → 既有 JSON 兼容字段。只输出来源类型，不输出值。
-- `WARNING`、截断、缓存失败、层级缺失或仅展示前 N 条都表示证据不完整；升级模式或标记未确认，不能包装成确定结论。
+元数据修改和基对象模板知识刷新交 `kingdee-metadata-change`；SDK 签名交 `kingdee-sdk-helper`，Java、报表和 KingScript 实现返回各自领域 skill。本地源码已足够且结论不依赖元数据时无需在线采集。
 
-## 工作流
-1. 确定实体、证据目标、环境和模式；字段层级、派生页面、PC/移动执行链、共用物理表的多实体/多布局或流程包直接用 `full`。
-2. 从当前目录向上定位项目根，按“目标环境显式配置 → 同项目通用配置 → 其它环境配置仅作对照 → 可用历史产物”选择证据源。
-3. 从当前 SKILL.md 定位 skill 根。POSIX 使用 `python3`，Windows 使用 `py -3`；所有路径作为独立参数传递并允许空格。
-4. 在线采集且目标配置尚未验证时运行；仅分析已有有效证据时跳过：
+## 采集流程
+
+1. 明确对象、环境和交付范围，按 [配置说明](references/config.md) 复用目标环境配置。用户未指定环境时用 dev；其它环境只作对照。
+2. 仅业务库定位时直接运行路由入口。在线 quick/full 采集首次使用配置时先执行 `check-config`，再执行所选模式：
+
    ```text
    <python> <skill-root>/scripts/bootstrap-python-env.py -- <skill-root>/scripts/cosmic-metadata-analyzer.py check-config --config <config>
+   <python> <skill-root>/scripts/bootstrap-python-env.py -- <skill-root>/scripts/cosmic-metadata-analyzer.py <entity> --config <config>
    ```
-   bootstrap 尊重 `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URLS` / `KINGDEE_METADATA_ANALYZER_PIP_INDEX_URL`；安装失败时报告依赖、配置、凭据或网络的具体分类。
-5. `quick` 调用 `quick-query.py` 的 `--fields`、`--ops`、`--plugins`、`--enums`、`--all` 或 `--search`；出现警告、截断或层级需求时升级到 `full`。
-6. `full` 调用 `cosmic-metadata-analyzer.py <entity> --config <config>`，按脚本打印的 `__INVENTORY_PATH__` 和 `__OUTPUT_DIR__` 读取结果；默认产物留在系统缓存，不写业务仓库。
-7. 在线配置失败后，按失败原因和可用性选择同项目候选配置、已有 inventory/quick cache、设计 XML、源码或 JAR；无需逐项穷举。跨环境结果只标为对照或推断。
-8. 需要给其它 skill 消费时运行 `metadata_contract.py --inventory <inventory> --environment <env>`；只有 quick cache 时使用 `--quick-cache`。
-9. 以回答当前字段、页面或挂载问题所需的完整证据为完成条件；不因生成 inventory 就提前结束，也不为单字段问题扩大成全量盘点。当前请求包含完整分析或实现目标时连续完成，不增加中途确认；扩大分析对象或副作用范围时再核对授权。
-10. `export` 前列出并哈希输入。用户人工标注的 MD/Excel/CSV 是只读权威输入；不得通过 `import`/`runpy` 执行副作用不明的生成器覆盖它。新导出写入不同路径，并按用户指定主清单做行数、主键和覆盖率对账。
 
-## 证据判定
-- `fieldKey`、中文名、字段类型、物理列、父 entry、PC/移动布局分别标注来源；任何一层缺证据都写未确认。
-- 同一物理表只证明存储复用，不证明实体、字段全集、表单/列表布局、菜单、插件或工作流入口相同；每个实体和布局必须独立列证据。
-- 同名或近义基础资料先解析字段的实际 `BaseEntityId`，再核对转换来源与目标；名称和单条样例不能证明引用或全量值域对应。分别记录本地主键、业务编码、映射字段与外部接口值，不把接口参数名中的 `Id` 当作应传本地主键的依据。
-- 表单布局与列表布局分别盘点。列表列、按钮、过滤、列表插件和 `ListOpenLayoutBill` 不能由表单字段清单推断。
-- `inventory.json` 只按它实际包含的字段/页面/插件作证；有 warning、截断、根/叶层级缺失或未读原始 source 时，不得声称全量完整。
-- `--fields --inherit` 保留各层设计候选，不计算平台有效字段全集；按缓存的 `warnings`、`fieldEvidence` 核对差量与祖先缺口，不能把同名字段去重后当作已合并。摘要需保留输入状态，旧缓存没有完整性信息时记为未知。
-- 流程当前定义以目标环境发布后导出的 `.scheme` 及发布状态为准；普通 `.process` 文件存在不能证明其已生效。
-- 从截图或表格提取角色、字段或挂载项时先逐行枚举，再与用户给出的总数和主键清单对账；裁切、合并单元格、备注列含义或行边界不清时标未确认，不能自行排除。
-- 选择字段的当前显示/选中值不能证明存储值、默认值或候选全集，需回到实际字段和选项定义核对。
-- `*Field` 未知类型保留原始标签，不因白名单缺失判定字段不存在。
-- 插件挂载同时核对 `className`/`oid`、`operation`、`formPage` 和 `pageElement`；类名相同不等于入口相同。
-- 无 `Key/Name/OperationKey` 的 `action=edit` 只能输出无语义标签，不能按顺序推断暂存、提交或审核。
-- 字段不存在只能由完整字段扫描、包含目标对象完整有效祖先/扩展/继承链的设计 XML，或目标运行期元数据证据证明；单份设计期差量 XML 中没有某字段不能证明它不存在。依据和分层规则见 `references/field-evidence.md`。
+   POSIX 用 `python3`，Windows 用 `py -3`；路径独立传参。bootstrap 的 `--` 后直接放脚本路径，不再放解释器。
+3. 读取脚本返回的 `__INVENTORY_PATH__`、`__OUTPUT_DIR__`，按实际缺口补查 source。`inventory` 不是全量完成标志；全量任务逐项核对上表六类配置，清单缺项时读取原始设计，不能以空摘要判定未配置。
+4. 只补当前结论缺少的证据，复用本次同环境有效结果。连接失败按原因选择同项目配置、设计 XML、缓存、源码或 JAR；标明环境与来源差异。
 
-## References
-- 取证评分：`references/analysis-rubric.md`
-- 配置：`references/config.md`
-- 页面挂载：`references/page-binding.md`
-- 字段证据：`references/field-evidence.md`
-- 输出合同：`references/output-contract.md`
-- 跨环境与导出：`references/cross-env-diff.md`
-- 报告结构：`references/report-template.md`
-- 工作流/布局变更的消费规则由 `kingdee-cosmic/references/workflow-metadata-change.md` 承担；本 skill 只输出只读证据。
+## 证据与交付
 
-## 门禁与失败
-- `metadataAnalyzer.enabled=false` 时不连接数据库。
-- 不读原始市场包 `config.json`，不打印数据库连接串、host/schema、账号、密码、租户、内部 URL 或业务字段样例值。
-- 明文密码迁移属于配置写入；只有当前任务明确授权时才备份、迁移到被 Git 忽略的同项目 `.env` 并验证回滚。
-- 目标环境不可达不等于没有元数据；输出目标环境状态、已尝试证据、可用替代证据和未确认项。
-- 不把命令流水和排查过程写入正式报告；报告只保留稳定事实、证据边界、复用途径和风险。
+- 字段、物理列、分录及关联实体按 [字段证据](references/field-evidence.md) 核对；字段不存在需要完整有效链或运行期证据，单份设计差量不足。
+- 表单、列表、操作和 PC/移动入口按 [页面挂载](references/page-binding.md) 分别取证；共表或同插件类不代表入口和规则相同。
+- 警告、截断、祖先缺失和旧缓存完整性未知均保留在结论中。`--fields --inherit` 是分层设计候选，不是平台合并后的有效全集。
+- 跨 skill 的 JSON 摘要使用 [输出契约](references/output-contract.md) 中的 `metadata_contract.py`，保留输入的警告和证据状态。
+- 回答用户的问题及实际影响结论的缺项；不输出命令流水。评分和正式报告按需读 [取证评分](references/analysis-rubric.md)、[报告模板](references/report-template.md)。
 
-## 输出
-配置状态（凭据来源类型） → 采集结果 → 字段/页面/插件证据 → 外部关系 → 可复用途径 → 脱敏项 → 风险与未确认项。
+## 边界
+
+- 在线查询只读，限目标实体与必要配置；生产查询设置超时和结果范围。业务写入由数据变更契约控制。
+- `metadataAnalyzer.enabled=false` 时不连接。凭据与产物规则统一见配置说明；不读取原始市场包 `config.json`。
+- 可输出任务要求的路由、库和表标识；不回显密码、账号、连接串、内部地址或业务样本，不把生产配置写入 Skill 或测试资产。
