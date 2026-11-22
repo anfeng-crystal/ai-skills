@@ -8,13 +8,15 @@
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
+import { readUpstreamOriginals, verifyUpstreamOriginal } from './upstream-originals.mjs';
 
-const SKILLS_ROOT = resolve(import.meta.dirname, '..', 'skills');
+const REPO_ROOT = resolve(import.meta.dirname, '..');
+const SKILLS_ROOT = join(REPO_ROOT, 'skills');
+const upstreamOriginals = readUpstreamOriginals(REPO_ROOT);
 
 let total = 0;
 let passed = 0;
 let failed = 0;
-const errors = [];
 
 function findSkills() {
   const skills = [];
@@ -70,8 +72,19 @@ function isStringScalar(rawValue) {
 
 function check(skill) {
   const issues = [];
-  const content = readFileSync(skill.path, 'utf8').replace(/\r\n/g, '\n');
   const type = detectType(skill.dir);
+  const original = upstreamOriginals.get(skill.dir);
+  let content;
+  if (original) {
+    try {
+      content = verifyUpstreamOriginal(original).toString('utf8');
+    } catch (error) {
+      return { issues: [error.message], type: 'upstream original' };
+    }
+  } else {
+    content = readFileSync(skill.path, 'utf8');
+  }
+  content = content.replace(/\r\n/g, '\n');
 
   // 1. Public Agent Skills frontmatter
   const fmMatch = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/);
@@ -148,21 +161,22 @@ function check(skill) {
     'paths',
     'shell',
   ]) {
+    if (original && key === 'disable-model-invocation') continue;
     if (new RegExp(`^${key}:`, 'm').test(fmText)) {
       issues.push(`Host-specific top-level field "${key}" is not portable`);
     }
   }
 
   // 2. Local portability and body checks
-  if (type !== 'doc' && !content.includes('Cross-platform Agent Skill')) {
+  if (!original && type !== 'doc' && !content.includes('Cross-platform Agent Skill')) {
     issues.push('Missing cross-platform header blockquote (required for script/multi-platform skills)');
   }
 
-  if (!content.match(/^# .+$/m)) {
+  if (!original && !content.match(/^# .+$/m)) {
     issues.push('Missing H1 heading');
   }
 
-  return { issues, type };
+  return { issues, type: original ? 'upstream original' : type };
 }
 
 // Main
@@ -182,8 +196,15 @@ for (const skill of skills.sort((a, b) => a.name.localeCompare(b.name))) {
     for (const issue of issues) {
       console.log(`        - ${issue}`);
     }
-    errors.push({ name: skill.name, issues });
   }
+}
+
+for (const original of upstreamOriginals.values()) {
+  if (skills.some(skill => skill.dir === original.dir)) continue;
+  total++;
+  failed++;
+  console.log(`  FAIL  ${original.name} [upstream original]`);
+  console.log(`        - Missing upstream original ${original.path}/SKILL.md`);
 }
 
 console.log(`\n--- Summary ---`);

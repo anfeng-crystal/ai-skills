@@ -50,6 +50,12 @@ node install.mjs --list              # list available skills / 列出可用技�
 
 `npm-deps.mjs install` 会把技能脚本使用的 npm 包预取到本地 `node_modules`，缓存放在仓库内的 `.npm-cache`。运行时包装器仍会优先尝试 `npx`，当 npm registry 访问不稳定时再回退到本地安装。
 
+### OpenCode 1 的业务 Skill 手动入口
+
+OpenCode 1 忽略 `disable-model-invocation`。用 `node scripts/opencode-v1.mjs` 启动已安装的 OpenCode 1，可通过 `/in-your-own-words` 和 `/sharpen` 调用两份 pstack 原版。启动器核对版本，在本次进程的有效权限中禁止模型自动调用这两份 Skill。斜杠命令读取经 SHA-256 校验的原文。
+
+OpenCode 可执行文件位于其他位置时，用 `AI_OPENCODE_BIN` 指定路径。已有 `OPENCODE_CONFIG_CONTENT` 时提供 JSON，JSONC 文件可用 `OPENCODE_CONFIG`。OpenCode 2 通过常规入口使用原版的 `disable-model-invocation`。 [OpenCode 1 Skill](https://opencode.ai/v1/docs/skills/) · [OpenCode 2 Skill](https://opencode.ai/docs/skills/)
+
 ## Environment / 环境变量
 
 Copy `.env.example` to a local `.env`, or export the variables in your shell profile.

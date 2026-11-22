@@ -1,0 +1,5 @@
+# Preserve the upstream bytes checked by SHA-256 on every checkout.
+skills/core/in-your-own-words/SKILL.md -text
+skills/core/in-your-own-words/LICENSE -text
+skills/core/sharpen/SKILL.md -text
+skills/core/sharpen/LICENSE -text
