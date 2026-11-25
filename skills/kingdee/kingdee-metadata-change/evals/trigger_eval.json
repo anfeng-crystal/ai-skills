@@ -6,6 +6,7 @@
   {"query": "修改苍穹实体的多语言和术语元数据", "should_trigger": true},
   {"query": "从只读元数据库刷新苍穹标准模板模型知识，然后生成字段变更候选", "should_trigger": true},
   {"query": "给苍穹表单挂载一个插件并按现有页面和操作证据生成平台候选验证", "should_trigger": true},
+  {"query": "手工添加的苍穹下拉字段和离线改包后名称旁的提示不同，在同一个 DEV 设计器复现并核对正式导出版本", "should_trigger": true},
   {"query": "查一下这个苍穹实体有什么字段和插件挂载点", "should_trigger": false},
   {"query": "给苍穹页面写 index.js 字段联动和 CSS", "should_trigger": false},
   {"query": "从零开发一个苍穹 KDApi 自定义控件", "should_trigger": false},

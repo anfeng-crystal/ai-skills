@@ -550,6 +550,19 @@ class MetadataAuthorTests(unittest.TestCase):
         # Boolean false is still a valid boolean value, not an empty value.
         self.assertIsNone(author.property_shape_issue({"value_shapes": {"boolean": 1}}, "DefValue", False))
 
+    def test_lock_state_list_requires_evidence_and_rejects_unknown_state(self):
+        change = {"lock_value_evidence": {
+            "reference": "DEV 单据 FieldAp 原生锁定选项",
+            "allowed_states": ["new", "edit", "submit", "audit"],
+        }}
+        self.assertIn("缺少", author.lock_value_issue({}, "Lock", "new,edit"))
+        self.assertIn("view", author.lock_value_issue(change, "Lock", "new,edit,view"))
+        self.assertIn("重复", author.lock_value_issue(change, "Lock", "new,new"))
+        self.assertIsNone(author.lock_value_issue(change, "Lock", "new,edit"))
+        self.assertIsNone(author.lock_value_issue(change, "Lock", ",submit,"))
+        self.assertIsNone(author.lock_value_issue({}, "Lock", ""))
+        self.assertIsNone(author.lock_value_issue({}, "Visible", "view"))
+
     def test_operation_key_must_bind_to_actual_entity_operation_or_standard_form_action(self):
         with tempfile.TemporaryDirectory() as tmp:
             baseline = self.write(Path(tmp) / "bos_billtpl.xml", self.bill_xml)

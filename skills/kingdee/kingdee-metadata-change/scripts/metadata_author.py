@@ -809,6 +809,27 @@ def property_shape_issue(contract: dict[str, Any] | None, property_name: str, va
     return None
 
 
+def lock_value_issue(change: dict[str, Any], name: str, value: Any) -> str | None:
+    if name != "Lock" or not normalized_scalar(value).strip():
+        return None
+    evidence = change.get("lock_value_evidence")
+    if not isinstance(evidence, dict) or not str(evidence.get("reference") or "").strip():
+        return "Lock 非空状态列表缺少目标版本、模型和控件的锁定选项证据"
+    allowed = evidence.get("allowed_states")
+    if not isinstance(allowed, list) or not allowed or any(
+        not isinstance(state, str) or not state.strip() or state != state.strip() or "," in state
+        for state in allowed
+    ):
+        return "Lock 证据的 allowed_states 必须是原生选项存储值列表"
+    states = [state.strip() for state in normalized_scalar(value).strip().strip(",").split(",")]
+    if "" in states or len(states) != len(set(states)):
+        return "Lock 状态列表包含空项或重复项"
+    invalid = sorted(set(states) - set(allowed))
+    if invalid:
+        return "Lock 包含目标控件不支持的状态: " + ", ".join(invalid)
+    return None
+
+
 def plugin_evidence_issue(change: dict[str, Any], node_type: str, parent_type: str) -> str | None:
     """Require business-object evidence for plugin attachment changes.
 
@@ -1074,8 +1095,8 @@ def resolve_change(
         shape_issue = property_shape_issue(
             knowledge.property_contract(unit["kind"], local_tag(node.tag), name), name, value
         )
-        if shape_issue:
-            issues.append(shape_issue)
+        if issue := shape_issue or lock_value_issue(change, name, value):
+            issues.append(issue)
     new_properties = requested - actual_property_names - standard_property_names
     if knowledge.is_control_type(local_tag(node.tag)) and control_profile is None and new_properties:
         issues.append("现有控件组合没有精确标准 profile，不能向其增加新属性")
@@ -1424,8 +1445,8 @@ def validate_added_node(
             shape_issue = property_shape_issue(
                 knowledge.property_contract(unit["kind"], node_type, name), name, value
             )
-            if shape_issue:
-                issues.append(shape_issue)
+            if issue := shape_issue or lock_value_issue(change, name, value):
+                issues.append(issue)
         nested = {local_tag(child.tag) for child in list(node) if len(child) > 0}
         allowed_nested = set((generic_profile.get("observed_nested_sections") or {}).keys()) if generic_profile else set()
         if control_profile:
