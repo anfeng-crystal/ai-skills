@@ -37,6 +37,11 @@ def validate(contract: Any) -> dict[str, Any]:
         raise ValueError("mode must be plan-only or execute-approved")
     if mode == "execute-approved" and not nonempty(contract.get("approval_ref")):
         errors.append({"field": "approval_ref", "code": "missing_approval"})
+    operation = contract.get("operation", "update")
+    if operation not in ("insert", "update", "delete"):
+        raise ValueError("operation must be insert, update, or delete")
+    if "insert" in contract and operation != "insert":
+        errors.append({"field": "operation", "code": "insert_operation_required"})
     change_kind = contract.get("change_kind", "direct")
     if change_kind not in {"direct", "relationship-remap", "entity-migration", "symptom-repair"}:
         raise ValueError("change_kind must be direct, relationship-remap, entity-migration, or symptom-repair")
@@ -87,19 +92,50 @@ def validate(contract: Any) -> dict[str, Any]:
             policy = assignment.get("mapping_missing")
             if policy not in {"preserve_old", "stop", "set_null"}:
                 errors.append({"field": field, "code": "invalid_missing_mapping_policy"})
-            if assignment.get("nullable") is False and policy == "set_null":
-                errors.append({"field": field, "code": "not_null_assignment_can_be_null"})
+            if policy == "set_null":
+                if assignment.get("nullable") is False:
+                    errors.append({"field": field, "code": "not_null_assignment_can_be_null"})
+                elif operation == "insert" and assignment.get("nullable") is not True:
+                    errors.append({"field": field, "code": "insert_nullability_unknown"})
+            if operation == "insert" and policy == "preserve_old":
+                errors.append({"field": field, "code": "no_old_value_for_insert"})
 
     boolean_gates = (
         ("transaction", contract.get("transaction") is True, "transaction_required"),
-        ("before_image.enabled", nested_true(contract, "before_image", "enabled"), "before_image_required"),
-        ("concurrency.compare_old_values", nested_true(contract, "concurrency", "compare_old_values"), "old_value_guard_required"),
-        ("rollback.compare_before_restore", nested_true(contract, "rollback", "compare_before_restore"), "safe_rollback_required"),
         ("verification.exact_affected_rows", nested_true(contract, "verification", "exact_affected_rows"), "exact_count_required"),
         ("verification.postcheck", nested_true(contract, "verification", "postcheck"), "postcheck_required"),
         ("failure_recovery.rollback", nested_true(contract, "failure_recovery", "rollback"), "failure_rollback_required"),
         ("failure_recovery.recompute_scope", nested_true(contract, "failure_recovery", "recompute_scope"), "recompute_required"),
     )
+    if operation == "insert":
+        insert = contract.get("insert")
+        if not isinstance(insert, dict):
+            insert = {}
+        if insert.get("key_source") not in ("platform-long", "platform-base39", "database-generated", "mapped-key"):
+            errors.append({"field": "insert.key_source", "code": "invalid_insert_key_source"})
+        if not evidence_ref(insert.get("evidence_ref")):
+            errors.append({"field": "insert.evidence_ref", "code": "insert_key_evidence_required"})
+        business_key = insert.get("business_key")
+        if not isinstance(business_key, list) or not business_key or not all(evidence_ref(k) for k in business_key):
+            errors.append({"field": "insert.business_key", "code": "insert_business_key_required"})
+        concurrency = contract.get("concurrency")
+        if not isinstance(concurrency, dict):
+            concurrency = {}
+        if concurrency.get("absence_guard") not in ("unique-constraint", "serialized-write"):
+            errors.append({"field": "concurrency.absence_guard", "code": "insert_concurrency_guard_required"})
+        if not evidence_ref(concurrency.get("evidence_ref")):
+            errors.append({"field": "concurrency.evidence_ref", "code": "insert_concurrency_evidence_required"})
+        boolean_gates += (
+            ("before_image.confirm_absent", nested_true(contract, "before_image", "confirm_absent"), "absence_check_required"),
+            ("verification.capture_inserted_rows", nested_true(contract, "verification", "capture_inserted_rows"), "inserted_image_required"),
+            ("rollback.compare_before_delete", nested_true(contract, "rollback", "compare_before_delete"), "safe_delete_required"),
+        )
+    else:
+        boolean_gates += (
+            ("before_image.enabled", nested_true(contract, "before_image", "enabled"), "before_image_required"),
+            ("concurrency.compare_old_values", nested_true(contract, "concurrency", "compare_old_values"), "old_value_guard_required"),
+            ("rollback.compare_before_restore", nested_true(contract, "rollback", "compare_before_restore"), "safe_rollback_required"),
+        )
     for field, passed, code in boolean_gates:
         if not passed:
             errors.append({"field": field, "code": code})

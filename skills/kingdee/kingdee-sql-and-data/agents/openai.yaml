@@ -1,8 +1,8 @@
 interface:
   display_name: "Kingdee SQL And Data"
-  short_description: "苍穹 KSQL、预置数据、只读核对与元数据 DDL 生成"
+  short_description: "苍穹 KSQL、预置数据、DDL、数据核对及 SQL 新增与修改"
   default_prompt: |
-    使用 $kingdee-sql-and-data 按 validate、generate、query-readonly 或 execute-approved 模式处理 KSQL、预置数据、只读核对和元数据到 DDL；先确认物理元数据与 dbRoute，永不把凭据写入脚本或输出。
+    使用 $kingdee-sql-and-data 处理 KSQL、预置数据、DDL、导入模板、只读核对或已批准的数据变更。SQL 新增时确认目标环境、物理列、dbRoute 和主键来源，按业务键复核结果。凭据不写入脚本或输出。
 
 policy:
   allow_implicit_invocation: true

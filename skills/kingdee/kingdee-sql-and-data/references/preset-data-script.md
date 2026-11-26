@@ -6,6 +6,8 @@
 
 生成器从关系型数据库查询苍穹预置数据，并输出逐行交替的 `DELETE` + `INSERT` KSQL 脚本。支持 PostgreSQL、MySQL、Oracle、SQL Server。
 
+新建一条编码规则或基础资料走[新增取号与写入](insert-with-platform-id.md)。本生成器用于导出已有配置，输出保留源记录主键。
+
 支持类型：
 
 | type | 参数 | 数据库 | 说明 |

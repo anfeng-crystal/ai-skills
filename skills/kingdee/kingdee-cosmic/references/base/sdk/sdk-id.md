@@ -8,6 +8,18 @@
 - 跳转：业务编码规则与主键生成不同，业务编号使用 `CodeRuleServiceHelper` 对应合同。
 - 继续读全文：批量生成、字符串长度、转换或初始化故障。
 
+## IDGenner 的 7.0 实现
+
+本地 `bos-id-7.0.jar` 中，`kd.bos.id.IDGenner.nextId()` 在同一实例上同步发号。默认单集群布局为 1 位符号（0）、40 位毫秒差、13 位 worker、10 位序列。默认构造器用 JVM 默认时区解析 `2017-01-01` 为纪元。同一毫秒序列从 0 递增到 1023，再取号时等到下一毫秒。时钟回拨按该版本的配置处理。普通布局按下式拼装。
+
+```text
+((timestampMillis - epochMillis) << 23) | (workerId << 10) | sequence
+```
+
+启用 `IDServiceConf2ZK.isEnableDifferentCluster()` 对应分支时，13 位区域由 worker 和集群号共用。worker 由目标环境的分配器协调。公式用于识别布局，仅凭时间、任取 worker 或查目标表未重号，均无法保证与正在发号的其他节点互斥。[金蝶 ID 服务配置说明](https://developer.kingdee.com/article/116229053962551552)
+
+在本地 `bos-dataentity-7.0.jar`、`bos-dbengine-7.0.jar` 和 `bos-id-7.0.jar` 中，`Uuid16.create()` 构造对象时调用 `DB.genStringId("")` → `ID.genStringId()` → `Base39Coder.toString(ID.genLongId())`。`Uuid16.toString()` 返回该值。Base39 字符表按数值从 0 到 38 排列为 `+/0123456789=ABCDEFGHIJKLMNOPQRSTUVWXYZ`，按 39 取余、逆序输出，无固定长度填充。数据库侧参数绑定和预取号操作见 SQL Skill 的[新增流程](../../../../kingdee-sql-and-data/references/insert-with-platform-id.md)。
+
 ## 核心 API
 
 `kd.bos.id.ID`。以下签名已由实际 7.0 JAR 与官方 V7.0.1 Javadoc 核实；依赖不同版本时再核对，不擅自升级项目。
@@ -27,7 +39,7 @@
 ## 长度与转换
 
 - `long` ID 最大十进制长度 19 位；数据库选能容纳该值的整型，具体列定义遵循数据库和元数据，不把 `bigint(19)` 当跨数据库 DDL。
-- 默认 `genStringId()` / `toStringId(long)` 使用 Base39（`+/=0-9A-Z`）表示 **long 数值**，方法级 Javadoc 标注最大 12 个字符。是 long 编成 String，不是 String 编成 long。
+- 默认 `genStringId()` / `toStringId(long)` 将 long 按 Base39 编成 String，方法级 Javadoc 标注最大 12 个字符。
 - `longTo36Radix` 使用 `0-9A-Z`，方法级 Javadoc 标注最大 13 个字符，且明确**不可用作实体主键**。用于该方法允许的唯一名称场景；不要把所有字符串 ID 字段统一设为 `varchar(12)`。
 - “最大长度”不是任意入参都固定宽度；本地实现未给通用转换结果补零。官方知识将常见结果简述为 12/13 位，V7.0.1 类概览中的默认 String“最大13”又与具体方法说明冲突；这里采用具体方法说明和实际编码实现的上界。
 - 两种编码必须成对解码：`toStringId` 配 `toLongId`，`longTo36Radix` 配 `longFrom36Radix`。字符集部分重合不代表可以混用；不要直接解码未知来源、外部主键或任意字符串。数值趋势不等于两种编码字符串都能按文本排序保持时间顺序。

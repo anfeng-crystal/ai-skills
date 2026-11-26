@@ -47,6 +47,45 @@ class ValidateChangeContractTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         self.assertIn("missing_approval", {item["code"] for item in json.loads(result.stdout)["errors"]})
 
+    def test_documented_insert_plan_and_approved_contract(self) -> None:
+        contract = documented_insert_contract()
+        self.assertEqual(self.run_contract(contract).returncode, 0)
+        contract["mode"] = "execute-approved"
+        result = self.run_contract(contract)
+        self.assertIn("missing_approval", {item["code"] for item in json.loads(result.stdout)["errors"]})
+        contract["approval_ref"] = "approval for example_header and source key"
+        for source in ("platform-long", "platform-base39", "database-generated", "mapped-key"):
+            with self.subTest(source=source):
+                contract["insert"]["key_source"] = source
+                result = self.run_contract(contract)
+                self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_update_checks_cannot_substitute_for_insert_evidence(self) -> None:
+        contract = safe_contract()
+        contract["operation"] = "insert"
+        contract["insert"] = {"key_source": "local-worker", "evidence_ref": "tbd", "business_key": []}
+        contract["concurrency"]["absence_guard"] = "select-not-exists"
+        result = self.run_contract(contract)
+        self.assertEqual(result.returncode, 1)
+        codes = {item["code"] for item in json.loads(result.stdout)["errors"]}
+        self.assertTrue({
+            "invalid_insert_key_source", "insert_key_evidence_required", "insert_business_key_required",
+            "no_old_value_for_insert", "absence_check_required", "insert_concurrency_guard_required", "insert_concurrency_evidence_required",
+            "inserted_image_required", "safe_delete_required",
+        } <= codes, codes)
+
+    def test_insert_requires_explicit_operation_and_nullable_mapping(self) -> None:
+        contract = documented_insert_contract()
+        del contract["operation"]
+        result = self.run_contract(contract)
+        self.assertIn("insert_operation_required", {item["code"] for item in json.loads(result.stdout)["errors"]})
+        contract["operation"] = "insert"
+        contract["assignments"].append({"column": "fnote", "mapping_missing": "set_null"})
+        result = self.run_contract(contract)
+        self.assertIn("insert_nullability_unknown", {item["code"] for item in json.loads(result.stdout)["errors"]})
+        contract["assignments"][-1]["nullable"] = True
+        self.assertEqual(self.run_contract(contract).returncode, 0)
+
     def test_special_change_kinds_require_extra_evidence(self) -> None:
         expected = {
             "relationship-remap": "relationship_evidence_required",
@@ -87,6 +126,12 @@ class ValidateChangeContractTest(unittest.TestCase):
         result = self.run_contract(contract)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(json.loads(result.stdout)["status"], "pass")
+
+
+def documented_insert_contract() -> dict:
+    reference = SCRIPT.parents[1] / "references" / "insert-with-platform-id.md"
+    example = reference.read_text(encoding="utf-8").split("```json\n", 1)[1].split("\n```", 1)[0]
+    return json.loads(example)
 
 
 def safe_contract() -> dict:

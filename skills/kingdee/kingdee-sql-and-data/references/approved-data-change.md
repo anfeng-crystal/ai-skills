@@ -6,8 +6,8 @@
 
 1. 按 [只读查询](db-query.md) 确认目标环境的 entity、field、entry、物理列、可空性和业务库，再窄查变更范围。同一物理表上的不同实体、阶段或布局必须分别确认业务入口和字段语义。
 2. 把目标拆成独立赋值规则。外键、展示字符串、阶段字段分别列适用范围，不能因一列共表而扩大另一列范围。
-3. stage 中保留业务主键、旧值、目标值、映射证据和拒绝原因；对 key、目标值和映射做唯一性检查。
-4. 对不可空列，映射缺失只能 `preserve_old` 或 `stop`。只有用户明确批准、列允许空且业务语义要求清空时，才可写 `NULL`。
+3. stage 中保留业务键、目标值、映射证据和拒绝原因，对键和映射检查唯一性。已有行保留旧值；新增行记录预期缺行，并在执行时补齐实际主键映射。
+4. 已有行的不可空列缺少映射时可 `preserve_old` 或 `stop`。新增没有旧值，需要赋值的不可空列缺少映射时用 `stop`；由已核实的数据库默认值生成的列按 DDL 省略。写入 `NULL` 须符合列约束、业务语义和批准范围。
 
 ### 多表关联范围
 
@@ -17,7 +17,7 @@
 
 实际环境、可写目标或复制时点冲突须在写入前解决。
 
-影响范围 COUNT、预览 SELECT 和实际 UPDATE/DELETE 使用同一组已核对的关联与过滤条件，或同一份已验证 stage。分别识别一对多连接、未匹配和跨阶段行，并核对目标主键集合；数量相同不能证明集合相同。以上关联核对适用于只读计划，不改变执行前的批准、before image 和并发比较要求。
+影响范围 COUNT、预览 SELECT 和实际 DML 使用同一组已核对的关联与过滤条件，或同一份已验证 stage。新增以候选业务键和目标缺行为范围。分别识别一对多连接、未匹配和跨阶段行，并核对目标主键集合；数量相同不能证明集合相同。
 
 ### 关系重建
 
@@ -37,11 +37,11 @@
 
 ## 事务执行
 
-- 在单一事务中重算 stage 和待更新数，要求 `expected_rows <= max_rows` 且实际命中等于批准计数。
+- 在单一事务中重算 stage 和待写入数，要求 `expected_rows <= max_rows` 且实际命中等于批准计数。
 - 更新前保存 before image；UPDATE 的 WHERE 同时比较主键与旧值，防止覆盖并发变化。
 - SQL 只从已验证 stage 取目标值；stage 中存在重复 key、未映射、冲突或越界行时停止，不做部分提交。
 - 检查精确影响行数、目标一致性、残留异常和备份完整性后才提交。任何门禁失败都回滚。
-- 回滚也必须 compare-before-restore：只有当前值仍等于本次目标值时才恢复旧值；检测到后续修改则停止并报告。
+- 更新后撤销时，只有当前值仍等于本次目标值才恢复旧值。新增按[新增取号与写入](insert-with-platform-id.md)记录写前缺行和实际插入结果，撤销时按本次主键、行快照和后续引用核对。
 
 ## 失败恢复
 
@@ -89,7 +89,7 @@
 }
 ```
 
-`mode=execute-approved` 时额外要求非空 `approval_ref`。`change_kind` 可为 `direct`、`relationship-remap`、`entity-migration` 或 `symptom-repair`；后三种还必须分别提供 `relationship`、`storage_topology` 或 `causal_target` 证据对象。运行：
+`mode=execute-approved` 时额外要求非空 `approval_ref`。新契约按物理动作设置 `operation` 为 `insert`、`update` 或 `delete`；旧版省略时沿用原有旧值比较。新增使用[完整契约示例](insert-with-platform-id.md#新增契约示例)。同批混合动作按表和动作列契约，共享已核实的事务边界。`change_kind` 仍表示业务场景，可为 `direct`、`relationship-remap`、`entity-migration` 或 `symptom-repair`；后三种分别提供 `relationship`、`storage_topology` 或 `causal_target` 证据对象。
 
 `entity-migration` 的 `storage_topology` 使用以下结构；`unknown`、`tbd`、`n/a` 等占位值不能通过：
 

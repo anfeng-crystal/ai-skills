@@ -1,10 +1,10 @@
 ---
 name: kingdee-sql-and-data
-description: "校验金蝶 KSQL、生成预置数据/DDL、填充平台数据导入模板，或核对与变更数据库数据；ISCB SQL/DML 服务流程交 iscb-script。"
+description: "校验金蝶 KSQL、生成预置数据/DDL、回填导入模板、核对数据库数据，或按授权用 SQL 新增和修改苍穹记录，含主表与分录取号。ISCB SQL/DML 服务流程交 iscb-script。"
 license: MIT
 metadata:
   author: "anfeng"
-  version: "1.2.1"
+  version: "1.3.0"
   tags: "kingdee, cosmic, ksql, data, database"
 ---
 
@@ -19,7 +19,8 @@ metadata:
 | 预置数据 `generate` | [生成器](references/preset-data-script.md)、[配置发现](references/config-management.md) | 按授权窄查源数据，生成 DELETE/INSERT 审阅稿，不执行目标写入 |
 | 元数据转 DDL `generate` | [DDL 契约](references/metadata-ddl-contract.md) | 生成 CREATE TABLE/INDEX；不连接、不执行、不生成 DROP/ALTER |
 | 业务数据 `query-readonly` | [只读查询](references/db-query.md) | 补齐必要映射后实际查询并解释结果；已有生产只读授权不重复确认 |
-| 修改计划/批准执行 `execute-approved` | [数据变更契约](references/approved-data-change.md) | 计划只读；批准后按精确范围执行并复核 |
+| 数据修改计划与批准执行 `execute-approved` | [数据变更契约](references/approved-data-change.md) | 计划只读；批准后按精确范围执行并复核 |
+| SQL 新增记录、配置或分录 | [新增取号与写入](references/insert-with-platform-id.md) | 计划用参数占位；获准执行后按目标键策略取号、INSERT，回读主键和业务关系 |
 | 平台导入模板 | [模板回填](references/import-workbook.md) | 保留系统模板结构，按授权分别完成填充、检查和导入 |
 
 复用已确认映射，仅补齐本次查询所需的实体、表列、分录和路由信息；需补查时使用 `kingdee-metadata-analyzer` 的对应入口。编写 ISCB SQL/DML 服务流程时使用 `iscb-script`。
